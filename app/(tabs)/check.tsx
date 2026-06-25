@@ -458,6 +458,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
     justifyContent: 'space-between',
     marginBottom: 14,
     padding: 18,
@@ -581,6 +583,8 @@ const styles = StyleSheet.create({
   infoRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
     justifyContent: 'space-between',
     minHeight: 34,
   },

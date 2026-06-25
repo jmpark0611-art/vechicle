@@ -907,8 +907,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#EEF2F6',
     borderBottomWidth: 1,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     minHeight: 44,
+    rowGap: 4,
   },
   summaryLabel: {
     color: '#667085',
@@ -921,6 +923,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     marginLeft: 16,
+    minWidth: 0,
     textAlign: 'right',
   },
   runningText: {
@@ -944,6 +947,8 @@ const styles = StyleSheet.create({
   inputLabelRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     justifyContent: 'space-between',
     marginTop: 12,
   },
@@ -1011,6 +1016,8 @@ const styles = StyleSheet.create({
   sectionHeader: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     justifyContent: 'space-between',
     marginBottom: 12,
   },
@@ -1105,11 +1112,13 @@ const styles = StyleSheet.create({
   },
   runningActionRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
     width: '100%',
   },
   runningEndBtn: {
-    flex: 1,
+    flexBasis: 160,
+    flexGrow: 1,
     width: 'auto',
   },
   detailActionBtn: {

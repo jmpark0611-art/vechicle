@@ -692,6 +692,8 @@ const styles = StyleSheet.create({
   toolbar: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     justifyContent: 'space-between',
     marginBottom: 14,
   },
@@ -706,6 +708,7 @@ const styles = StyleSheet.create({
   formRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
     marginTop: 12,
   },
@@ -718,6 +721,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '800',
+    minWidth: 180,
     minHeight: 46,
     paddingHorizontal: 12,
   },
@@ -744,6 +748,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     marginRight: 12,
+    minWidth: 180,
   },
   summaryGrid: {
     flexDirection: 'row',
@@ -853,6 +858,8 @@ const styles = StyleSheet.create({
   cardHeader: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     justifyContent: 'space-between',
     marginBottom: 12,
   },
@@ -884,6 +891,8 @@ const styles = StyleSheet.create({
   infoRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
     justifyContent: 'space-between',
     minHeight: 30,
   },

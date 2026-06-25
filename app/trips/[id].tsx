@@ -630,6 +630,8 @@ const styles = StyleSheet.create({
   infoRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
     justifyContent: 'space-between',
     minHeight: 30,
   },

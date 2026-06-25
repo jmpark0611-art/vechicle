@@ -701,6 +701,8 @@ const styles = StyleSheet.create({
   toolbar: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     justifyContent: 'space-between',
     marginBottom: 14,
   },
@@ -710,6 +712,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     marginRight: 12,
+    minWidth: 180,
   },
   reloadText: {
     color: '#1565C0',
@@ -863,6 +866,8 @@ const styles = StyleSheet.create({
   cardHeader: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     justifyContent: 'space-between',
     marginBottom: 12,
   },
@@ -925,6 +930,8 @@ const styles = StyleSheet.create({
   metaRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
     justifyContent: 'space-between',
     minHeight: 28,
   },
@@ -968,6 +975,7 @@ const styles = StyleSheet.create({
   },
   cardActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
     marginTop: 12,
   },
