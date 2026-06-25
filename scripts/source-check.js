@@ -26,6 +26,7 @@ const requiredText = [
   { file: path.join('app', '(tabs)', 'check.tsx'), text: '환경변수 오류 fallback' },
   { file: path.join('app', '(tabs)', 'check.tsx'), text: 'GPS 경과' },
   { file: path.join('app', '(tabs)', 'check.tsx'), text: 'gps_points 테이블' },
+  { file: path.join('app', '(tabs)', 'check.tsx'), text: '최근 진행 운행 표시' },
   { file: path.join('app', '(tabs)', 'explore.tsx'), text: 'CSV 내보내기' },
   { file: path.join('app', '(tabs)', 'explore.tsx'), text: '기간' },
   { file: path.join('app', '(tabs)', 'explore.tsx'), text: '완료 평균 소요' },

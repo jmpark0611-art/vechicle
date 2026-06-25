@@ -18,6 +18,7 @@ import { formatDbError } from '../../lib/errors';
 import { withTimeout } from '../../lib/request';
 
 type HealthStatus = 'checking' | 'ok' | 'error';
+const ACTIVE_TRIP_DETAIL_LIMIT = 10;
 
 type HealthSummary = {
   vehicles: number;
@@ -150,7 +151,7 @@ export default function CheckScreen() {
               .select('id, vehicle_id, start_time')
               .eq('status', 'in_progress')
               .order('start_time', { ascending: false })
-              .limit(10),
+              .limit(ACTIVE_TRIP_DETAIL_LIMIT),
             '진행 운행 목록'
           ),
           withTimeout(supabase.from('vehicles').select('id, vehicle_number'), '차량 목록'),
@@ -322,6 +323,11 @@ export default function CheckScreen() {
       {activeTrips.length > 0 && (
         <View style={styles.infoPanel}>
           <Text style={styles.sectionTitle}>진행 중 운행</Text>
+          {summary.activeTrips > activeTrips.length && (
+            <Text style={styles.sectionHint}>
+              최근 진행 운행 표시 {activeTrips.length}건 / 전체 {summary.activeTrips}건
+            </Text>
+          )}
           {activeTrips.map((trip) => {
             const isStale = isStaleActiveTrip(trip.start_time);
             const isDuplicated =
@@ -508,6 +514,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     marginBottom: 12,
+  },
+  sectionHint: {
+    color: '#667085',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 10,
   },
   activeTripRow: {
     alignItems: 'center',
