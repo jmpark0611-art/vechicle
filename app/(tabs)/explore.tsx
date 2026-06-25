@@ -54,6 +54,12 @@ type HistoryFilter = 'all' | 'running' | 'completed' | 'canceled';
 type DateFilter = 'all' | 'today' | '7d' | '30d';
 const HISTORY_TRIP_LIMIT = 30;
 
+type LoadHistoryOptions = {
+  limit?: number;
+  loadingMore?: boolean;
+  refreshing?: boolean;
+};
+
 function getTripTime(value: string | null) {
   if (!value) {
     return null;
@@ -117,7 +123,10 @@ export default function TripHistoryScreen() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [historyLimit, setHistoryLimit] = useState(HISTORY_TRIP_LIMIT);
+  const [hasMoreTrips, setHasMoreTrips] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const vehicleMap = useMemo(() => {
@@ -254,9 +263,13 @@ export default function TripHistoryScreen() {
     };
   }, [filteredTrips, gpsSummaryByTripId]);
 
-  const loadHistory = useCallback(async (refreshing = false) => {
-    if (refreshing) {
+  const loadHistory = useCallback(async (options: LoadHistoryOptions = {}) => {
+    const nextLimit = options.limit ?? HISTORY_TRIP_LIMIT;
+
+    if (options.refreshing) {
       setIsRefreshing(true);
+    } else if (options.loadingMore) {
+      setIsLoadingMore(true);
     } else {
       setIsLoading(true);
     }
@@ -270,19 +283,22 @@ export default function TripHistoryScreen() {
             .from('trips')
             .select('id, vehicle_id, start_place, end_place, start_time, end_time, status')
             .order('start_time', { ascending: false })
-            .limit(HISTORY_TRIP_LIMIT),
+            .range(0, nextLimit),
           '운행 기록'
         ),
         withTimeout(supabase.from('vehicles').select('id, vehicle_number'), '차량 목록'),
       ]);
 
-      const nextTrips = tripsResult.error ? [] : ((tripsResult.data ?? []) as Trip[]);
+      const loadedTrips = tripsResult.error ? [] : ((tripsResult.data ?? []) as Trip[]);
+      const nextTrips = loadedTrips.slice(0, nextLimit);
 
       if (tripsResult.error) {
         setErrorMessage(formatDbError(tripsResult.error, '운행 기록을 불러오는 중 오류가 발생했습니다.'));
         setTrips([]);
+        setHasMoreTrips(false);
       } else {
         setTrips(nextTrips);
+        setHasMoreTrips(loadedTrips.length > nextLimit);
       }
 
       if (vehiclesResult.error) {
@@ -332,14 +348,27 @@ export default function TripHistoryScreen() {
       setTrips([]);
       setVehicles([]);
       setGpsSummaryByTripId(new Map());
+      setHasMoreTrips(false);
       setErrorMessage(
         formatDbError(error, '운행 기록을 불러오는 중 오류가 발생했습니다.')
       );
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
       setIsRefreshing(false);
     }
   }, []);
+
+  const handleRefresh = useCallback(() => {
+    setHistoryLimit(HISTORY_TRIP_LIMIT);
+    loadHistory({ limit: HISTORY_TRIP_LIMIT, refreshing: true });
+  }, [loadHistory]);
+
+  const handleLoadMore = useCallback(() => {
+    const nextLimit = historyLimit + HISTORY_TRIP_LIMIT;
+    setHistoryLimit(nextLimit);
+    loadHistory({ limit: nextLimit, loadingMore: true });
+  }, [historyLimit, loadHistory]);
 
   useFocusEffect(
     useCallback(() => {
@@ -351,18 +380,18 @@ export default function TripHistoryScreen() {
     <ScrollView
       contentContainerStyle={styles.container}
       refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={() => loadHistory(true)} />
+        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
       }>
       <Text style={styles.eyebrow}>TRIP HISTORY</Text>
       <Text style={styles.title}>운행 기록</Text>
 
       <View style={styles.toolbar}>
         <Text style={styles.countText}>
-          표시 {filteredTrips.length}건 · 최근 {HISTORY_TRIP_LIMIT}건 기준
+          표시 {filteredTrips.length}건 · 불러온 기록 {trips.length}건
         </Text>
         <TouchableOpacity
           accessibilityLabel="운행 기록 새로고침"
-          onPress={() => loadHistory(true)}
+          onPress={handleRefresh}
           disabled={isRefreshing || isLoading}>
           <Text style={styles.reloadText}>새로고침</Text>
         </TouchableOpacity>
@@ -499,14 +528,6 @@ export default function TripHistoryScreen() {
         </View>
       )}
 
-      {trips.length === HISTORY_TRIP_LIMIT && (
-        <View style={styles.noticeBox}>
-          <Text style={styles.noticeText}>
-            목록은 성능을 위해 최근 {HISTORY_TRIP_LIMIT}건을 표시합니다. 더 오래된 기록은 Supabase에서 보관됩니다.
-          </Text>
-        </View>
-      )}
-
       {runningCount > 1 && (
         <View style={styles.warningBox}>
           <Text style={styles.warningText}>
@@ -632,6 +653,20 @@ export default function TripHistoryScreen() {
           );
         })}
       </View>
+
+      {hasMoreTrips && !errorMessage && (
+        <TouchableOpacity
+          accessibilityLabel="운행 기록 더 보기"
+          style={[styles.loadMoreBtn, (isLoadingMore || isLoading) && styles.disabledBtn]}
+          onPress={handleLoadMore}
+          disabled={isLoadingMore || isLoading}>
+          {isLoadingMore ? (
+            <ActivityIndicator color="#1565C0" />
+          ) : (
+            <Text style={styles.loadMoreText}>운행 기록 더 보기</Text>
+          )}
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
@@ -939,6 +974,21 @@ const styles = StyleSheet.create({
   },
   secondaryActionText: {
     color: '#1565C0',
+  },
+  loadMoreBtn: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#BBD7FF',
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    marginTop: 14,
+    minHeight: 46,
+  },
+  loadMoreText: {
+    color: '#1565C0',
+    fontSize: 15,
+    fontWeight: '900',
   },
   noticeBox: {
     alignItems: 'center',

@@ -31,6 +31,7 @@ const requiredText = [
   { file: path.join('app', '(tabs)', 'explore.tsx'), text: '완료 평균 소요' },
   { file: path.join('app', '(tabs)', 'explore.tsx'), text: 'GPS 누락' },
   { file: path.join('app', '(tabs)', 'explore.tsx'), text: '운행 기록 CSV 내보내기' },
+  { file: path.join('app', '(tabs)', 'explore.tsx'), text: '운행 기록 더 보기' },
   { file: path.join('app', '(tabs)', '_layout.tsx'), text: 'clock.fill' },
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '차량 검색' },
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '차량 등록' },
