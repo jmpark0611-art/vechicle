@@ -251,6 +251,27 @@ export default function VehiclesScreen() {
             setErrorMessage(null);
 
             try {
+              const tripCountResult = await withTimeout(
+                supabase
+                  .from('trips')
+                  .select('id', { count: 'exact', head: true })
+                  .eq('vehicle_id', vehicle.id),
+                '차량 삭제 전 운행 기록 확인'
+              );
+
+              if (tripCountResult.error) {
+                setErrorMessage(
+                  formatDbError(tripCountResult.error, '차량 삭제 전 운행 기록 확인 중 오류가 발생했습니다.')
+                );
+                return;
+              }
+
+              if ((tripCountResult.count ?? 0) > 0) {
+                setErrorMessage('운행 기록이 있는 차량은 삭제할 수 없습니다. 차량번호 수정만 가능합니다.');
+                await loadVehicles(true);
+                return;
+              }
+
               const { error } = await withTimeout(
                 supabase.from('vehicles').delete().eq('id', vehicle.id),
                 '차량 삭제'
