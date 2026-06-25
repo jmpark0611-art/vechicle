@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '../../lib/supabase';
 import { formatCoord, formatDateTime, formatTripDuration, getTripStatusText, isStaleActiveTrip } from '../../lib/format';
@@ -158,6 +159,7 @@ function getGpsStats(points: GpsPoint[]) {
 }
 
 export default function TripDetailScreen() {
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
   const tripId = Array.isArray(id) ? id[0] : id;
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -344,7 +346,13 @@ export default function TripDetailScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[
+        styles.container,
+        {
+          paddingBottom: Math.max(insets.bottom + 40, 56),
+          paddingTop: Math.max(insets.top + 24, 32),
+        },
+      ]}
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={() => loadDetail(true)} />
       }>
@@ -502,7 +510,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: '#F6F8FB',
     padding: 20,
-    paddingTop: 32,
   },
   eyebrow: {
     color: '#4F6F52',

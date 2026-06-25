@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '../../lib/supabase';
 import { formatDateTime, formatTripDuration, isStaleActiveTrip } from '../../lib/format';
@@ -44,6 +45,7 @@ function normalizeVehicleNumber(value: string) {
 }
 
 export default function VehiclesScreen() {
+  const insets = useSafeAreaInsets();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [exactTripCountsByVehicleId, setExactTripCountsByVehicleId] = useState<Map<string, VehicleTripCounts>>(new Map());
@@ -388,7 +390,13 @@ export default function VehiclesScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[
+        styles.container,
+        {
+          paddingBottom: Math.max(insets.bottom + 96, 112),
+          paddingTop: Math.max(insets.top + 24, 56),
+        },
+      ]}
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={() => loadVehicles(true)} />
       }>
@@ -667,7 +675,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: '#F6F8FB',
     padding: 20,
-    paddingTop: 72,
   },
   eyebrow: {
     color: '#4F6F52',

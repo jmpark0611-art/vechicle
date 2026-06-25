@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase, supabaseConfig } from '../../lib/supabase';
 import { formatDateTime, formatTripDuration, isStaleActiveTrip } from '../../lib/format';
@@ -75,6 +76,7 @@ function getAgeHours(value: string | null) {
 }
 
 export default function CheckScreen() {
+  const insets = useSafeAreaInsets();
   const appVersion = Constants.expoConfig?.version ?? '-';
   const sdkVersion = Constants.expoConfig?.sdkVersion ?? '-';
   const [status, setStatus] = useState<HealthStatus>('checking');
@@ -232,7 +234,13 @@ export default function CheckScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[
+        styles.container,
+        {
+          paddingBottom: Math.max(insets.bottom + 96, 112),
+          paddingTop: Math.max(insets.top + 24, 56),
+        },
+      ]}
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={() => loadStatus(true)} />
       }>
@@ -429,7 +437,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: '#F6F8FB',
     padding: 20,
-    paddingTop: 72,
   },
   eyebrow: {
     color: '#4F6F52',

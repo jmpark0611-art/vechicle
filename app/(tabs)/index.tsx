@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatDateTime, formatTripDuration, isStaleActiveTrip } from '../../lib/format';
 import { formatDbError } from '../../lib/errors';
@@ -142,6 +143,7 @@ function getGpsPermissionText(status: GpsPermissionStatus) {
 }
 
 export default function DriverScreen() {
+  const insets = useSafeAreaInsets();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -634,7 +636,14 @@ export default function DriverScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={[
+        styles.container,
+        {
+          paddingBottom: Math.max(insets.bottom + 96, 112),
+          paddingTop: Math.max(insets.top + 24, 56),
+        },
+      ]}>
       <Text style={styles.eyebrow}>DRIVER LOG</Text>
       <Text style={styles.title}>차량운행시스템</Text>
 
@@ -871,7 +880,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: '#F6F8FB',
     padding: 20,
-    paddingTop: 72,
   },
   eyebrow: {
     color: '#4F6F52',

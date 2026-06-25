@@ -13,6 +13,7 @@ const requiredText = [
   { file: '.env.example', text: '설정 출처' },
   { file: 'README.md', text: '차량운행시스템' },
   { file: path.join('app', '(tabs)', 'index.tsx'), text: '차량운행시스템' },
+  { file: path.join('app', '(tabs)', 'index.tsx'), text: 'useSafeAreaInsets' },
   { file: path.join('app', '(tabs)', 'index.tsx'), text: '최근 저장' },
   { file: path.join('app', '(tabs)', 'index.tsx'), text: 'GPS_SAVE_RETRY_COUNT' },
   { file: path.join('app', '(tabs)', 'index.tsx'), text: '마이크 권한' },
@@ -116,6 +117,25 @@ for (const item of requiredText) {
 const statusRoute = path.join(root, 'app', '(tabs)', 'status.tsx');
 if (fs.existsSync(statusRoute)) {
   failures.push('app/(tabs)/status.tsx: Expo Metro /status와 충돌하므로 /check를 사용해야 합니다.');
+}
+
+for (const file of [
+  path.join('app', '(tabs)', 'index.tsx'),
+  path.join('app', '(tabs)', 'explore.tsx'),
+  path.join('app', '(tabs)', 'vehicles.tsx'),
+  path.join('app', '(tabs)', 'check.tsx'),
+  path.join('app', 'trips', '[id].tsx'),
+]) {
+  const fullPath = path.join(root, file);
+  const content = fs.existsSync(fullPath) ? fs.readFileSync(fullPath, 'utf8') : '';
+
+  if (!content.includes('useSafeAreaInsets')) {
+    failures.push(`${file.replaceAll(path.sep, '/')}: 모바일 안전영역 처리를 위해 useSafeAreaInsets를 사용해야 합니다.`);
+  }
+
+  if (/paddingTop:\s*72/.test(content)) {
+    failures.push(`${file.replaceAll(path.sep, '/')}: 고정 paddingTop 72 대신 안전영역 기반 여백을 사용해야 합니다.`);
+  }
 }
 
 const modalRoute = path.join(root, 'app', 'modal.tsx');
