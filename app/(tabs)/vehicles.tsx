@@ -31,6 +31,12 @@ type Trip = {
   status: string | null;
 };
 
+type VehicleTripCounts = {
+  active: number;
+  completed: number;
+  total: number;
+};
+
 type VehicleStatusFilter = 'all' | 'active' | 'waiting' | 'stale';
 
 function normalizeVehicleNumber(value: string) {
@@ -40,6 +46,7 @@ function normalizeVehicleNumber(value: string) {
 export default function VehiclesScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [exactTripCountsByVehicleId, setExactTripCountsByVehicleId] = useState<Map<string, VehicleTripCounts>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -78,30 +85,11 @@ export default function VehiclesScreen() {
     return map;
   }, [trips]);
 
-  const tripCountsByVehicleId = useMemo(() => {
-    const map = new Map<string, { total: number; completed: number; active: number }>();
-
-    trips.forEach((trip) => {
-      if (!trip.vehicle_id) {
-        return;
-      }
-
-      const current = map.get(trip.vehicle_id) ?? { total: 0, completed: 0, active: 0 };
-      map.set(trip.vehicle_id, {
-        total: current.total + 1,
-        completed: current.completed + (trip.status === 'completed' ? 1 : 0),
-        active: current.active + (trip.status === 'in_progress' ? 1 : 0),
-      });
-    });
-
-    return map;
-  }, [trips]);
-
   const vehicleSummary = useMemo(() => {
     return vehicles.reduce(
       (summary, vehicle) => {
         const activeTrip = activeTripsByVehicleId.get(vehicle.id) ?? null;
-        const activeCount = tripCountsByVehicleId.get(vehicle.id)?.active ?? 0;
+        const activeCount = exactTripCountsByVehicleId.get(vehicle.id)?.active ?? 0;
         const isStale = isStaleActiveTrip(activeTrip?.start_time ?? null);
 
         return {
@@ -114,7 +102,7 @@ export default function VehiclesScreen() {
       },
       { active: 0, duplicatedActive: 0, stale: 0, total: 0, waiting: 0 }
     );
-  }, [activeTripsByVehicleId, tripCountsByVehicleId, vehicles]);
+  }, [activeTripsByVehicleId, exactTripCountsByVehicleId, vehicles]);
 
   const filteredVehicles = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase();
@@ -165,11 +153,14 @@ export default function VehiclesScreen() {
         ),
       ]);
 
+      const nextVehicles = vehiclesResult.error ? [] : ((vehiclesResult.data ?? []) as Vehicle[]);
+
       if (vehiclesResult.error) {
         setVehicles([]);
+        setExactTripCountsByVehicleId(new Map());
         setErrorMessage(formatDbError(vehiclesResult.error, '차량 목록을 불러오는 중 오류가 발생했습니다.'));
       } else {
-        setVehicles((vehiclesResult.data ?? []) as Vehicle[]);
+        setVehicles(nextVehicles);
       }
 
       if (tripsResult.error) {
@@ -178,9 +169,58 @@ export default function VehiclesScreen() {
       } else {
         setTrips((tripsResult.data ?? []) as Trip[]);
       }
+
+      if (!vehiclesResult.error) {
+        const countEntries = await Promise.all(
+          nextVehicles.map(async (vehicle) => {
+            const [totalResult, completedResult, activeResult] = await Promise.all([
+              withTimeout(
+                supabase
+                  .from('trips')
+                  .select('id', { count: 'exact', head: true })
+                  .eq('vehicle_id', vehicle.id),
+                '차량별 전체 운행 수'
+              ),
+              withTimeout(
+                supabase
+                  .from('trips')
+                  .select('id', { count: 'exact', head: true })
+                  .eq('vehicle_id', vehicle.id)
+                  .eq('status', 'completed'),
+                '차량별 완료 운행 수'
+              ),
+              withTimeout(
+                supabase
+                  .from('trips')
+                  .select('id', { count: 'exact', head: true })
+                  .eq('vehicle_id', vehicle.id)
+                  .eq('status', 'in_progress'),
+                '차량별 미종료 운행 수'
+              ),
+            ]);
+
+            const countError = totalResult.error ?? completedResult.error ?? activeResult.error;
+            if (countError) {
+              throw countError;
+            }
+
+            return [
+              vehicle.id,
+              {
+                active: activeResult.count ?? 0,
+                completed: completedResult.count ?? 0,
+                total: totalResult.count ?? 0,
+              },
+            ] as const;
+          })
+        );
+
+        setExactTripCountsByVehicleId(new Map(countEntries));
+      }
     } catch (error) {
       setVehicles([]);
       setTrips([]);
+      setExactTripCountsByVehicleId(new Map());
       setErrorMessage(
         formatDbError(error, '차량 상태를 불러오는 중 오류가 발생했습니다.')
       );
@@ -483,7 +523,7 @@ export default function VehiclesScreen() {
         {filteredVehicles.map((vehicle) => {
           const activeTrip = activeTripsByVehicleId.get(vehicle.id) ?? null;
           const latestTrip = latestTripsByVehicleId.get(vehicle.id) ?? null;
-          const counts = tripCountsByVehicleId.get(vehicle.id) ?? {
+          const counts = exactTripCountsByVehicleId.get(vehicle.id) ?? {
             total: 0,
             completed: 0,
             active: 0,

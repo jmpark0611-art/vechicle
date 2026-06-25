@@ -36,6 +36,7 @@ const requiredText = [
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '차량 검색' },
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '차량 등록' },
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '차량 삭제 전 운행 기록 확인' },
+  { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '차량별 전체 운행 수' },
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '장시간' },
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '중복 미종료' },
   { file: path.join('app', 'trips', '[id].tsx'), text: '최고 속도' },
