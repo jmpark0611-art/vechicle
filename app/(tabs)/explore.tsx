@@ -586,7 +586,9 @@ export default function TripHistoryScreen() {
           return (
             <View key={trip.id} style={styles.tripCard}>
               <View style={styles.cardHeader}>
-                <Text style={styles.vehicleText}>{vehicleNumber}</Text>
+                <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.vehicleText}>
+                  {vehicleNumber}
+                </Text>
                 <Text style={[styles.statusBadge, isRunning && styles.runningBadge, isStale && styles.staleBadge]}>
                   {isStale ? '장시간 운행' : getTripStatusText(trip.status)}
                 </Text>
@@ -877,6 +879,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     marginRight: 12,
+    minWidth: 0,
   },
   statusBadge: {
     backgroundColor: '#E8F7EF',

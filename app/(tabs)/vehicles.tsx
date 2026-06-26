@@ -553,7 +553,13 @@ export default function VehiclesScreen() {
                     placeholderTextColor="#98A2B3"
                   />
                 ) : (
-                  <Text style={styles.vehicleNumber}>{vehicle.vehicle_number}</Text>
+                  <Text
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.82}
+                    numberOfLines={1}
+                    style={styles.vehicleNumber}>
+                    {vehicle.vehicle_number}
+                  </Text>
                 )}
                 <Text style={[styles.statusBadge, activeTrip && styles.runningBadge, isStale && styles.staleBadge]}>
                   {isStale ? '장시간 운행' : statusText}
@@ -869,6 +875,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
     marginRight: 12,
+    minWidth: 0,
   },
   statusBadge: {
     backgroundColor: '#FFF7E6',

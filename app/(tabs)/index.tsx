@@ -645,50 +645,77 @@ export default function DriverScreen() {
         },
       ]}>
       <Text style={styles.eyebrow}>DRIVER LOG</Text>
-      <Text style={styles.title}>차량운행시스템</Text>
+      <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.title}>
+        차량운행시스템
+      </Text>
 
       <View style={styles.summaryCard}>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>상태</Text>
-          <Text style={[styles.summaryValue, isRunning ? styles.runningText : styles.waitingText]}>
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}
+            numberOfLines={1}
+            style={[styles.summaryValue, isRunning ? styles.runningText : styles.waitingText]}>
             {isRunning ? '운행 중' : '대기 중'}
           </Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>선택</Text>
-          <Text style={styles.summaryValue}>{selectedVehicleText}</Text>
+          <Text adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={styles.summaryValue}>
+            {selectedVehicleText}
+          </Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>출발지</Text>
-          <Text style={styles.summaryValue}>{startPlace.trim() || START_PLACE}</Text>
+          <Text adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={styles.summaryValue}>
+            {startPlace.trim() || START_PLACE}
+          </Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>목적지</Text>
-          <Text style={styles.summaryValue}>{endPlace.trim() || END_PLACE}</Text>
+          <Text adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={styles.summaryValue}>
+            {endPlace.trim() || END_PLACE}
+          </Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>출발</Text>
-          <Text style={styles.summaryValue}>
+          <Text adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={styles.summaryValue}>
             {formatDateTime(startTime)}
           </Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>경과</Text>
-          <Text style={[styles.summaryValue, isStaleRunningTrip && styles.staleText]}>{elapsedText}</Text>
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.78}
+            numberOfLines={1}
+            style={[styles.summaryValue, isStaleRunningTrip && styles.staleText]}>
+            {elapsedText}
+          </Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>속도</Text>
-          <Text style={styles.summaryValue}>{speedKmh.toFixed(1)} km/h</Text>
+          <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.summaryValue}>
+            {speedKmh.toFixed(1)} km/h
+          </Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>GPS</Text>
-          <Text style={[styles.summaryValue, isRunning && location ? styles.runningText : styles.waitingText]}>
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}
+            numberOfLines={1}
+            style={[styles.summaryValue, isRunning && location ? styles.runningText : styles.waitingText]}>
             {gpsStatusText}
           </Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>위치 권한</Text>
           <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}
+            numberOfLines={1}
             style={[
               styles.summaryValue,
               gpsPermissionStatus === 'granted' ? styles.runningText : styles.waitingText,
@@ -699,11 +726,17 @@ export default function DriverScreen() {
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>최근 저장</Text>
-          <Text style={styles.summaryValue}>{formatDateTime(lastGpsSavedAt)}</Text>
+          <Text adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={styles.summaryValue}>
+            {formatDateTime(lastGpsSavedAt)}
+          </Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>저장 실패</Text>
-          <Text style={[styles.summaryValue, gpsSaveFailureCount > 0 && styles.staleText]}>
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}
+            numberOfLines={1}
+            style={[styles.summaryValue, gpsSaveFailureCount > 0 && styles.staleText]}>
             {gpsSaveFailureCount}회
           </Text>
         </View>
