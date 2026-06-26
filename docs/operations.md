@@ -1,85 +1,169 @@
 # 운영 절차
 
+## EAS Android 빌드
+
+### 사전 조건
+
+```bash
+npm install -g eas-cli
+eas login          # Expo 계정으로 로그인
+```
+
+### app.json 확인 사항
+
+| 항목 | 현재 값 | 비고 |
+|---|---|---|
+| `android.package` | `com.vehicle.tracking` | EAS 필수 |
+| `scheme` | `vehicletracking` | 딥링크용 |
+| `slug` | `my-sdk54-app` | EAS 프로젝트 식별자 — 변경 시 EAS 대시보드에서 재연결 필요 |
+| `version` | `1.0.0` | production 빌드는 autoIncrement로 자동 증가 |
+
+> `owner` 필드가 없으면 첫 `eas build` 실행 시 계정에 자동 연결된다. 팀 공유 시 `"owner": "<expo-username>"` 추가 필요.
+
+### 빌드 명령
+
+```bash
+# APK (내부 테스트, Expo Go 없이 설치 가능)
+eas build --profile preview --platform android
+
+# AAB (스토어 배포)
+eas build --profile production --platform android
+```
+
+### 네이티브 의존성 EAS 호환성
+
+| 패키지 | 버전 | 새 아키텍처 | 비고 |
+|---|---|---|---|
+| `expo-location` | ~19.0.8 | ✅ | 플러그인 설정 완료 |
+| `expo-secure-store` | ^56.0.4 | ✅ | 플러그인 불필요(기본 옵션) |
+| `react-native-webview` | ^14.0.1 | ✅ | 자동 링크 |
+| `@react-native-async-storage/async-storage` | ^3.1.1 | ✅ | 자동 링크 |
+| `react-native-reanimated` | ~4.1.1 | ✅ | React Compiler 호환 |
+
+### 권한
+
+`app.json`에 선언된 권한:
+- `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION` — GPS 운행 기록
+- `RECORD_AUDIO` — 음성 입력(웹 브라우저 중심, 추후 네이티브 확장 대비)
+- iOS: `NSLocationWhenInUseUsageDescription`, `NSMicrophoneUsageDescription`
+
+---
+
 ## 개발 서버 실행
 
-PC 웹 확인:
-
-```powershell
-npm.cmd run start:offline
+```bash
+npm ci                   # 의존성 설치
+npm run start:offline    # 오프라인(캐시) 모드
+npm run start:lan        # LAN — Android/iPhone Expo Go 실기기 연결
 ```
 
-Android Expo Go 실기기 확인:
+기본 URL: `http://localhost:8082/`
 
-```powershell
-npm.cmd run start:lan
+---
+
+## Supabase 설정
+
+### 환경변수 (`.env.local`)
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=https://<project-id>.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 ```
 
-기본 웹 주소:
+설정 출처는 앱 `점검` 탭에서 확인 (`환경변수` / `fallback 개발값` / `환경변수 오류 fallback`).
 
-```text
-http://localhost:8082/
+### RLS 정책 현황
+
+| 테이블 | RLS | 정책 |
+|---|---|---|
+| `vehicles` | 활성화 | anon SELECT · INSERT · UPDATE · DELETE |
+| `trips` | 활성화 | anon SELECT · INSERT · UPDATE · DELETE |
+| `gps_points` | 활성화 | anon SELECT · INSERT |
+
+기준 SQL: `docs/schema.sql` (RLS 정책 포함).
+
+새 Supabase 프로젝트에 적용:
+```sql
+-- Supabase 대시보드 SQL Editor 또는 CLI로 docs/schema.sql 전체 실행
 ```
 
-휴대폰 확인 시 PC와 Android 휴대폰은 같은 Wi-Fi에 연결되어 있어야 한다.
+### Realtime 구독 (관제 지도)
 
-점검 탭 라우트는 `/check`이다. `/status`는 Expo Metro 내부 상태 엔드포인트와 충돌하므로 사용하지 않는다.
+`map.tsx`는 `gps_points INSERT`와 `trips *` 이벤트를 구독한다. Supabase 프로젝트에서 해당 테이블의 Realtime이 활성화되어 있어야 한다.
 
-## Supabase 설정 확인
+Supabase 대시보드 → Database → Replication → `supabase_realtime` publication에 `gps_points`, `trips` 포함 여부 확인.
 
-`.env.local`에 아래 값을 설정하면 앱이 환경변수 기준으로 Supabase에 연결된다.
-값은 Supabase Project Settings > API에서 확인한다.
+---
 
-```text
-EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+## PIN / 역할 설정
+
+### 초기 설정 흐름
+
+```
+앱 최초 실행
+  └─ 역할 미설정 → /role-select
+       ├─ 운전자 선택 → AsyncStorage @app_role = 'driver' → /(tabs)
+       └─ 수송부 간부 선택 → /commander-pin (setup 모드)
+            └─ PIN 4자리 설정 → SecureStore 'commander_pin'
+                → AsyncStorage @app_role = 'commander' → /(tabs)
 ```
 
-점검 화면(`/check`)에서 Supabase 호스트와 설정 출처를 확인한다. 운영 또는 다른 PC에서는 설정 출처가 `환경변수`로 표시되어야 한다. `.env.local`을 수정한 뒤에는 Expo 서버를 다시 시작한다. `fallback 개발값`으로 표시되면 `lib/supabase.js`의 개발 DB fallback을 사용 중인 상태다. `환경변수 오류 fallback`으로 표시되면 `EXPO_PUBLIC_SUPABASE_URL`이 올바른 `http` 또는 `https` URL인지 확인한다.
+### 재진입 흐름 (수송부 간부)
 
-## 검증
-
-```powershell
-npm.cmd run source-check
-npx.cmd eslint . --no-cache
-npx.cmd tsc --noEmit
-npm.cmd run health
+```
+앱 재시작
+  └─ role = 'commander' + PIN 저장됨 → /commander-pin (verify 모드)
+       ├─ PIN 일치 → /(tabs)
+       └─ PIN 불일치 → 오류 메시지 + 재시도
 ```
 
-또는:
+### PIN 변경
 
-```powershell
-npm.cmd run verify
+`점검` 탭 → `PIN 변경` 버튼 → `/commander-pin?change=1`
+
+### 역할 초기화
+
+`점검` 탭 → `역할 변경` 버튼 → AsyncStorage `@app_role` 삭제 → /role-select
+
+> PIN(`commander_pin` in SecureStore)은 역할 초기화 시 자동 삭제되지 않는다. 필요 시 `점검` 탭에서 `PIN 변경` 후 역할 변경.
+
+---
+
+## GPS 큐 문제 대응
+
+### 증상
+
+운행 화면에 "미전송 N건" 표시 또는 점검 탭 `GPS 대기 큐` 항목이 0이 아닌 경우.
+
+### 원인과 조치
+
+| 원인 | 확인 방법 | 조치 |
+|---|---|---|
+| Supabase RLS 미설정 | 점검 탭 Supabase 연결 상태 | `docs/schema.sql` 재적용 |
+| 네트워크 단절 | 앱 포그라운드 복귀 시 자동 재전송 | 별도 조치 불필요 |
+| 큐 포화(200개 초과) | 점검 탭 GPS 대기 큐 개수 | 네트워크 복구 시 최근 200개만 재전송 |
+
+---
+
+## 관제 지도 (GPS 상태 기준)
+
+`위치` 탭(수송부 간부 전용) 차량 목록 뱃지 기준:
+
+| 뱃지 | 의미 | 기준 |
+|---|---|---|
+| (없음) | GPS 정상 | 최근 5분 이내 수신 |
+| `오래됨` (노란색) | GPS 지연 | 5분 ~ 30분 전 수신 |
+| `오래됨` (빨간색) | GPS 장기 지연 | 30분 이상 전 수신 |
+| `미수신` | GPS 포인트 없음 | 운행 중이나 GPS 미전송 |
+| `장시간` | 장시간 운행 | 운행 시작 8시간 이상 경과 |
+
+---
+
+## 검증 명령
+
+```bash
+npm run verify    # source-check + ESLint + tsc --noEmit
+npm run health    # Expo 웹 서버 주요 라우트 응답 확인
 ```
 
-`npm.cmd run health`는 Expo 서버가 켜진 상태에서 운행, 기록, 차량, 점검 화면 응답을 확인한다.
-특정 운행 상세 화면까지 확인하려면 `EXPO_HEALTH_TRIP_ID`에 운행 ID를 지정한 뒤 실행한다.
-첫 번들링이 느린 PC에서는 `EXPO_HEALTH_TIMEOUT_MS`와 `EXPO_HEALTH_RETRY_DELAY_MS` 환경변수로 health 타임아웃과 재시도 대기 시간을 조정할 수 있다. 응답 크기 기준은 `EXPO_HEALTH_MIN_BYTES`로 조정한다.
-`npm.cmd run source-check`는 한글 깨짐, 시스템명 누락, `/status` 라우트 재생성을 확인한다.
-
-## 실기기 확인 순서
-
-1. `npm.cmd run start:lan` 실행 후 Android Expo Go에서 QR 스캔
-2. 위치 권한 허용
-3. 차량 선택
-4. 출발지/목적지 입력 또는 프리셋 선택
-5. 출발
-6. 위치 수집 대기
-7. 종료
-8. 기록, 상세, 점검 화면에서 저장 결과 확인
-
-## 음성 입력
-
-- 웹 브라우저에서는 출발지/목적지 옆 `음성` 버튼으로 브라우저 음성 인식을 사용할 수 있다.
-- 마이크 권한이 차단되면 브라우저 주소창의 사이트 권한에서 마이크를 허용한 뒤 다시 시도한다.
-- Android Expo Go에서는 기본 앱만으로 음성 인식 모듈을 안정적으로 사용할 수 없으므로, 현재는 안내 메시지를 표시한다.
-- 실기기에서 네이티브 음성 인식이 필요하면 개발 빌드 또는 별도 음성 인식 모듈 도입이 필요하다.
-- 앱 설정에는 위치 권한 문구와 마이크 권한 문구를 함께 둔다. 개발 빌드로 음성 모듈을 붙일 때 같은 설명을 재사용할 수 있다.
-
-## 문제 대응
-
-- 위치 권한이 거부되면 Android 설정에서 Expo Go의 위치 권한을 다시 허용한다.
-- 운행 기록은 있는데 점검 화면의 GPS가 0이면 위치 권한, `gps_points` 테이블, Supabase RLS/insert 정책을 확인한다.
-- 네트워크 연결 실패 또는 요청 시간 초과가 반복되면 인터넷 연결, Supabase URL, Supabase 프로젝트 상태를 확인한다.
-- 진행 중 운행이 남으면 운행 탭에서 복구 후 종료하거나 상세 화면에서 무효 처리한다.
-- 차량번호를 잘못 등록하면 차량 탭에서 수정한다.
-- 운행 기록이 없는 차량만 삭제할 수 있다.
+`EXPO_HEALTH_TRIP_ID=<uuid>` 환경변수를 설정하면 `/trips/[id]` 상세 응답도 함께 확인한다.

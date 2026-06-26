@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getStoredPin } from '../../lib/commander-pin';
+import { getGpsQueueSize } from '../../lib/gps-queue';
 import { AppRole, clearStoredRole, getStoredRole } from '../../lib/role';
 import { supabase, supabaseConfig } from '../../lib/supabase';
 import { formatDateTime, formatTripDuration, isStaleActiveTrip } from '../../lib/format';
@@ -95,6 +97,8 @@ export default function CheckScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [gpsQueueSize, setGpsQueueSize] = useState(0);
+  const [pinIsSet, setPinIsSet] = useState<boolean | null>(null);
 
   const loadStatus = useCallback(async (refreshing = false) => {
     setStatus('checking');
@@ -232,7 +236,15 @@ export default function CheckScreen() {
   useFocusEffect(
     useCallback(() => {
       loadStatus();
-      getStoredRole().then(setRole);
+      getStoredRole().then((r) => {
+        setRole(r);
+        if (r === 'commander') {
+          getStoredPin().then((pin) => setPinIsSet(pin !== null));
+        } else {
+          setPinIsSet(null);
+        }
+      });
+      getGpsQueueSize().then(setGpsQueueSize);
     }, [loadStatus])
   );
 
@@ -433,6 +445,20 @@ export default function CheckScreen() {
           <Text style={styles.infoLabel}>사용자 역할</Text>
           <Text style={styles.infoValue}>
             {role === 'commander' ? '수송부 간부' : role === 'driver' ? '운전자' : '-'}
+          </Text>
+        </View>
+        {role === 'commander' && pinIsSet !== null && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>PIN 잠금</Text>
+            <Text style={[styles.infoValue, !pinIsSet && styles.warningInfoValue]}>
+              {pinIsSet ? '설정됨' : '미설정'}
+            </Text>
+          </View>
+        )}
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>GPS 대기 큐</Text>
+          <Text style={[styles.infoValue, gpsQueueSize > 0 && styles.warningInfoValue]}>
+            {gpsQueueSize > 0 ? `${gpsQueueSize}건 미전송` : '없음'}
           </Text>
         </View>
         {role === 'commander' && (

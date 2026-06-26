@@ -1,6 +1,13 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { VehicleMap } from '../../components/vehicle-map';
@@ -9,11 +16,46 @@ import { getStoredRole } from '../../lib/role';
 import { supabase } from '../../lib/supabase';
 
 const FALLBACK_POLL_MS = 60_000;
+const GPS_STALE_MIN = 5;
+const GPS_VERY_STALE_MIN = 30;
+const TRIP_STALE_HOURS = 8;
+
+type VehicleSummary = {
+  tripId: string;
+  vehicleNumber: string;
+  startPlace: string | null;
+  endPlace: string | null;
+  startTime: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  speedKmh: number | null;
+  recordedAt: string | null;
+};
+
+type GpsStatus = 'fresh' | 'stale' | 'very_stale' | 'no_gps';
+
+function getGpsStatus(recordedAt: string | null): GpsStatus {
+  if (!recordedAt) return 'no_gps';
+  const ageMin = (Date.now() - new Date(recordedAt).getTime()) / 60000;
+  if (ageMin < GPS_STALE_MIN) return 'fresh';
+  if (ageMin < GPS_VERY_STALE_MIN) return 'stale';
+  return 'very_stale';
+}
+
+function isTripLong(startTime: string | null): boolean {
+  if (!startTime) return false;
+  return Date.now() - new Date(startTime).getTime() > TRIP_STALE_HOURS * 3600 * 1000;
+}
+
+function fmtTime(iso: string | null): string {
+  if (!iso) return '-';
+  return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+}
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const [html, setHtml] = useState('');
-  const [vehicleCount, setVehicleCount] = useState(0);
+  const [summaries, setSummaries] = useState<VehicleSummary[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCommander, setIsCommander] = useState<boolean | null>(null);
@@ -31,14 +73,14 @@ export default function MapScreen() {
     try {
       const { data: trips, error: tripError } = await supabase
         .from('trips')
-        .select('id, vehicle_id, start_place, end_place, vehicles(vehicle_number)')
+        .select('id, vehicle_id, start_place, end_place, start_time, vehicles(vehicle_number)')
         .eq('status', 'in_progress');
 
       if (tripError) throw tripError;
 
       if (!trips || trips.length === 0) {
         setHtml(generateVehicleMapHtml([]));
-        setVehicleCount(0);
+        setSummaries([]);
         setLastUpdated(new Date());
         setErrorMessage(null);
         setIsLoading(false);
@@ -62,29 +104,46 @@ export default function MapScreen() {
         }
       }
 
+      const newSummaries: VehicleSummary[] = [];
       const positions: VehiclePosition[] = [];
+
       for (const trip of trips) {
         const gps = latestByTrip.get(trip.id);
-        if (!gps || gps.latitude == null || gps.longitude == null) continue;
-
-        const veh = trip.vehicles as { vehicle_number?: string } | { vehicle_number?: string }[] | null;
+        const veh = trip.vehicles as
+          | { vehicle_number?: string }
+          | { vehicle_number?: string }[]
+          | null;
         const vehicleNumber = Array.isArray(veh)
           ? (veh[0]?.vehicle_number ?? null)
           : (veh?.vehicle_number ?? null);
 
-        positions.push({
+        newSummaries.push({
+          tripId: trip.id,
           vehicleNumber: vehicleNumber ?? '미상',
-          latitude: gps.latitude,
-          longitude: gps.longitude,
-          speedKmh: gps.speed_kmh,
-          recordedAt: gps.recorded_at,
           startPlace: trip.start_place,
           endPlace: trip.end_place,
+          startTime: trip.start_time,
+          latitude: gps?.latitude ?? null,
+          longitude: gps?.longitude ?? null,
+          speedKmh: gps?.speed_kmh ?? null,
+          recordedAt: gps?.recorded_at ?? null,
         });
+
+        if (gps && gps.latitude != null && gps.longitude != null) {
+          positions.push({
+            vehicleNumber: vehicleNumber ?? '미상',
+            latitude: gps.latitude,
+            longitude: gps.longitude,
+            speedKmh: gps.speed_kmh,
+            recordedAt: gps.recorded_at,
+            startPlace: trip.start_place,
+            endPlace: trip.end_place,
+          });
+        }
       }
 
       setHtml(generateVehicleMapHtml(positions));
-      setVehicleCount(positions.length);
+      setSummaries(newSummaries);
       setLastUpdated(new Date());
       setErrorMessage(null);
     } catch (error) {
@@ -102,8 +161,16 @@ export default function MapScreen() {
 
     const channel = supabase
       .channel('map-vehicle-positions')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'gps_points' }, fetchPositions)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, fetchPositions)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'gps_points' },
+        fetchPositions
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'trips' },
+        fetchPositions
+      )
       .subscribe();
 
     const fallbackTimer = setInterval(fetchPositions, FALLBACK_POLL_MS);
@@ -141,13 +208,20 @@ export default function MapScreen() {
     );
   }
 
+  const gpsCount = summaries.filter((s) => s.latitude != null).length;
+  const alertCount = summaries.filter((s) => {
+    const gs = getGpsStatus(s.recordedAt);
+    return gs === 'stale' || gs === 'very_stale' || gs === 'no_gps' || isTripLong(s.startTime);
+  }).length;
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={styles.title}>차량 위치</Text>
           <Text style={styles.subtitle}>
-            운행 중 {vehicleCount}대
+            운행 {summaries.length}대 · GPS {gpsCount}대
+            {alertCount > 0 ? ` · 주의 ${alertCount}대` : ''}
             {lastUpdated
               ? ` · ${lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
               : ''}
@@ -170,7 +244,69 @@ export default function MapScreen() {
           <Text style={styles.loadingText}>차량 위치를 불러오는 중...</Text>
         </View>
       ) : (
-        <VehicleMap html={html} style={styles.map} />
+        <>
+          <VehicleMap html={html} style={styles.map} />
+          {summaries.length > 0 && (
+            <View style={styles.listPanel}>
+              <ScrollView
+                style={styles.listScroll}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}>
+                {summaries.map((s) => {
+                  const gpsStatus = getGpsStatus(s.recordedAt);
+                  const isLong = isTripLong(s.startTime);
+                  const route =
+                    s.startPlace && s.endPlace
+                      ? `${s.startPlace} → ${s.endPlace}`
+                      : (s.startPlace ?? '-');
+                  return (
+                    <View key={s.tripId} style={styles.vehicleRow}>
+                      <View style={styles.vehicleRowLeft}>
+                        <Text style={styles.vehicleNum} numberOfLines={1} adjustsFontSizeToFit>
+                          {s.vehicleNumber}
+                        </Text>
+                        <Text style={styles.vehicleRoute} numberOfLines={1}>
+                          {route}
+                        </Text>
+                        <Text style={styles.vehicleGpsTime}>
+                          {s.recordedAt ? `GPS ${fmtTime(s.recordedAt)}` : 'GPS 미수신'}
+                        </Text>
+                      </View>
+                      <View style={styles.badges}>
+                        {gpsStatus === 'no_gps' && (
+                          <View style={[styles.badge, styles.badgeGray]}>
+                            <Text style={styles.badgeGrayText}>미수신</Text>
+                          </View>
+                        )}
+                        {(gpsStatus === 'stale' || gpsStatus === 'very_stale') && (
+                          <View
+                            style={[
+                              styles.badge,
+                              gpsStatus === 'very_stale' ? styles.badgeRed : styles.badgeYellow,
+                            ]}>
+                            <Text
+                              style={
+                                gpsStatus === 'very_stale'
+                                  ? styles.badgeRedText
+                                  : styles.badgeYellowText
+                              }>
+                              오래됨
+                            </Text>
+                          </View>
+                        )}
+                        {isLong && (
+                          <View style={[styles.badge, styles.badgeOrange]}>
+                            <Text style={styles.badgeOrangeText}>장시간</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+        </>
       )}
     </View>
   );
@@ -217,9 +353,15 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
     borderBottomWidth: 1,
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 12,
+  },
+  headerLeft: {
+    flex: 1,
+    minWidth: 0,
   },
   title: {
     color: '#0F172A',
@@ -228,7 +370,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: '#64748B',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     marginTop: 2,
   },
@@ -267,5 +409,90 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  listPanel: {
+    backgroundColor: '#FFFFFF',
+    borderTopColor: '#E2E8F0',
+    borderTopWidth: 1,
+    maxHeight: 220,
+  },
+  listScroll: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  vehicleRow: {
+    alignItems: 'center',
+    borderBottomColor: '#F1F5F9',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
+    minHeight: 56,
+    paddingVertical: 8,
+  },
+  vehicleRowLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
+  vehicleNum: {
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  vehicleRoute: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '400',
+    marginTop: 1,
+  },
+  vehicleGpsTime: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '400',
+    marginTop: 1,
+  },
+  badges: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  badge: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeGray: {
+    backgroundColor: '#F1F5F9',
+  },
+  badgeGrayText: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  badgeYellow: {
+    backgroundColor: '#FFFBEB',
+  },
+  badgeYellowText: {
+    color: '#D97706',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  badgeRed: {
+    backgroundColor: '#FEF2F2',
+  },
+  badgeRedText: {
+    color: '#DC2626',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  badgeOrange: {
+    backgroundColor: '#FFF7ED',
+  },
+  badgeOrangeText: {
+    color: '#EA580C',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

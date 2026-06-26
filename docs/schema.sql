@@ -46,6 +46,56 @@ create table if not exists public.gps_points (
 create index if not exists gps_points_trip_id_recorded_at_idx
   on public.gps_points (trip_id, recorded_at desc);
 
+-- RLS 정책 (anon 키로 CRUD 허용)
+-- gps_points: RLS 활성화 + SELECT/INSERT
+alter table public.gps_points enable row level security;
+
+drop policy if exists "anon_select_gps_points" on public.gps_points;
+create policy "anon_select_gps_points" on public.gps_points
+  for select to anon using (true);
+
+drop policy if exists "anon_insert_gps_points" on public.gps_points;
+create policy "anon_insert_gps_points" on public.gps_points
+  for insert to anon with check (true);
+
+-- vehicles: RLS 활성화 + 전체 CRUD
+alter table public.vehicles enable row level security;
+
+drop policy if exists "anon_select_vehicles" on public.vehicles;
+create policy "anon_select_vehicles" on public.vehicles
+  for select to anon using (true);
+
+drop policy if exists "anon_insert_vehicles" on public.vehicles;
+create policy "anon_insert_vehicles" on public.vehicles
+  for insert to anon with check (true);
+
+drop policy if exists "anon_update_vehicles" on public.vehicles;
+create policy "anon_update_vehicles" on public.vehicles
+  for update to anon using (true) with check (true);
+
+drop policy if exists "anon_delete_vehicles" on public.vehicles;
+create policy "anon_delete_vehicles" on public.vehicles
+  for delete to anon using (true);
+
+-- trips: RLS 활성화 + 전체 CRUD
+alter table public.trips enable row level security;
+
+drop policy if exists "anon_select_trips" on public.trips;
+create policy "anon_select_trips" on public.trips
+  for select to anon using (true);
+
+drop policy if exists "anon_insert_trips" on public.trips;
+create policy "anon_insert_trips" on public.trips
+  for insert to anon with check (true);
+
+drop policy if exists "anon_update_trips" on public.trips;
+create policy "anon_update_trips" on public.trips
+  for update to anon using (true) with check (true);
+
+drop policy if exists "anon_delete_trips" on public.trips;
+create policy "anon_delete_trips" on public.trips
+  for delete to anon using (true);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
