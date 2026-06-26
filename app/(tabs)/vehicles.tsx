@@ -40,6 +40,11 @@ type VehicleTripCounts = {
 
 type VehicleStatusFilter = 'all' | 'active' | 'waiting' | 'stale';
 
+type MaintenanceWarning = {
+  overdue: number;
+  warning: number;
+};
+
 function normalizeVehicleNumber(value: string) {
   return value.trim().replace(/\s+/g, ' ').toUpperCase();
 }
@@ -58,6 +63,7 @@ export default function VehiclesScreen() {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatusFilter>('all');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [maintenanceWarnings, setMaintenanceWarnings] = useState<Map<string, MaintenanceWarning>>(new Map());
 
   const activeTripsByVehicleId = useMemo(() => {
     const map = new Map<string, Trip>();
@@ -170,6 +176,55 @@ export default function VehiclesScreen() {
         setErrorMessage((current) => current ?? formatDbError(tripsResult.error));
       } else {
         setTrips((tripsResult.data ?? []) as Trip[]);
+      }
+
+      if (!vehiclesResult.error && nextVehicles.length > 0) {
+        const today = new Date().toISOString().split('T')[0];
+        const vehicleIds = nextVehicles.map((v) => v.id);
+        const [overdueResult, warningResult] = await Promise.all([
+          withTimeout(
+            supabase
+              .from('vehicle_maintenance')
+              .select('vehicle_id')
+              .in('vehicle_id', vehicleIds)
+              .not('next_due_date', 'is', null)
+              .lt('next_due_date', today),
+            '교체 필요 조회'
+          ),
+          withTimeout(
+            supabase
+              .from('vehicle_maintenance')
+              .select('vehicle_id, next_due_date')
+              .in('vehicle_id', vehicleIds)
+              .not('next_due_date', 'is', null)
+              .gte('next_due_date', today),
+            '교체 주의 조회'
+          ),
+        ]);
+
+        const warnMap = new Map<string, MaintenanceWarning>();
+        nextVehicles.forEach((v) => warnMap.set(v.id, { overdue: 0, warning: 0 }));
+
+        if (!overdueResult.error) {
+          (overdueResult.data ?? []).forEach((row: { vehicle_id: string }) => {
+            const w = warnMap.get(row.vehicle_id);
+            if (w) w.overdue += 1;
+          });
+        }
+
+        if (!warningResult.error) {
+          const thirtyDaysLater = new Date();
+          thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 60);
+          const cutoff = thirtyDaysLater.toISOString().split('T')[0];
+          (warningResult.data ?? []).forEach((row: { vehicle_id: string; next_due_date: string }) => {
+            if (row.next_due_date <= cutoff) {
+              const w = warnMap.get(row.vehicle_id);
+              if (w) w.warning += 1;
+            }
+          });
+        }
+
+        setMaintenanceWarnings(warnMap);
       }
 
       if (!vehiclesResult.error) {
@@ -617,18 +672,35 @@ export default function VehiclesScreen() {
 
               {editingVehicleId !== vehicle.id && (
                 <View style={styles.actions}>
-                  <Link
-                    href={{
-                      pathname: '/vehicles/[id]',
-                      params: { id: vehicle.id },
-                    }}
-                    asChild>
-                    <TouchableOpacity
-                      accessibilityLabel={`${vehicle.vehicle_number} 정비 현황`}
-                      style={[styles.actionBtn, styles.maintenanceBtn]}>
-                      <Text style={[styles.actionText, styles.maintenanceText]}>정비</Text>
-                    </TouchableOpacity>
-                  </Link>
+                  {(() => {
+                    const warn = maintenanceWarnings.get(vehicle.id);
+                    const hasOverdue = (warn?.overdue ?? 0) > 0;
+                    const hasWarning = !hasOverdue && (warn?.warning ?? 0) > 0;
+                    return (
+                      <Link
+                        href={{ pathname: '/vehicles/[id]', params: { id: vehicle.id } }}
+                        asChild>
+                        <TouchableOpacity
+                          accessibilityLabel={`${vehicle.vehicle_number} 정비 현황`}
+                          style={[
+                            styles.actionBtn,
+                            styles.maintenanceBtn,
+                            hasOverdue && styles.maintenanceBtnOverdue,
+                            hasWarning && styles.maintenanceBtnWarning,
+                          ]}>
+                          <Text
+                            style={[
+                              styles.actionText,
+                              styles.maintenanceText,
+                              hasOverdue && styles.maintenanceTextOverdue,
+                              hasWarning && styles.maintenanceTextWarning,
+                            ]}>
+                            정비{hasOverdue ? ` ·${warn!.overdue}` : hasWarning ? ` ·${warn!.warning}` : ''}
+                          </Text>
+                        </TouchableOpacity>
+                      </Link>
+                    );
+                  })()}
                   <TouchableOpacity
                     accessibilityLabel={`${vehicle.vehicle_number} 차량번호 수정`}
                     style={[styles.actionBtn, styles.secondaryBtn]}
@@ -1000,8 +1072,20 @@ const styles = StyleSheet.create({
   maintenanceBtn: {
     backgroundColor: '#F0FDF4',
   },
+  maintenanceBtnOverdue: {
+    backgroundColor: '#FEF2F2',
+  },
+  maintenanceBtnWarning: {
+    backgroundColor: '#FFFBEB',
+  },
   maintenanceText: {
     color: '#16A34A',
+  },
+  maintenanceTextOverdue: {
+    color: '#DC2626',
+  },
+  maintenanceTextWarning: {
+    color: '#D97706',
   },
   actionText: {
     color: '#FFFFFF',

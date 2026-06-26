@@ -63,6 +63,20 @@ npm.cmd run health
 - 역할 변경 시 `clearStoredRole()` 후 `/role-select`로 이동. PIN은 별도 변경 필요(`/commander-pin?change=1`).
 - 관련 파일: `lib/role.ts`, `lib/commander-pin.ts`, `app/role-select.tsx`, `app/commander-pin.tsx`, `app/_layout.tsx`
 
+## 수리부속 교체 주기 관리
+
+- `차량` 탭 각 차량 카드의 **정비** 버튼 → `/vehicles/[id]` 화면으로 이동.
+- 정비 화면은 현대·기아 권장 교체 주기 기준 12개 항목을 표시한다.
+- **상태 뱃지**: 정상(초록) / 주의(노랑, 교체 임박) / 교체 필요(빨강, 기간/km 초과) / 미기록(회색).
+- **날짜·km 이중 판정**: `next_due_date` 기준 날짜와 `current_mileage_km` 대비 `next_due_mileage_km` km 중 더 나쁜 쪽을 상태로 표시.
+- **오도미터 입력**: 화면 상단에서 현재 주행거리를 수동 입력/저장. `vehicles.current_mileage_km` 컬럼에 저장.
+- **교체 완료**: 오늘 날짜·입력 km 기준으로 다음 교체 일자·km 자동 계산. `vehicle_maintenance` upsert + `vehicle_maintenance_history` insert.
+- **교체 이력**: 항목별 최근 5건 교체 날짜·주행거리를 카드 내 표시.
+- **차량 카드 뱃지**: 교체 필요 항목 있으면 정비 버튼 빨간색+건수. 주의 항목만 있으면 노란색.
+- **탭바 뱃지**: 전체 차량 교체 필요 항목 수를 `차량` 탭에 숫자 뱃지로 표시.
+- 관련 테이블: `maintenance_items`, `vehicle_maintenance`, `vehicle_maintenance_history`.
+- OBD 스캐너(Vgate iCar Pro) 연동으로 오도미터 자동 입력 예정 → `docs/obd-integration.md` 참고.
+
 ## 오프라인 GPS 큐
 
 - GPS 저장 실패(재시도 포함)시 `lib/gps-queue.ts`의 `enqueueGpsPoint()`로 AsyncStorage 큐(`@gps_queue`)에 저장. 최대 200개.

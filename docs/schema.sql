@@ -210,6 +210,33 @@ create trigger vehicle_maintenance_set_updated_at
 before update on public.vehicle_maintenance
 for each row execute function public.set_updated_at();
 
+-- 차량 현재 주행거리 컬럼
+alter table public.vehicles add column if not exists current_mileage_km numeric;
+
+-- 교체 이력 테이블
+create table if not exists public.vehicle_maintenance_history (
+  id uuid primary key default gen_random_uuid(),
+  vehicle_id uuid not null references public.vehicles(id) on delete cascade,
+  item_id uuid not null references public.maintenance_items(id) on delete cascade,
+  replaced_at date not null,
+  mileage_km numeric,
+  memo text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists vmh_vehicle_item_idx
+  on public.vehicle_maintenance_history (vehicle_id, item_id, replaced_at desc);
+
+alter table public.vehicle_maintenance_history enable row level security;
+
+drop policy if exists "anon_select_maintenance_history" on public.vehicle_maintenance_history;
+create policy "anon_select_maintenance_history" on public.vehicle_maintenance_history
+  for select to anon using (true);
+
+drop policy if exists "anon_insert_maintenance_history" on public.vehicle_maintenance_history;
+create policy "anon_insert_maintenance_history" on public.vehicle_maintenance_history
+  for insert to anon with check (true);
+
 -- 기본 정비 항목 시드 (현대·기아 권장 교체 주기)
 insert into public.maintenance_items (name, standard_km, standard_month, warning_km, warning_month)
 values

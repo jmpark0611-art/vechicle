@@ -7,15 +7,30 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AppRole, getStoredRole } from '../../lib/role';
+import { supabase } from '../../lib/supabase';
+import { withTimeout } from '../../lib/request';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const palette = Colors[colorScheme ?? 'light'];
   const [role, setRole] = useState<AppRole | null>(null);
+  const [maintenanceOverdueCount, setMaintenanceOverdueCount] = useState(0);
 
   useEffect(() => {
     getStoredRole().then(setRole);
+
+    const today = new Date().toISOString().split('T')[0];
+    withTimeout(
+      supabase
+        .from('vehicle_maintenance')
+        .select('id', { count: 'exact', head: true })
+        .not('next_due_date', 'is', null)
+        .lt('next_due_date', today),
+      '교체 필요 집계'
+    )
+      .then((r) => { if (!r.error) setMaintenanceOverdueCount(r.count ?? 0); })
+      .catch(() => {});
   }, []);
 
   return (
@@ -66,6 +81,7 @@ export default function TabLayout() {
         options={{
           title: '차량',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="car.fill" color={color} />,
+          tabBarBadge: maintenanceOverdueCount > 0 ? maintenanceOverdueCount : undefined,
         }}
       />
       <Tabs.Screen
