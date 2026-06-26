@@ -96,7 +96,7 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
-    if (isCommander === null) return;
+    if (isCommander !== true) return;
 
     fetchPositions();
 

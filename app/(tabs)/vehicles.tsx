@@ -972,7 +972,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     flexBasis: 132,
     flexGrow: 1,
-    minHeight: 42,
+    minHeight: 44,
     justifyContent: 'center',
     paddingHorizontal: 14,
   },

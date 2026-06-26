@@ -1,5 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { router, Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
@@ -7,6 +8,8 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getStoredPin } from '../lib/commander-pin';
 import { getStoredRole } from '../lib/role';
+
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -17,14 +20,18 @@ export default function RootLayout() {
 
   useEffect(() => {
     (async () => {
-      const role = await getStoredRole();
-      if (!role) {
-        router.replace('/role-select');
-      } else if (role === 'commander') {
-        const pin = await getStoredPin();
-        if (pin) {
-          router.replace('/commander-pin');
+      try {
+        const role = await getStoredRole();
+        if (!role) {
+          router.replace('/role-select');
+        } else if (role === 'commander') {
+          const pin = await getStoredPin();
+          if (pin) {
+            router.replace('/commander-pin');
+          }
         }
+      } finally {
+        SplashScreen.hideAsync();
       }
     })();
   }, []);

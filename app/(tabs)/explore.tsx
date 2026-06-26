@@ -988,7 +988,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
     borderRadius: 10,
     flex: 1,
-    minHeight: 42,
+    minHeight: 44,
     justifyContent: 'center',
     paddingHorizontal: 14,
   },

@@ -69,6 +69,16 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - `app/(tabs)/index.tsx` → GPS 저장 실패 시 gps-queue에 큐잉, 앱 활성화/초기화 시 큐 플러시, GPS 카드에 미전송 큐 개수 표시
 - `app/(tabs)/check.tsx` → "사용자 역할" 표시 + "역할 변경" 버튼 추가 (clearStoredRole 후 role-select로 이동)
 
+### Session 5 (Stabilization + Verify)
+- `scripts/source-check.js` → check.tsx 필수 문구 "차량운행시스템 점검" → "시스템 점검" 갱신, trips/[id].tsx GPS 경로 필수 문구 4개 → "운행 상세"로 교체(경로 비공개 정책 반영)
+- `app/(tabs)/explore.tsx` → tripActionBtn minHeight 42 → 44
+- `app/(tabs)/vehicles.tsx` → actionBtn minHeight 42 → 44
+- `app/(tabs)/_layout.tsx` → duplicate React import 수정 (import React, { useEffect, useState })
+- `app/_layout.tsx` → SplashScreen.preventAutoHideAsync() 추가: 역할/PIN 확인 완료 전 스플래시 유지, flash 현상 제거
+- `app/(tabs)/map.tsx` → isCommander !== true 조건으로 비사령관 Supabase 쿼리 차단
+- `docs/handoff.md` → 역할 인증, PIN 잠금, 오프라인 큐, 지도, EAS 빌드 섹션 추가
+- `docs/changelog.md` → 현재 작업본/이전 작업본 구분, 신규 기능 목록 추가
+
 ## Architecture Decisions
 - **No route history anywhere**: gps_points table is write-only from driver's perspective; commanders only read latest point per active trip
 - **Map stack**: react-native-webview (native) + iframe (web) both rendering Leaflet HTML from `lib/map-html.ts`
