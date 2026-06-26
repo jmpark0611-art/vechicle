@@ -637,13 +637,16 @@ export default function DriverScreen() {
 
   return (
     <ScrollView
+      automaticallyAdjustKeyboardInsets
       contentContainerStyle={[
         styles.container,
         {
           paddingBottom: Math.max(insets.bottom + 96, 112),
           paddingTop: Math.max(insets.top + 24, 56),
         },
-      ]}>
+      ]}
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled">
       <Text style={styles.eyebrow}>DRIVER LOG</Text>
       <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.title}>
         차량운행시스템

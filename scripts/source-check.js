@@ -159,6 +159,21 @@ for (const item of [
   }
 }
 
+for (const file of [
+  path.join('app', '(tabs)', 'index.tsx'),
+  path.join('app', '(tabs)', 'explore.tsx'),
+  path.join('app', '(tabs)', 'vehicles.tsx'),
+]) {
+  const fullPath = path.join(root, file);
+  const content = fs.existsSync(fullPath) ? fs.readFileSync(fullPath, 'utf8') : '';
+
+  for (const text of ['automaticallyAdjustKeyboardInsets', 'keyboardDismissMode="on-drag"', 'keyboardShouldPersistTaps="handled"']) {
+    if (!content.includes(text)) {
+      failures.push(`${file.replaceAll(path.sep, '/')}: 입력 중 모바일 키보드 대응을 위해 ${text} 설정이 필요합니다.`);
+    }
+  }
+}
+
 const modalRoute = path.join(root, 'app', 'modal.tsx');
 if (fs.existsSync(modalRoute)) {
   failures.push('app/modal.tsx: 차량운행시스템에서 사용하지 않는 Expo 템플릿 모달 라우트는 제거해야 합니다.');
