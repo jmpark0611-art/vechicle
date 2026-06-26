@@ -35,6 +35,9 @@ const requiredText = [
   { file: path.join('app', '(tabs)', 'explore.tsx'), text: '운행 기록 CSV 내보내기' },
   { file: path.join('app', '(tabs)', 'explore.tsx'), text: '운행 기록 더 보기' },
   { file: path.join('app', '(tabs)', '_layout.tsx'), text: 'clock.fill' },
+  { file: path.join('app', '(tabs)', '_layout.tsx'), text: 'tabBarStyle' },
+  { file: path.join('app', '(tabs)', '_layout.tsx'), text: 'useSafeAreaInsets' },
+  { file: path.join('constants', 'theme.ts'), text: "tintColorLight = '#1565C0'" },
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '차량 검색' },
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '차량 등록' },
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '차량 삭제 전 운행 기록 확인' },
@@ -135,6 +138,42 @@ for (const file of [
 
   if (/paddingTop:\s*72/.test(content)) {
     failures.push(`${file.replaceAll(path.sep, '/')}: 고정 paddingTop 72 대신 안전영역 기반 여백을 사용해야 합니다.`);
+  }
+}
+
+for (const item of [
+  { file: path.join('app', '(tabs)', 'explore.tsx'), styles: ['chipBtn', 'filterBtn', 'tripActionBtn', 'loadMoreBtn'] },
+  { file: path.join('app', '(tabs)', 'vehicles.tsx'), styles: ['filterBtn', 'actionBtn'] },
+  { file: path.join('app', '(tabs)', 'check.tsx'), styles: ['detailBtn', 'reloadBtn'] },
+]) {
+  const fullPath = path.join(root, item.file);
+  const content = fs.existsSync(fullPath) ? fs.readFileSync(fullPath, 'utf8') : '';
+
+  for (const styleName of item.styles) {
+    const styleMatch = content.match(new RegExp(`${styleName}:\\s*{([\\s\\S]*?)\\n\\s*}`));
+    const minHeightMatch = styleMatch?.[1]?.match(/minHeight:\s*(\d+)/);
+    const minHeight = minHeightMatch ? Number(minHeightMatch[1]) : null;
+
+    if (minHeight === null || minHeight < 44) {
+      failures.push(
+        `${item.file.replaceAll(path.sep, '/')}: ${styleName}은 모바일 터치 편의성을 위해 minHeight 44 이상이어야 합니다.`
+      );
+    }
+  }
+}
+
+for (const file of [
+  path.join('app', '(tabs)', 'index.tsx'),
+  path.join('app', '(tabs)', 'explore.tsx'),
+  path.join('app', '(tabs)', 'vehicles.tsx'),
+]) {
+  const fullPath = path.join(root, file);
+  const content = fs.existsSync(fullPath) ? fs.readFileSync(fullPath, 'utf8') : '';
+
+  for (const text of ['automaticallyAdjustKeyboardInsets', 'keyboardDismissMode="on-drag"', 'keyboardShouldPersistTaps="handled"']) {
+    if (!content.includes(text)) {
+      failures.push(`${file.replaceAll(path.sep, '/')}: 입력 중 모바일 키보드 대응을 위해 ${text} 설정이 필요합니다.`);
+    }
   }
 }
 

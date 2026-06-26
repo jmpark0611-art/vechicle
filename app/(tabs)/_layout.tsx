@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { useEffect, useState } from 'react';
 import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -10,6 +11,8 @@ import { AppRole, getStoredRole } from '../../lib/role';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
+  const palette = Colors[colorScheme ?? 'light'];
   const [role, setRole] = useState<AppRole | null>(null);
 
   useEffect(() => {
@@ -19,14 +22,29 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: palette.tint,
+        tabBarInactiveTintColor: palette.tabIconDefault,
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarIconStyle: {
+          marginTop: 4,
+        },
+        tabBarItemStyle: {
+          minHeight: 56,
+          paddingVertical: 4,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '800',
+          lineHeight: 14,
+          marginTop: 2,
+        },
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#F1F5F9',
+          backgroundColor: palette.card,
+          borderTopColor: palette.border,
           borderTopWidth: 1,
+          height: Math.max(insets.bottom + 64, 72),
+          paddingBottom: Math.max(insets.bottom, 8),
           paddingTop: 6,
         },
       }}>

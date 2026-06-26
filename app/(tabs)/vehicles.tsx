@@ -390,6 +390,7 @@ export default function VehiclesScreen() {
 
   return (
     <ScrollView
+      automaticallyAdjustKeyboardInsets
       contentContainerStyle={[
         styles.container,
         {
@@ -397,6 +398,8 @@ export default function VehiclesScreen() {
           paddingTop: Math.max(insets.top + 24, 56),
         },
       ]}
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={() => loadVehicles(true)} />
       }>
@@ -844,7 +847,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     flexBasis: '48%',
     flexGrow: 1,
-    minHeight: 38,
+    minHeight: 44,
     justifyContent: 'center',
     paddingHorizontal: 6,
   },
