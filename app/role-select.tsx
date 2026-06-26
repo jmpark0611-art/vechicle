@@ -3,16 +3,20 @@ import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppRole, setStoredRole } from '../lib/role';
+import { setStoredRole } from '../lib/role';
 
 export default function RoleSelectScreen() {
   const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSelect = async (role: AppRole) => {
+  const handleSelectDriver = async () => {
     setIsLoading(true);
-    await setStoredRole(role);
+    await setStoredRole('driver');
     router.replace('/(tabs)');
+  };
+
+  const handleSelectCommander = () => {
+    router.replace('/commander-pin');
   };
 
   return (
@@ -28,7 +32,7 @@ export default function RoleSelectScreen() {
 
       <TouchableOpacity
         style={styles.card}
-        onPress={() => handleSelect('driver')}
+        onPress={handleSelectDriver}
         disabled={isLoading}
         activeOpacity={0.85}>
         <View style={[styles.roleTag, styles.driverTag]}>
@@ -40,7 +44,7 @@ export default function RoleSelectScreen() {
 
       <TouchableOpacity
         style={[styles.card, styles.commanderCard]}
-        onPress={() => handleSelect('commander')}
+        onPress={handleSelectCommander}
         disabled={isLoading}
         activeOpacity={0.85}>
         <View style={[styles.roleTag, styles.commanderTag]}>
@@ -48,6 +52,7 @@ export default function RoleSelectScreen() {
         </View>
         <Text style={styles.cardTitle}>수송부 간부 모드</Text>
         <Text style={styles.cardDesc}>차량 현재 위치 조회, 실시간 운행 현황 확인</Text>
+        <Text style={styles.pinHint}>PIN 설정 후 입장</Text>
       </TouchableOpacity>
 
       {isLoading && (
@@ -126,6 +131,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
     lineHeight: 20,
+  },
+  pinHint: {
+    color: '#2563EB',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 8,
   },
   loader: {
     marginTop: 28,

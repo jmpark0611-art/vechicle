@@ -48,6 +48,15 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - `app/(tabs)/map.tsx` → NEW: commander map screen — fetches active trips + latest GPS per vehicle, shows on Leaflet map, auto-refreshes every 30s, shows vehicle count + last update time
 - `app/(tabs)/_layout.tsx` → added "위치" tab with map.fill icon
 
+### Session 4 (Commander PIN Lock + EAS Build Prep)
+- `lib/commander-pin.ts` → NEW: AsyncStorage 기반 PIN 저장/검증 (getStoredPin/setStoredPin/clearStoredPin/verifyPin)
+- `app/commander-pin.tsx` → NEW: 4자리 PIN 입력 화면 (숫자패드), 3가지 모드: setup(최초 설정), verify(앱 시작 시 확인), change(점검 탭에서 변경). shake 애니메이션, 오류 메시지 표시
+- `app/role-select.tsx` → commander 선택 시 setStoredRole 하지 않고 /commander-pin으로 이동 (PIN 설정 후 role 저장)
+- `app/_layout.tsx` → 앱 시작 시: role=commander + PIN 저장됨 → /commander-pin(verify모드)로 리다이렉트. commander-pin Stack.Screen 추가
+- `app/(tabs)/check.tsx` → role=commander일 때 "PIN 변경" 버튼 추가 (/commander-pin?change=1)
+- `eas.json` → NEW: EAS Build 설정 (preview=APK internal, production=app-bundle autoIncrement)
+- `app.json` → android.package: "com.vehicle.tracking" 추가 (EAS Build 필수)
+
 ### Session 3 (Auth + UX + Offline Queue)
 - **Policy**: 기능 완성도 #1(GPS 저장)은 이미 완성되어 있었음. #2 Realtime 적용, UX 3건 모두 구현.
 - `lib/role.ts` → NEW: AsyncStorage 기반 역할 관리 (driver/commander), getStoredRole/setStoredRole/clearStoredRole

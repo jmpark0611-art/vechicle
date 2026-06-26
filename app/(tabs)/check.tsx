@@ -434,6 +434,13 @@ export default function CheckScreen() {
             {role === 'commander' ? '수송부 간부' : role === 'driver' ? '운전자' : '-'}
           </Text>
         </View>
+        {role === 'commander' && (
+          <TouchableOpacity
+            style={styles.changePinBtn}
+            onPress={() => router.push({ pathname: '/commander-pin', params: { change: '1' } })}>
+            <Text style={styles.changePinText}>PIN 변경</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.changeRoleBtn}
           onPress={async () => {
@@ -667,12 +674,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  changePinBtn: {
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    justifyContent: 'center',
+    marginTop: 12,
+    minHeight: 44,
+  },
+  changePinText: {
+    color: '#2563EB',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   changeRoleBtn: {
     alignItems: 'center',
     backgroundColor: '#F1F5F9',
     borderRadius: 12,
     justifyContent: 'center',
-    marginTop: 12,
+    marginTop: 10,
     minHeight: 44,
   },
   changeRoleText: {
