@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatDateTime, formatTripDuration, isStaleActiveTrip } from '../../lib/format';
 import { formatDbError } from '../../lib/errors';
+import { dequeueAllGpsPoints, enqueueGpsPoint, getGpsQueueSize, QueuedGpsPoint } from '../../lib/gps-queue';
 import { supabase } from '../../lib/supabase';
 import { withTimeout } from '../../lib/request';
 
@@ -159,6 +160,7 @@ export default function DriverScreen() {
   const [gpsPermissionStatus, setGpsPermissionStatus] = useState<GpsPermissionStatus>('unknown');
   const [gpsSaveFailureCount, setGpsSaveFailureCount] = useState(0);
   const [lastGpsSavedAt, setLastGpsSavedAt] = useState<string | null>(null);
+  const [gpsQueueSize, setGpsQueueSize] = useState(0);
   const [recoveryNotice, setRecoveryNotice] = useState<string | null>(null);
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
   const [listeningTarget, setListeningTarget] = useState<VoiceTarget | null>(null);
@@ -225,6 +227,48 @@ export default function DriverScreen() {
 
     setGpsSaveFailureCount((count) => count + 1);
     setGpsWarning(`GPS 저장 실패: ${formatDbError(lastError)} 재시도 후에도 저장하지 못했습니다.`);
+    await enqueueGpsPoint({
+      tripId: currentTripId,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      speedKmh: getSpeedKmh(coords),
+      recordedAt,
+    });
+    setGpsQueueSize(await getGpsQueueSize());
+  }, []);
+
+  const flushGpsQueue = useCallback(async () => {
+    const queued = await dequeueAllGpsPoints();
+    if (queued.length === 0) return;
+
+    const failed: QueuedGpsPoint[] = [];
+    for (const point of queued) {
+      try {
+        const { error } = await withTimeout(
+          supabase.from('gps_points').insert({
+            trip_id: point.tripId,
+            latitude: point.latitude,
+            longitude: point.longitude,
+            speed_kmh: point.speedKmh,
+            recorded_at: point.recordedAt,
+          }),
+          'GPS 큐 업로드'
+        );
+        if (error) failed.push(point);
+      } catch {
+        failed.push(point);
+      }
+    }
+
+    for (const point of failed) {
+      await enqueueGpsPoint(point);
+    }
+
+    const remaining = await getGpsQueueSize();
+    setGpsQueueSize(remaining);
+    if (queued.length > failed.length) {
+      setGpsWarning(null);
+    }
   }, []);
 
   const startLocationWatch = useCallback(
@@ -361,23 +405,26 @@ export default function DriverScreen() {
 
   useEffect(() => {
     loadDashboard();
+    getGpsQueueSize().then(setGpsQueueSize);
+    flushGpsQueue();
 
     return () => {
       stopLocationWatch();
     };
-  }, [loadDashboard, stopLocationWatch]);
+  }, [loadDashboard, stopLocationWatch, flushGpsQueue]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active' && !isSubmitting) {
         loadDashboard();
+        flushGpsQueue();
       }
     });
 
     return () => {
       subscription.remove();
     };
-  }, [isSubmitting, loadDashboard]);
+  }, [isSubmitting, loadDashboard, flushGpsQueue]);
 
   useEffect(() => {
     if (!isRunning) {
@@ -721,12 +768,18 @@ export default function DriverScreen() {
               <Text style={styles.gpsLabel}>최근 저장</Text>
               <Text style={styles.gpsValue}>{formatDateTime(lastGpsSavedAt)}</Text>
             </View>
-            <View style={[styles.gpsRow, styles.gpsRowLast]}>
+            <View style={[styles.gpsRow, gpsQueueSize === 0 && styles.gpsRowLast]}>
               <Text style={styles.gpsLabel}>저장 실패</Text>
               <Text style={[styles.gpsValue, gpsSaveFailureCount > 0 && styles.errorText]}>
                 {gpsSaveFailureCount}회
               </Text>
             </View>
+            {gpsQueueSize > 0 && (
+              <View style={[styles.gpsRow, styles.gpsRowLast]}>
+                <Text style={styles.gpsLabel}>미전송 큐</Text>
+                <Text style={[styles.gpsValue, styles.waitingText]}>{gpsQueueSize}개</Text>
+              </View>
+            )}
           </View>
         </>
       ) : (

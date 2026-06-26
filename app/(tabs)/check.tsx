@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppRole, clearStoredRole, getStoredRole } from '../../lib/role';
 import { supabase, supabaseConfig } from '../../lib/supabase';
 import { formatDateTime, formatTripDuration, isStaleActiveTrip } from '../../lib/format';
 import { formatDbError } from '../../lib/errors';
@@ -92,6 +93,7 @@ export default function CheckScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [role, setRole] = useState<AppRole | null>(null);
 
   const loadStatus = useCallback(async (refreshing = false) => {
     setStatus('checking');
@@ -229,6 +231,7 @@ export default function CheckScreen() {
   useFocusEffect(
     useCallback(() => {
       loadStatus();
+      getStoredRole().then(setRole);
     }, [loadStatus])
   );
 
@@ -422,6 +425,23 @@ export default function CheckScreen() {
         <Text style={styles.checkText}>1. PC와 Android 휴대폰을 같은 Wi-Fi에 연결</Text>
         <Text style={styles.checkText}>2. npm.cmd run start:lan 실행 후 Expo Go에서 QR 스캔</Text>
         <Text style={styles.checkText}>3. 위치 권한 허용 후 출발, GPS 수집, 종료 확인</Text>
+      </View>
+
+      <View style={styles.infoPanel}>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>사용자 역할</Text>
+          <Text style={styles.infoValue}>
+            {role === 'commander' ? '수송부 간부' : role === 'driver' ? '운전자' : '-'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.changeRoleBtn}
+          onPress={async () => {
+            await clearStoredRole();
+            router.replace('/role-select');
+          }}>
+          <Text style={styles.changeRoleText}>역할 변경</Text>
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.reloadBtn} onPress={() => loadStatus(true)} disabled={isRefreshing}>
@@ -646,6 +666,19 @@ const styles = StyleSheet.create({
     color: '#D97706',
     fontSize: 14,
     fontWeight: '500',
+  },
+  changeRoleBtn: {
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    justifyContent: 'center',
+    marginTop: 12,
+    minHeight: 44,
+  },
+  changeRoleText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '600',
   },
   reloadBtn: {
     alignItems: 'center',

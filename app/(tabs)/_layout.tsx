@@ -1,13 +1,20 @@
 import { Tabs } from 'expo-router';
+import { useEffect, useState } from 'react';
 import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { AppRole, getStoredRole } from '../../lib/role';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const [role, setRole] = useState<AppRole | null>(null);
+
+  useEffect(() => {
+    getStoredRole().then(setRole);
+  }, []);
 
   return (
     <Tabs
@@ -55,6 +62,7 @@ export default function TabLayout() {
         name="map"
         options={{
           title: '위치',
+          href: role === 'commander' ? undefined : null,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="map.fill" color={color} />,
         }}
       />

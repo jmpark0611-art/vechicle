@@ -12,7 +12,11 @@ export function generateVehicleMapHtml(vehicles: VehiclePosition[]): string {
   const center = vehicles.length > 0
     ? `[${vehicles[0].latitude}, ${vehicles[0].longitude}]`
     : '[36.5, 127.9]';
-  const zoom = vehicles.length > 0 ? 14 : 7;
+  const zoom = vehicles.length > 0 ? 13 : 7;
+
+  const emptyStateHtml = vehicles.length === 0
+    ? `<div id="empty-state" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:1000;background:white;padding:20px 28px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.12);pointer-events:none"><div style="font-size:15px;font-weight:700;color:#0F172A;margin-bottom:4px">운행 중인 차량 없음</div><div style="font-size:13px;color:#64748B">현재 운행 중인 차량이 없습니다</div></div>`
+    : '';
 
   const markersJs = vehicles.map((v) => {
     const speed = v.speedKmh != null ? `${v.speedKmh.toFixed(1)} km/h` : '-';
@@ -41,6 +45,7 @@ export function generateVehicleMapHtml(vehicles: VehiclePosition[]): string {
 </head>
 <body>
   <div id="map"></div>
+  ${emptyStateHtml}
   <script>
     var map = L.map('map').setView(${center}, ${zoom});
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

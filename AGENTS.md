@@ -48,6 +48,18 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - `app/(tabs)/map.tsx` → NEW: commander map screen — fetches active trips + latest GPS per vehicle, shows on Leaflet map, auto-refreshes every 30s, shows vehicle count + last update time
 - `app/(tabs)/_layout.tsx` → added "위치" tab with map.fill icon
 
+### Session 3 (Auth + UX + Offline Queue)
+- **Policy**: 기능 완성도 #1(GPS 저장)은 이미 완성되어 있었음. #2 Realtime 적용, UX 3건 모두 구현.
+- `lib/role.ts` → NEW: AsyncStorage 기반 역할 관리 (driver/commander), getStoredRole/setStoredRole/clearStoredRole
+- `lib/gps-queue.ts` → NEW: 오프라인 GPS 큐 (AsyncStorage), enqueueGpsPoint/dequeueAllGpsPoints/getGpsQueueSize, 최대 200개
+- `app/role-select.tsx` → NEW: 첫 실행 시 역할 선택 화면 (운전자/수송부 간부)
+- `app/_layout.tsx` → role 체크 후 미설정 시 /role-select로 리다이렉트, Stack에 role-select 추가
+- `app/(tabs)/_layout.tsx` → 역할에 따라 "위치" 탭 표시/숨김 (commander만 노출, href:null 사용)
+- `app/(tabs)/map.tsx` → Supabase Realtime 구독(gps_points INSERT + trips 변경) + 60s 폴백 폴링, 수송부간부 아닌 경우 접근 차단, isFetchingRef로 중복 요청 방지
+- `lib/map-html.ts` → 운행 차량 없을 때 empty state 오버레이 추가
+- `app/(tabs)/index.tsx` → GPS 저장 실패 시 gps-queue에 큐잉, 앱 활성화/초기화 시 큐 플러시, GPS 카드에 미전송 큐 개수 표시
+- `app/(tabs)/check.tsx` → "사용자 역할" 표시 + "역할 변경" 버튼 추가 (clearStoredRole 후 role-select로 이동)
+
 ## Architecture Decisions
 - **No route history anywhere**: gps_points table is write-only from driver's perspective; commanders only read latest point per active trip
 - **Map stack**: react-native-webview (native) + iframe (web) both rendering Leaflet HTML from `lib/map-html.ts`

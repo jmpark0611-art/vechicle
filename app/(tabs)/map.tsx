@@ -1,12 +1,14 @@
+import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { VehicleMap } from '../../components/vehicle-map';
 import { generateVehicleMapHtml, VehiclePosition } from '../../lib/map-html';
+import { getStoredRole } from '../../lib/role';
 import { supabase } from '../../lib/supabase';
 
-const REFRESH_INTERVAL_MS = 30_000;
+const FALLBACK_POLL_MS = 60_000;
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
@@ -14,10 +16,18 @@ export default function MapScreen() {
   const [vehicleCount, setVehicleCount] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCommander, setIsCommander] = useState<boolean | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isFetchingRef = useRef(false);
+
+  useEffect(() => {
+    getStoredRole().then((role) => setIsCommander(role === 'commander'));
+  }, []);
 
   const fetchPositions = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
     try {
       const { data: trips, error: tripError } = await supabase
         .from('trips')
@@ -81,21 +91,47 @@ export default function MapScreen() {
       setErrorMessage(error instanceof Error ? error.message : '위치 조회 실패');
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   }, []);
 
   useEffect(() => {
+    if (isCommander === null) return;
+
     fetchPositions();
-    timerRef.current = setInterval(fetchPositions, REFRESH_INTERVAL_MS);
+
+    const channel = supabase
+      .channel('map-vehicle-positions')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'gps_points' }, fetchPositions)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, fetchPositions)
+      .subscribe();
+
+    const fallbackTimer = setInterval(fetchPositions, FALLBACK_POLL_MS);
+
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      supabase.removeChannel(channel);
+      clearInterval(fallbackTimer);
     };
-  }, [fetchPositions]);
+  }, [fetchPositions, isCommander]);
 
   const handleRefresh = useCallback(() => {
     setIsLoading(true);
     fetchPositions();
   }, [fetchPositions]);
+
+  if (isCommander === false) {
+    return (
+      <View style={[styles.container, styles.centerBox, { paddingTop: insets.top }]}>
+        <Text style={styles.accessTitle}>수송부 간부 전용</Text>
+        <Text style={styles.accessDesc}>차량 위치 화면은 수송부 간부만 사용할 수 있습니다.</Text>
+        <TouchableOpacity
+          style={styles.roleBtn}
+          onPress={() => router.replace('/role-select')}>
+          <Text style={styles.roleBtnText}>역할 변경하기</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -136,6 +172,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  centerBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  accessTitle: {
+    color: '#0F172A',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  accessDesc: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '400',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 28,
+  },
+  roleBtn: {
+    backgroundColor: '#2563EB',
+    borderRadius: 14,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+  },
+  roleBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
   header: {
     alignItems: 'center',
