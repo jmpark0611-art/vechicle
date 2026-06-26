@@ -496,7 +496,13 @@ export default function VehiclesScreen() {
               key={value}
               style={[styles.filterBtn, isSelected && styles.activeFilterBtn]}
               onPress={() => setStatusFilter(nextFilter)}>
-              <Text style={[styles.filterText, isSelected && styles.activeFilterText]}>{label}</Text>
+              <Text
+                adjustsFontSizeToFit
+                minimumFontScale={0.86}
+                numberOfLines={1}
+                style={[styles.filterText, isSelected && styles.activeFilterText]}>
+                {label}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -827,6 +833,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EAF0F7',
     borderRadius: 8,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     marginBottom: 14,
     padding: 4,
@@ -834,7 +841,8 @@ const styles = StyleSheet.create({
   filterBtn: {
     alignItems: 'center',
     borderRadius: 6,
-    flex: 1,
+    flexBasis: '48%',
+    flexGrow: 1,
     minHeight: 40,
     justifyContent: 'center',
     paddingHorizontal: 6,
@@ -846,6 +854,7 @@ const styles = StyleSheet.create({
     color: '#667085',
     fontSize: 12,
     fontWeight: '800',
+    lineHeight: 15,
     textAlign: 'center',
   },
   activeFilterText: {

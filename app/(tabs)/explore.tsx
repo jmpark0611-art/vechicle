@@ -482,7 +482,11 @@ export default function TripHistoryScreen() {
                 key={vehicle.id}
                 style={[styles.chipBtn, isSelected && styles.activeChipBtn]}
                 onPress={() => setSelectedVehicleId(vehicle.id)}>
-                <Text style={[styles.chipText, isSelected && styles.activeChipText]}>
+                <Text
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
+                  numberOfLines={1}
+                  style={[styles.chipText, isSelected && styles.activeChipText]}>
                   {vehicle.vehicle_number}
                 </Text>
               </TouchableOpacity>
@@ -725,6 +729,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EAF0F7',
     borderRadius: 8,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     marginBottom: 14,
     padding: 4,
@@ -766,8 +771,10 @@ const styles = StyleSheet.create({
     borderColor: '#CFD7E6',
     borderRadius: 8,
     borderWidth: 1,
+    flexShrink: 1,
     minHeight: 36,
     justifyContent: 'center',
+    maxWidth: '100%',
     paddingHorizontal: 12,
   },
   activeChipBtn: {
@@ -778,6 +785,7 @@ const styles = StyleSheet.create({
     color: '#25324B',
     fontSize: 13,
     fontWeight: '900',
+    textAlign: 'center',
   },
   activeChipText: {
     color: '#FFFFFF',
@@ -838,7 +846,8 @@ const styles = StyleSheet.create({
   filterBtn: {
     alignItems: 'center',
     borderRadius: 6,
-    flex: 1,
+    flexBasis: '48%',
+    flexGrow: 1,
     minHeight: 40,
     justifyContent: 'center',
     paddingHorizontal: 8,
@@ -850,6 +859,7 @@ const styles = StyleSheet.create({
     color: '#667085',
     fontSize: 13,
     fontWeight: '800',
+    lineHeight: 16,
     textAlign: 'center',
   },
   activeFilterText: {
