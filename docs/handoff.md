@@ -65,6 +65,7 @@ npm.cmd run health
 - 운행 상세는 GPS 기록 전체 개수를 보여주되, 화면에는 최근 50개까지만 표시한다. 표시된 GPS 기준으로 추정 거리, 평균/최고 속도, 첫/최근 GPS, GPS 수집 구간을 계산한다.
 - Android Expo Go에서는 네이티브 음성 인식 모듈이 기본 포함되지 않으므로 현재 음성 입력은 웹 브라우저 중심이다. 브라우저에서는 권한 차단, 음성 미감지, 마이크 장치 오류를 운행 화면 안내 박스로 표시한다. `app.json`에는 추후 개발 빌드 확장을 대비해 위치/마이크 권한 문구를 명시해 두었다.
 - 주요 ScrollView 화면은 `useSafeAreaInsets`로 상단 노치와 하단 홈 인디케이터/탭바 여백을 반영한다. 새 화면을 추가할 때도 고정 `paddingTop` 대신 안전영역 기반 여백을 사용한다.
+- 하단 탭바도 `useSafeAreaInsets`로 홈 인디케이터 여백과 최소 터치 높이를 반영한다.
 - 작은 Android/iPhone 폭에서 텍스트와 버튼이 잘리지 않도록 툴바, 카드 헤더, 정보 행, 주요 액션 행은 `flexWrap`과 `gap`을 사용한다.
 - 긴 차량번호/장소/요약 값은 `numberOfLines`, `adjustsFontSizeToFit`, `minWidth: 0`으로 모바일 폭 안에 머물도록 처리한다.
 - 기록/차량 필터 바는 작은 화면에서 2열로 감기도록 `flexBasis`와 `flexWrap`을 사용한다.
