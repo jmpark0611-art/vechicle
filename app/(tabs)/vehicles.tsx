@@ -617,6 +617,18 @@ export default function VehiclesScreen() {
 
               {editingVehicleId !== vehicle.id && (
                 <View style={styles.actions}>
+                  <Link
+                    href={{
+                      pathname: '/vehicles/[id]',
+                      params: { id: vehicle.id },
+                    }}
+                    asChild>
+                    <TouchableOpacity
+                      accessibilityLabel={`${vehicle.vehicle_number} 정비 현황`}
+                      style={[styles.actionBtn, styles.maintenanceBtn]}>
+                      <Text style={[styles.actionText, styles.maintenanceText]}>정비</Text>
+                    </TouchableOpacity>
+                  </Link>
                   <TouchableOpacity
                     accessibilityLabel={`${vehicle.vehicle_number} 차량번호 수정`}
                     style={[styles.actionBtn, styles.secondaryBtn]}
@@ -984,6 +996,12 @@ const styles = StyleSheet.create({
   },
   dangerBtn: {
     backgroundColor: '#FEF2F2',
+  },
+  maintenanceBtn: {
+    backgroundColor: '#F0FDF4',
+  },
+  maintenanceText: {
+    color: '#16A34A',
   },
   actionText: {
     color: '#FFFFFF',

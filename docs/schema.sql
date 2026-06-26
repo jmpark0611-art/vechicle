@@ -149,3 +149,80 @@ create trigger trips_set_updated_at
 before update on public.trips
 for each row
 execute function public.set_updated_at();
+
+-- 정비 항목 (현대·기아 권장 교체 주기)
+create table if not exists public.maintenance_items (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  standard_km integer not null default 0,
+  standard_month integer not null default 0,
+  warning_km integer not null default 0,
+  warning_month integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.maintenance_items enable row level security;
+
+drop policy if exists "anon_select_maintenance_items" on public.maintenance_items;
+create policy "anon_select_maintenance_items" on public.maintenance_items
+  for select to anon using (true);
+
+-- 차량별 정비 기록
+create table if not exists public.vehicle_maintenance (
+  id uuid primary key default gen_random_uuid(),
+  vehicle_id uuid not null references public.vehicles(id) on delete cascade,
+  item_id uuid not null references public.maintenance_items(id) on delete cascade,
+  last_replaced_at date,
+  last_replaced_mileage_km numeric,
+  next_due_date date,
+  next_due_mileage_km numeric,
+  remaining_km numeric,
+  remaining_days integer,
+  status text not null default 'unknown',
+  memo text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(vehicle_id, item_id)
+);
+
+alter table public.vehicle_maintenance enable row level security;
+
+drop policy if exists "anon_select_vehicle_maintenance" on public.vehicle_maintenance;
+create policy "anon_select_vehicle_maintenance" on public.vehicle_maintenance
+  for select to anon using (true);
+
+drop policy if exists "anon_insert_vehicle_maintenance" on public.vehicle_maintenance;
+create policy "anon_insert_vehicle_maintenance" on public.vehicle_maintenance
+  for insert to anon with check (true);
+
+drop policy if exists "anon_update_vehicle_maintenance" on public.vehicle_maintenance;
+create policy "anon_update_vehicle_maintenance" on public.vehicle_maintenance
+  for update to anon using (true) with check (true);
+
+drop policy if exists "anon_delete_vehicle_maintenance" on public.vehicle_maintenance;
+create policy "anon_delete_vehicle_maintenance" on public.vehicle_maintenance
+  for delete to anon using (true);
+
+drop trigger if exists vehicle_maintenance_set_updated_at on public.vehicle_maintenance;
+create trigger vehicle_maintenance_set_updated_at
+before update on public.vehicle_maintenance
+for each row execute function public.set_updated_at();
+
+-- 기본 정비 항목 시드 (현대·기아 권장 교체 주기)
+insert into public.maintenance_items (name, standard_km, standard_month, warning_km, warning_month)
+values
+  ('엔진오일',          10000, 12,  1000, 1),
+  ('에어클리너',        40000, 24,  5000, 2),
+  ('에어컨 필터(실내)', 15000, 12,  2000, 1),
+  ('냉각수',            40000, 24,  5000, 2),
+  ('미션오일',          60000, 48,  5000, 2),
+  ('브레이크오일',      20000, 24,  2000, 2),
+  ('와이퍼 블레이드',       0, 12,     0, 1),
+  ('점화플러그',        20000, 24,  2000, 2),
+  ('배터리',                0, 36,     0, 3),
+  ('브레이크패드',      30000,  0,  5000, 0),
+  ('타이어',            40000, 36,  5000, 2),
+  ('타이밍벨트/체인',  100000, 60,  5000, 3)
+on conflict do nothing;

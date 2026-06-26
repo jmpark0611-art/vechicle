@@ -45,6 +45,7 @@ export default function RootLayout() {
         <Stack.Screen name="role-select" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="commander-pin" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="trips/[id]" options={{ title: '운행 상세' }} />
+        <Stack.Screen name="vehicles/[id]" options={{ title: '정비 현황' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
