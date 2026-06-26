@@ -138,6 +138,27 @@ for (const file of [
   }
 }
 
+for (const item of [
+  { file: path.join('app', '(tabs)', 'explore.tsx'), styles: ['chipBtn', 'filterBtn', 'tripActionBtn', 'loadMoreBtn'] },
+  { file: path.join('app', '(tabs)', 'vehicles.tsx'), styles: ['filterBtn', 'actionBtn'] },
+  { file: path.join('app', '(tabs)', 'check.tsx'), styles: ['detailBtn', 'reloadBtn'] },
+]) {
+  const fullPath = path.join(root, item.file);
+  const content = fs.existsSync(fullPath) ? fs.readFileSync(fullPath, 'utf8') : '';
+
+  for (const styleName of item.styles) {
+    const styleMatch = content.match(new RegExp(`${styleName}:\\s*{([\\s\\S]*?)\\n\\s*}`));
+    const minHeightMatch = styleMatch?.[1]?.match(/minHeight:\s*(\d+)/);
+    const minHeight = minHeightMatch ? Number(minHeightMatch[1]) : null;
+
+    if (minHeight === null || minHeight < 44) {
+      failures.push(
+        `${item.file.replaceAll(path.sep, '/')}: ${styleName}은 모바일 터치 편의성을 위해 minHeight 44 이상이어야 합니다.`
+      );
+    }
+  }
+}
+
 const modalRoute = path.join(root, 'app', 'modal.tsx');
 if (fs.existsSync(modalRoute)) {
   failures.push('app/modal.tsx: 차량운행시스템에서 사용하지 않는 Expo 템플릿 모달 라우트는 제거해야 합니다.');
