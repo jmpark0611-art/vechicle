@@ -644,103 +644,7 @@ export default function DriverScreen() {
           paddingTop: Math.max(insets.top + 24, 56),
         },
       ]}>
-      <Text style={styles.eyebrow}>DRIVER LOG</Text>
-      <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.title}>
-        차량운행시스템
-      </Text>
-
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>상태</Text>
-          <Text
-            adjustsFontSizeToFit
-            minimumFontScale={0.82}
-            numberOfLines={1}
-            style={[styles.summaryValue, isRunning ? styles.runningText : styles.waitingText]}>
-            {isRunning ? '운행 중' : '대기 중'}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>선택</Text>
-          <Text adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={styles.summaryValue}>
-            {selectedVehicleText}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>출발지</Text>
-          <Text adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={styles.summaryValue}>
-            {startPlace.trim() || START_PLACE}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>목적지</Text>
-          <Text adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={styles.summaryValue}>
-            {endPlace.trim() || END_PLACE}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>출발</Text>
-          <Text adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={styles.summaryValue}>
-            {formatDateTime(startTime)}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>경과</Text>
-          <Text
-            adjustsFontSizeToFit
-            minimumFontScale={0.78}
-            numberOfLines={1}
-            style={[styles.summaryValue, isStaleRunningTrip && styles.staleText]}>
-            {elapsedText}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>속도</Text>
-          <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.summaryValue}>
-            {speedKmh.toFixed(1)} km/h
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>GPS</Text>
-          <Text
-            adjustsFontSizeToFit
-            minimumFontScale={0.82}
-            numberOfLines={1}
-            style={[styles.summaryValue, isRunning && location ? styles.runningText : styles.waitingText]}>
-            {gpsStatusText}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>위치 권한</Text>
-          <Text
-            adjustsFontSizeToFit
-            minimumFontScale={0.82}
-            numberOfLines={1}
-            style={[
-              styles.summaryValue,
-              gpsPermissionStatus === 'granted' ? styles.runningText : styles.waitingText,
-              gpsPermissionStatus === 'denied' && styles.staleText,
-            ]}>
-            {getGpsPermissionText(gpsPermissionStatus)}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>최근 저장</Text>
-          <Text adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={styles.summaryValue}>
-            {formatDateTime(lastGpsSavedAt)}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>저장 실패</Text>
-          <Text
-            adjustsFontSizeToFit
-            minimumFontScale={0.82}
-            numberOfLines={1}
-            style={[styles.summaryValue, gpsSaveFailureCount > 0 && styles.staleText]}>
-            {gpsSaveFailureCount}회
-          </Text>
-        </View>
-      </View>
+      <Text style={styles.title}>차량운행시스템</Text>
 
       {gpsWarning && (
         <View style={styles.warningBox}>
@@ -762,13 +666,79 @@ export default function DriverScreen() {
 
       {isLoadingDashboard && (
         <View style={styles.noticeBox}>
-          <ActivityIndicator color="#1565C0" />
+          <ActivityIndicator color="#2563EB" />
           <Text style={styles.noticeText}>운행 상태를 확인하는 중입니다.</Text>
         </View>
       )}
 
-      {!isRunning && (
+      {isRunning ? (
         <>
+          <View style={styles.runningHeroCard}>
+            <View style={styles.heroHeader}>
+              <View style={styles.statusDotActive} />
+              <Text style={styles.heroStatusText}>운행 중</Text>
+              <Text style={styles.heroVehicleText} numberOfLines={1}>{selectedVehicleText}</Text>
+            </View>
+            <View style={styles.heroMetrics}>
+              <View style={styles.heroMetric}>
+                <Text style={styles.heroMetricValue}>{speedKmh.toFixed(0)}</Text>
+                <Text style={styles.heroMetricUnit}>km/h</Text>
+              </View>
+              <View style={styles.heroMetricDivider} />
+              <View style={styles.heroMetric}>
+                <Text style={[styles.heroMetricValue, isStaleRunningTrip && styles.heroStaleValue]}>
+                  {elapsedText}
+                </Text>
+                <Text style={styles.heroMetricUnit}>경과</Text>
+              </View>
+            </View>
+            <View style={styles.heroRoute}>
+              <Text style={styles.heroRouteText} numberOfLines={1}>{startPlace}</Text>
+              <Text style={styles.heroRouteArrow}>→</Text>
+              <Text style={styles.heroRouteText} numberOfLines={1}>{endPlace}</Text>
+            </View>
+            <Text style={styles.heroStartTime}>출발 {formatDateTime(startTime)}</Text>
+          </View>
+
+          <View style={styles.gpsCard}>
+            <View style={styles.gpsRow}>
+              <Text style={styles.gpsLabel}>GPS</Text>
+              <Text style={[styles.gpsValue, location ? styles.successText : styles.waitingText]}>
+                {gpsStatusText}
+              </Text>
+            </View>
+            <View style={styles.gpsRow}>
+              <Text style={styles.gpsLabel}>위치 권한</Text>
+              <Text style={[
+                styles.gpsValue,
+                gpsPermissionStatus === 'granted' ? styles.successText : styles.waitingText,
+                gpsPermissionStatus === 'denied' && styles.errorText,
+              ]}>
+                {getGpsPermissionText(gpsPermissionStatus)}
+              </Text>
+            </View>
+            <View style={styles.gpsRow}>
+              <Text style={styles.gpsLabel}>최근 저장</Text>
+              <Text style={styles.gpsValue}>{formatDateTime(lastGpsSavedAt)}</Text>
+            </View>
+            <View style={[styles.gpsRow, styles.gpsRowLast]}>
+              <Text style={styles.gpsLabel}>저장 실패</Text>
+              <Text style={[styles.gpsValue, gpsSaveFailureCount > 0 && styles.errorText]}>
+                {gpsSaveFailureCount}회
+              </Text>
+            </View>
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={styles.idleCard}>
+            <View style={styles.idleRow}>
+              <View style={styles.statusDotIdle} />
+              <Text style={styles.idleStatusText}>대기 중</Text>
+              <Text style={styles.idleVehicleText} numberOfLines={1}>{selectedVehicleText}</Text>
+            </View>
+          </View>
+
           <View style={styles.inputCard}>
             <Text style={styles.sectionTitle}>운행 정보</Text>
             <View style={styles.inputLabelRow}>
@@ -785,7 +755,7 @@ export default function DriverScreen() {
               value={startPlace}
               onChangeText={setStartPlace}
               placeholder="출발지를 입력하세요"
-              placeholderTextColor="#98A2B3"
+              placeholderTextColor="#94A3B8"
             />
             <View style={styles.presetRow}>
               {PLACE_PRESETS.map((place) => (
@@ -808,7 +778,7 @@ export default function DriverScreen() {
               value={endPlace}
               onChangeText={setEndPlace}
               placeholder="목적지를 입력하세요"
-              placeholderTextColor="#98A2B3"
+              placeholderTextColor="#94A3B8"
             />
             <View style={styles.presetRow}>
               {PLACE_PRESETS.map((place) => (
@@ -851,7 +821,6 @@ export default function DriverScreen() {
               <View style={styles.selectBox}>
                 {vehicles.map((vehicle) => {
                   const isSelected = selectedVehicle?.id === vehicle.id;
-
                   return (
                     <TouchableOpacity
                       key={vehicle.id}
@@ -873,7 +842,6 @@ export default function DriverScreen() {
         <TouchableOpacity
           accessibilityLabel="운행 출발"
           style={[
-            styles.actionBtn,
             styles.startBtn,
             (!selectedVehicle || isSubmitting || isLoadingDashboard) && styles.disabledBtn,
           ]}
@@ -890,14 +858,14 @@ export default function DriverScreen() {
                 params: { id: tripId },
               }}
               asChild>
-              <TouchableOpacity accessibilityLabel="진행 중 운행 상세 보기" style={styles.detailActionBtn}>
-                <Text style={styles.detailActionText}>상세</Text>
+              <TouchableOpacity accessibilityLabel="진행 중 운행 상세 보기" style={styles.detailBtn}>
+                <Text style={styles.detailBtnText}>상세</Text>
               </TouchableOpacity>
             </Link>
           )}
           <TouchableOpacity
             accessibilityLabel="운행 종료"
-            style={[styles.actionBtn, styles.runningEndBtn, styles.endBtn, isSubmitting && styles.disabledBtn]}
+            style={[styles.endBtn, styles.endBtnFlex, isSubmitting && styles.disabledBtn]}
             onPress={handleEnd}
             disabled={isSubmitting}>
             <Text style={styles.btnText}>{isSubmitting ? '처리 중...' : '종료'}</Text>
@@ -911,121 +879,233 @@ export default function DriverScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#F6F8FB',
+    backgroundColor: '#F8FAFC',
     padding: 20,
   },
-  eyebrow: {
-    color: '#4F6F52',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0,
-    marginBottom: 8,
-  },
   title: {
-    color: '#101828',
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 24,
+    color: '#0F172A',
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 16,
   },
-  summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E3E8EF',
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 14,
-    padding: 18,
+  // Running hero card
+  runningHeroCard: {
+    backgroundColor: '#1D4ED8',
+    borderRadius: 20,
+    marginBottom: 12,
+    padding: 22,
+    shadowColor: '#1D4ED8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  summaryRow: {
+  heroHeader: {
     alignItems: 'center',
-    borderBottomColor: '#EEF2F6',
-    borderBottomWidth: 1,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    minHeight: 44,
-    rowGap: 4,
+    gap: 8,
+    marginBottom: 22,
   },
-  summaryLabel: {
-    color: '#667085',
+  statusDotActive: {
+    backgroundColor: '#34D399',
+    borderRadius: 5,
+    height: 8,
+    width: 8,
+  },
+  heroStatusText: {
+    color: '#BFDBFE',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  heroVehicleText: {
+    color: '#FFFFFF',
+    flex: 1,
     fontSize: 15,
     fontWeight: '700',
-  },
-  summaryValue: {
-    color: '#101828',
-    flexShrink: 1,
-    fontSize: 17,
-    fontWeight: '800',
-    marginLeft: 16,
-    minWidth: 0,
     textAlign: 'right',
   },
-  runningText: {
-    color: '#0E7C66',
+  heroMetrics: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 28,
+    justifyContent: 'center',
+    marginBottom: 22,
+  },
+  heroMetric: {
+    alignItems: 'center',
+  },
+  heroMetricValue: {
+    color: '#FFFFFF',
+    fontSize: 52,
+    fontWeight: '700',
+    lineHeight: 58,
+  },
+  heroStaleValue: {
+    color: '#FCA5A5',
+  },
+  heroMetricUnit: {
+    color: '#BFDBFE',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  heroMetricDivider: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    height: 52,
+    width: 1,
+  },
+  heroRoute: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  heroRouteText: {
+    color: '#DBEAFE',
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  heroRouteArrow: {
+    color: '#93C5FD',
+    fontSize: 14,
+    marginHorizontal: 10,
+  },
+  heroStartTime: {
+    color: '#93C5FD',
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  // GPS status card
+  gpsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    marginBottom: 14,
+    padding: 16,
+    shadowColor: '#94A3B8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  gpsRow: {
+    alignItems: 'center',
+    borderBottomColor: '#F1F5F9',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 40,
+  },
+  gpsRowLast: {
+    borderBottomWidth: 0,
+  },
+  gpsLabel: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  gpsValue: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  successText: {
+    color: '#059669',
   },
   waitingText: {
-    color: '#7A4A00',
+    color: '#D97706',
   },
+  // Idle status card
+  idleCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    marginBottom: 14,
+    padding: 16,
+    shadowColor: '#94A3B8',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  idleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statusDotIdle: {
+    backgroundColor: '#CBD5E1',
+    borderRadius: 5,
+    height: 8,
+    width: 8,
+  },
+  idleStatusText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  idleVehicleText: {
+    color: '#0F172A',
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  // Input form
   vehicleSection: {
-    marginBottom: 22,
-    marginTop: 8,
+    marginBottom: 24,
   },
   inputCard: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#E3E8EF',
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 16,
     marginBottom: 14,
-    padding: 16,
+    padding: 20,
+    shadowColor: '#94A3B8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
   },
   inputLabelRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
     justifyContent: 'space-between',
-    marginTop: 12,
+    marginTop: 18,
+    marginBottom: 8,
   },
   inputLabel: {
-    color: '#667085',
-    fontSize: 14,
-    fontWeight: '800',
-    marginBottom: 8,
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '500',
   },
   voiceBtn: {
-    backgroundColor: '#ECFDF3',
-    borderColor: '#ABEFC6',
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
   voiceText: {
-    color: '#087443',
+    color: '#059669',
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   voiceNoticeBox: {
     backgroundColor: '#F0F9FF',
-    borderColor: '#BAE6FD',
-    borderRadius: 8,
-    borderWidth: 1,
-    marginTop: 12,
+    borderRadius: 10,
+    marginTop: 14,
     padding: 12,
   },
   voiceNoticeText: {
-    color: '#075985',
+    color: '#0369A1',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '500',
   },
   textInput: {
     backgroundColor: '#F8FAFC',
-    borderColor: '#CFD7E6',
-    borderRadius: 8,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
     borderWidth: 1,
-    color: '#101828',
+    color: '#0F172A',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     minHeight: 48,
     paddingHorizontal: 14,
   },
@@ -1033,36 +1113,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 8,
+    marginTop: 10,
   },
   presetBtn: {
-    backgroundColor: '#EEF4FF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 20,
+    paddingHorizontal: 14,
     paddingVertical: 8,
   },
   presetText: {
-    color: '#1565C0',
+    color: '#2563EB',
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   sectionHeader: {
     alignItems: 'center',
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
     justifyContent: 'space-between',
     marginBottom: 12,
   },
   sectionTitle: {
-    color: '#25324B',
-    fontSize: 18,
-    fontWeight: '800',
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '600',
   },
   reloadText: {
-    color: '#1565C0',
+    color: '#2563EB',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   selectBox: {
     flexDirection: 'row',
@@ -1071,116 +1149,128 @@ const styles = StyleSheet.create({
   },
   vehicleBtn: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#CFD7E6',
-    borderRadius: 8,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
     borderWidth: 1,
-    minWidth: 112,
+    minWidth: 100,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    shadowColor: '#94A3B8',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 1,
   },
   selectedBtn: {
-    backgroundColor: '#1565C0',
-    borderColor: '#1565C0',
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+    shadowColor: '#2563EB',
+    shadowOpacity: 0.3,
   },
   vehicleTxt: {
-    color: '#25324B',
-    fontSize: 16,
-    fontWeight: '800',
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '600',
     textAlign: 'center',
   },
   selectedVehicleTxt: {
     color: '#FFFFFF',
   },
+  // Notices
   noticeBox: {
     alignItems: 'center',
-    backgroundColor: '#EAF2FF',
-    borderColor: '#BBD7FF',
-    borderRadius: 8,
-    borderWidth: 1,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 14,
+    marginBottom: 12,
     padding: 14,
   },
   noticeText: {
-    color: '#1D4E89',
+    color: '#1D4ED8',
     flex: 1,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '500',
   },
   warningBox: {
-    backgroundColor: '#FFF7E6',
-    borderColor: '#FFD591',
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 14,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 12,
+    marginBottom: 12,
     padding: 14,
   },
   warningText: {
-    color: '#8C5A00',
+    color: '#D97706',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   errorBox: {
-    backgroundColor: '#FFF1F0',
-    borderColor: '#FFCCC7',
-    borderRadius: 8,
-    borderWidth: 1,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    marginBottom: 12,
     padding: 14,
   },
   errorText: {
-    color: '#A8071A',
-    fontSize: 15,
-    fontWeight: '700',
+    color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '500',
   },
-  staleText: {
-    color: '#A8071A',
-  },
-  actionBtn: {
-    alignItems: 'center',
-    borderRadius: 8,
-    justifyContent: 'center',
-    minHeight: 72,
-    width: '100%',
-  },
-  runningActionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    width: '100%',
-  },
-  runningEndBtn: {
-    flexBasis: 160,
-    flexGrow: 1,
-    width: 'auto',
-  },
-  detailActionBtn: {
-    alignItems: 'center',
-    backgroundColor: '#EEF4FF',
-    borderColor: '#BBD7FF',
-    borderRadius: 8,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 72,
-    width: 96,
-  },
-  detailActionText: {
-    color: '#1565C0',
-    fontSize: 17,
-    fontWeight: '900',
-  },
+  // Buttons
   startBtn: {
-    backgroundColor: '#1565C0',
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+    borderRadius: 16,
+    justifyContent: 'center',
+    minHeight: 60,
+    width: '100%',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 5,
   },
   endBtn: {
-    backgroundColor: '#D92D20',
+    alignItems: 'center',
+    backgroundColor: '#DC2626',
+    borderRadius: 16,
+    justifyContent: 'center',
+    minHeight: 60,
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  endBtnFlex: {
+    flexBasis: 160,
+    flexGrow: 1,
   },
   disabledBtn: {
-    opacity: 0.45,
+    opacity: 0.4,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   btnText: {
     color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  runningActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  detailBtn: {
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 16,
+    justifyContent: 'center',
+    minHeight: 60,
+    width: 80,
+  },
+  detailBtnText: {
+    color: '#2563EB',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
