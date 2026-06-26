@@ -69,6 +69,7 @@ npm.cmd run health
 - 작은 Android/iPhone 폭에서 텍스트와 버튼이 잘리지 않도록 툴바, 카드 헤더, 정보 행, 주요 액션 행은 `flexWrap`과 `gap`을 사용한다.
 - 긴 차량번호/장소/요약 값은 `numberOfLines`, `adjustsFontSizeToFit`, `minWidth: 0`으로 모바일 폭 안에 머물도록 처리한다.
 - 기록/차량 필터 바는 작은 화면에서 2열로 감기도록 `flexBasis`와 `flexWrap`을 사용한다.
+- 공통 테마 색상은 차량운행시스템의 업무용 파랑/회색 팔레트로 맞췄고, 하단 탭바는 `Colors`의 `card`, `border`, `tabIconDefault`, `tint`를 사용한다.
 - 필터/chip/상세 버튼은 모바일 터치 편의성을 위해 최소 44px 높이를 기준으로 둔다.
 - `source-check`는 주요 터치 버튼 스타일의 `minHeight`가 44px 미만으로 내려가면 실패 처리한다.
 - 입력 화면의 ScrollView는 `automaticallyAdjustKeyboardInsets`, `keyboardDismissMode="on-drag"`, `keyboardShouldPersistTaps="handled"`로 모바일 키보드 사용성을 보강한다.

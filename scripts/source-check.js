@@ -37,6 +37,7 @@ const requiredText = [
   { file: path.join('app', '(tabs)', '_layout.tsx'), text: 'clock.fill' },
   { file: path.join('app', '(tabs)', '_layout.tsx'), text: 'tabBarStyle' },
   { file: path.join('app', '(tabs)', '_layout.tsx'), text: 'useSafeAreaInsets' },
+  { file: path.join('constants', 'theme.ts'), text: "tintColorLight = '#1565C0'" },
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '차량 검색' },
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '차량 등록' },
   { file: path.join('app', '(tabs)', 'vehicles.tsx'), text: '차량 삭제 전 운행 기록 확인' },

@@ -10,11 +10,13 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
+  const palette = Colors[colorScheme ?? 'light'];
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: palette.tint,
+        tabBarInactiveTintColor: palette.tabIconDefault,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarIconStyle: {
@@ -31,7 +33,8 @@ export default function TabLayout() {
           marginTop: 2,
         },
         tabBarStyle: {
-          borderTopColor: '#E3E8EF',
+          backgroundColor: palette.card,
+          borderTopColor: palette.border,
           borderTopWidth: 1,
           height: Math.max(insets.bottom + 64, 72),
           paddingBottom: Math.max(insets.bottom, 8),
