@@ -19,6 +19,7 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'gearshape.fill': 'settings',
   'car.fill': 'directions-car',
+  'map.fill': 'map',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
 } as IconMapping;

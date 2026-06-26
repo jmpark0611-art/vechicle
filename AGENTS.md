@@ -1,3 +1,59 @@
 # Expo HAS CHANGED
 
 Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before writing any code.
+
+---
+
+# Progress Notes (for AI continuity)
+
+## Stack
+- Expo SDK 54 (React Native + Web, cross-platform)
+- Expo Router (file-based routing, tabs layout)
+- Supabase backend: tables `vehicles`, `trips`, `gps_points`
+- expo-location ~19.0.8 (GPS tracking, already installed)
+- react-native-webview ^14.0.1 (installed — for embedded map)
+
+## Database Schema (Supabase)
+- `vehicles`: id, vehicle_number, status, ...
+- `trips`: id, vehicle_id (FK→vehicles), start_place, end_place, start_time, end_time, start_lat, start_lng, end_lat, end_lng, status ('in_progress'|'completed'|'canceled')
+- `gps_points`: id, trip_id (FK→trips), latitude, longitude, speed_kmh, recorded_at
+
+## Design System
+- Primary: #2563EB (blue), hero card: #1D4ED8
+- Background: #F8FAFC, card: #FFFFFF
+- Text: #0F172A (dark), secondary: #64748B, muted: #94A3B8
+- Card border radius: 14-20px, shadows (shadowOpacity 0.07-0.08, elevation 2)
+- Pill badges: borderRadius 20
+- No eyebrow text (removed "DRIVER LOG" style labels from all screens)
+
+## Completed Work
+
+### Session 1 (UI/UX Redesign)
+- `.claude/settings.json` → added `"Bash(git push*)"` permission for session persistence
+- `constants/theme.ts` → updated tintColorLight to #2563EB
+- `app/(tabs)/_layout.tsx` → tab bar style (white bg, border, paddingTop: 6)
+- `app/(tabs)/index.tsx` → full redesign: blue hero card when running, idle card, modern styles
+- `app/(tabs)/vehicles.tsx` → removed eyebrow, shadow cards, pill badges, modern styles
+- `app/(tabs)/check.tsx` → removed eyebrow, renamed title to "시스템 점검", modern styles
+- `app/(tabs)/explore.tsx` → removed eyebrow, pill chips, modern styles
+- `app/trips/[id].tsx` → removed eyebrow, modern styles
+
+### Session 2 (Map Feature + Route Removal)
+- **Policy**: Vehicle route/history NOT shown to anyone. Commanders see current position only (for rescue operations).
+- `app/trips/[id].tsx` → removed all GPS route data: GPS points list, coordinates card, "지도 열기" button, `handleOpenMap`, `getGpsStats`, `getDistanceKm`, `getTotalDistanceKm`, `formatGpsDuration`, `formatMapPoint`, `toRadians`, `getRecordedAtMs`, `formatCoord` import, `Linking` import. Only basic trip info (vehicle, route, times, stale warning) + cancel/back buttons remain.
+- `components/ui/icon-symbol.tsx` → added `'map.fill': 'map'` to MAPPING
+- `lib/map-html.ts` → NEW: `generateVehicleMapHtml(vehicles: VehiclePosition[])` using Leaflet.js + OpenStreetMap (no API key)
+- `components/vehicle-map.native.tsx` → NEW: WebView wrapper for native (react-native-webview)
+- `components/vehicle-map.web.tsx` → NEW: iframe wrapper for web (React.createElement)
+- `app/(tabs)/map.tsx` → NEW: commander map screen — fetches active trips + latest GPS per vehicle, shows on Leaflet map, auto-refreshes every 30s, shows vehicle count + last update time
+- `app/(tabs)/_layout.tsx` → added "위치" tab with map.fill icon
+
+## Architecture Decisions
+- **No route history anywhere**: gps_points table is write-only from driver's perspective; commanders only read latest point per active trip
+- **Map stack**: react-native-webview (native) + iframe (web) both rendering Leaflet HTML from `lib/map-html.ts`
+- **Map refresh**: client-side interval (30s), not real-time subscription (Supabase realtime not used to keep it simple)
+- **No Google Maps API key needed**: OpenStreetMap tiles via Leaflet CDN (unpkg.com/leaflet@1.9.4)
+- **Platform split**: `vehicle-map.native.tsx` / `vehicle-map.web.tsx` — Expo Router resolves automatically
+
+## Working Branch
+`claude/env-permissions-session-restart-154onb` on `jmpark0611-art/vechicle`
