@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF4FF',
     borderRadius: 8,
     justifyContent: 'center',
-    minHeight: 40,
+    minHeight: 44,
     paddingHorizontal: 14,
   },
   detailText: {

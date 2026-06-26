@@ -843,7 +843,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     flexBasis: '48%',
     flexGrow: 1,
-    minHeight: 40,
+    minHeight: 44,
     justifyContent: 'center',
     paddingHorizontal: 6,
   },
