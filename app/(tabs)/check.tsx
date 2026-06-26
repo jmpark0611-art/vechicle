@@ -4,6 +4,7 @@ import { Link, router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -444,7 +445,12 @@ export default function CheckScreen() {
         <TouchableOpacity
           style={styles.changeRoleBtn}
           onPress={async () => {
-            await clearStoredRole();
+            try {
+              await clearStoredRole();
+            } catch {
+              Alert.alert('오류', '역할 초기화에 실패했습니다. 다시 시도해 주세요.');
+              return;
+            }
             router.replace('/role-select');
           }}>
           <Text style={styles.changeRoleText}>역할 변경</Text>

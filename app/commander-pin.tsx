@@ -71,7 +71,11 @@ export default function CommanderPinScreen() {
           case 'verify': {
             const ok = await verifyPin(pin);
             if (ok) {
-              await setStoredRole('commander');
+              try {
+                await setStoredRole('commander');
+              } catch {
+                // role write failure is non-fatal; proceed anyway
+              }
               router.replace('/(tabs)');
             } else {
               setError('PIN이 올바르지 않습니다.');
@@ -89,8 +93,17 @@ export default function CommanderPinScreen() {
           }
           case 'setup-confirm': {
             if (pin === currentTempPin) {
-              await setStoredPin(pin);
-              await setStoredRole('commander');
+              try {
+                await setStoredPin(pin);
+                await setStoredRole('commander');
+              } catch {
+                setError('저장 중 오류가 발생했습니다. 다시 시도하세요.');
+                shake();
+                setDigits([]);
+                setTempPin('');
+                setPhase('setup-enter');
+                break;
+              }
               router.replace('/(tabs)');
             } else {
               setError('PIN이 일치하지 않습니다. 처음부터 다시 시도하세요.');
@@ -123,8 +136,21 @@ export default function CommanderPinScreen() {
           }
           case 'change-confirm': {
             if (pin === currentTempPin) {
-              await setStoredPin(pin);
-              router.back();
+              try {
+                await setStoredPin(pin);
+              } catch {
+                setError('저장 중 오류가 발생했습니다. 다시 시도하세요.');
+                shake();
+                setDigits([]);
+                setTempPin('');
+                setPhase('change-enter');
+                break;
+              }
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)');
+              }
             } else {
               setError('PIN이 일치하지 않습니다. 다시 시도하세요.');
               shake();

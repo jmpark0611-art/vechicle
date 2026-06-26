@@ -1,9 +1,9 @@
-import { StyleSheet } from 'react-native';
+import { StyleProp, StyleSheet, ViewStyle } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 interface Props {
   html: string;
-  style?: object;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function VehicleMap({ html, style }: Props) {

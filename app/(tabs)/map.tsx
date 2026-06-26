@@ -119,6 +119,14 @@ export default function MapScreen() {
     fetchPositions();
   }, [fetchPositions]);
 
+  if (isCommander === null) {
+    return (
+      <View style={[styles.container, styles.centerBox, { paddingTop: insets.top }]}>
+        <ActivityIndicator color="#2563EB" size="large" />
+      </View>
+    );
+  }
+
   if (isCommander === false) {
     return (
       <View style={[styles.container, styles.centerBox, { paddingTop: insets.top }]}>

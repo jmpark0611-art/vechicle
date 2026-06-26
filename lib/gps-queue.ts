@@ -11,22 +11,32 @@ export type QueuedGpsPoint = {
 const QUEUE_KEY = '@gps_queue';
 const MAX_QUEUE_SIZE = 200;
 
-export async function enqueueGpsPoint(point: QueuedGpsPoint): Promise<void> {
+function parseQueue(raw: string | null): QueuedGpsPoint[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function enqueueGpsPoint(point: QueuedGpsPoint): Promise<boolean> {
   try {
     const raw = await AsyncStorage.getItem(QUEUE_KEY);
-    const queue: QueuedGpsPoint[] = raw ? JSON.parse(raw) : [];
+    const queue = parseQueue(raw);
     queue.push(point);
     await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue.slice(-MAX_QUEUE_SIZE)));
+    return true;
   } catch {
-    // Storage error — silently skip
+    return false;
   }
 }
 
 export async function dequeueAllGpsPoints(): Promise<QueuedGpsPoint[]> {
   try {
     const raw = await AsyncStorage.getItem(QUEUE_KEY);
-    if (!raw) return [];
-    const queue: QueuedGpsPoint[] = JSON.parse(raw);
+    const queue = parseQueue(raw);
     await AsyncStorage.removeItem(QUEUE_KEY);
     return queue;
   } catch {
@@ -37,8 +47,7 @@ export async function dequeueAllGpsPoints(): Promise<QueuedGpsPoint[]> {
 export async function getGpsQueueSize(): Promise<number> {
   try {
     const raw = await AsyncStorage.getItem(QUEUE_KEY);
-    if (!raw) return 0;
-    return (JSON.parse(raw) as QueuedGpsPoint[]).length;
+    return parseQueue(raw).length;
   } catch {
     return 0;
   }

@@ -90,6 +90,12 @@ eas build --profile production --platform android # AAB (스토어 배포)
 - `eas.json`: preview=APK internal, production=AAB autoIncrement
 - `app.json`: `android.package = "com.vehicle.tracking"` (EAS 필수)
 
+## 보안
+
+- 수송부 간부 PIN은 `expo-secure-store`(암호화 키체인)에 저장된다. 키 이름: `commander_pin`.
+- `gps_points`, `vehicles`, `trips` 테이블은 모두 RLS가 활성화되어 있고 anon 역할에 CRUD 정책이 적용되어 있다. 별도 Supabase 인증 없이 anon 키로 읽기/쓰기가 가능하다.
+- 관제 지도 팝업의 차량번호·경로 텍스트는 HTML 이스케이프 처리 후 삽입된다.
+
 ## 주의점
 
 - GitHub 레포/브랜치로 넘길 때는 `docs/github-handoff.md`를 먼저 확인한다.

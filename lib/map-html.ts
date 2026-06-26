@@ -8,6 +8,15 @@ export type VehiclePosition = {
   endPlace: string | null;
 };
 
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function generateVehicleMapHtml(vehicles: VehiclePosition[]): string {
   const center = vehicles.length > 0
     ? `[${vehicles[0].latitude}, ${vehicles[0].longitude}]`
@@ -24,11 +33,12 @@ export function generateVehicleMapHtml(vehicles: VehiclePosition[]): string {
       ? new Date(v.recordedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
       : '-';
     const route = v.startPlace && v.endPlace
-      ? `${v.startPlace} → ${v.endPlace}`
-      : (v.startPlace ?? '-');
+      ? `${escHtml(v.startPlace)} → ${escHtml(v.endPlace)}`
+      : escHtml(v.startPlace ?? '-');
+    const vehicleNum = escHtml(v.vehicleNumber);
     return `L.marker([${v.latitude}, ${v.longitude}], {icon: carIcon})
       .addTo(map)
-      .bindPopup('<div style="font-family:sans-serif;min-width:160px"><b style="font-size:15px">${v.vehicleNumber}</b><br><span style="color:#2563EB">● 운행 중</span><br><span style="color:#64748B;font-size:12px">${route}</span><br><span style="font-size:12px">속도: ${speed} · ${time}</span></div>')`;
+      .bindPopup('<div style="font-family:sans-serif;min-width:160px"><b style="font-size:15px">${vehicleNum}</b><br><span style="color:#2563EB">● 운행 중</span><br><span style="color:#64748B;font-size:12px">${route}</span><br><span style="font-size:12px">속도: ${speed} · ${time}</span></div>')`;
   }).join(';\n') + (vehicles.length > 0 ? ';' : '');
 
   return `<!DOCTYPE html>

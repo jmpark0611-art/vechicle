@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { setStoredRole } from '../lib/role';
@@ -11,8 +11,13 @@ export default function RoleSelectScreen() {
 
   const handleSelectDriver = async () => {
     setIsLoading(true);
-    await setStoredRole('driver');
-    router.replace('/(tabs)');
+    try {
+      await setStoredRole('driver');
+      router.replace('/(tabs)');
+    } catch {
+      setIsLoading(false);
+      Alert.alert('오류', '역할 저장에 실패했습니다. 다시 시도해 주세요.');
+    }
   };
 
   const handleSelectCommander = () => {

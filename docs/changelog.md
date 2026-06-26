@@ -1,6 +1,18 @@
 # 변경 이력
 
-## 현재 작업본
+## 현재 작업본 (안정화)
+
+- Supabase RLS 정책을 정비했다. `gps_points`는 RLS가 켜져 있었으나 정책이 없어 GPS 저장이 전면 차단되던 문제를 수정했다(anon SELECT·INSERT 정책 추가). `vehicles`와 `trips`에도 RLS를 활성화하고 anon CRUD 정책을 추가했다.
+- 수송부 간부 PIN을 AsyncStorage 평문 저장에서 expo-secure-store 암호화 저장으로 전환했다.
+- 관제 지도 화면에서 역할 조회 중(isCommander === null)일 때 로딩 인디케이터를 표시하도록 수정했다.
+- `commander-pin.tsx`에 PIN 저장·역할 저장 실패 시 오류 메시지 표시와 change-confirm 단계의 router.back() 대체 경로(canGoBack 실패 시 /(tabs) 이동)를 추가했다.
+- `role-select.tsx`에 역할 저장 실패 시 Alert 오류 안내를 추가했다.
+- `check.tsx`에 역할 초기화 실패 시 Alert 오류 안내를 추가했다.
+- `gps-queue.ts`에 JSON 파싱 방어 코드(Array.isArray 검사)를 추가하고 enqueueGpsPoint 반환값을 boolean으로 변경했다.
+- `map-html.ts`의 Leaflet 팝업 내 차량번호·경로 문자열에 HTML 이스케이프 처리를 적용해 XSS 위험을 제거했다.
+- `vehicle-map.native.tsx`, `vehicle-map.web.tsx`의 style prop 타입을 `object`에서 `StyleProp<ViewStyle>`로 교정했다.
+
+## 이전 작업본
 
 - 역할 기반 인증을 추가했다. 앱 시작 시 역할 미설정이면 `/role-select`로 이동하고, 운전자/수송부 간부 중 하나를 선택한다.
 - 수송부 간부 역할에 4자리 PIN 잠금을 추가했다. 최초 설정, 앱 재시작 시 확인, 점검 탭에서 변경의 3가지 모드를 지원한다.
