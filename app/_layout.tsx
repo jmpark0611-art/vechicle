@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { recordAppAccess } from '../lib/access-counter';
 import { getStoredPin } from '../lib/commander-pin';
 import { getStoredRole } from '../lib/role';
 
@@ -21,6 +22,7 @@ export default function RootLayout() {
   useEffect(() => {
     (async () => {
       try {
+        recordAppAccess();
         const role = await getStoredRole();
         if (!role) {
           router.replace('/role-select');

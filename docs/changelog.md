@@ -7,6 +7,7 @@
 - 헤더 부제목에 운행 중 대수, GPS 수신 대수, 주의 대수를 표시한다.
 - 점검 탭에 `GPS 대기 큐` 항목을 추가했다(미전송 건수 표시, 0이면 '없음').
 - 점검 탭에 수송부 간부 전용 `PIN 잠금` 항목을 추가했다(설정됨/미설정 표시).
+- 앱 시작 시 Supabase 공유 DB의 접속 카운터를 증가시키고, 점검 탭에 누적 접속/최근 집계 시간을 표시한다.
 - `app.json` scheme을 `mysdk54app`(템플릿 잔재)에서 `vehicletracking`으로 변경했다.
 - `docs/schema.sql`에 현재 Supabase RLS 정책을 반영했다(재적용 가능한 SQL 포함).
 - `docs/operations.md`를 신규 작성했다: EAS 빌드 절차, 네이티브 호환성 표, Supabase 설정, PIN/역할 흐름, GPS 큐 대응, 관제 지도 뱃지 기준.

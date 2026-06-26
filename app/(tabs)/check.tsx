@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AccessCounterStats, getAppAccessCounter } from '../../lib/access-counter';
 import { getStoredPin } from '../../lib/commander-pin';
 import { getGpsQueueSize } from '../../lib/gps-queue';
 import { AppRole, clearStoredRole, getStoredRole } from '../../lib/role';
@@ -99,6 +100,7 @@ export default function CheckScreen() {
   const [role, setRole] = useState<AppRole | null>(null);
   const [gpsQueueSize, setGpsQueueSize] = useState(0);
   const [pinIsSet, setPinIsSet] = useState<boolean | null>(null);
+  const [accessCounter, setAccessCounter] = useState<AccessCounterStats | null>(null);
 
   const loadStatus = useCallback(async (refreshing = false) => {
     setStatus('checking');
@@ -245,6 +247,7 @@ export default function CheckScreen() {
         }
       });
       getGpsQueueSize().then(setGpsQueueSize);
+      getAppAccessCounter().then(setAccessCounter);
     }, [loadStatus])
   );
 
@@ -460,6 +463,14 @@ export default function CheckScreen() {
           <Text style={[styles.infoValue, gpsQueueSize > 0 && styles.warningInfoValue]}>
             {gpsQueueSize > 0 ? `${gpsQueueSize}건 미전송` : '없음'}
           </Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>누적 접속</Text>
+          <Text style={styles.infoValue}>{accessCounter ? `${accessCounter.totalCount}회` : '-'}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>접속 집계</Text>
+          <Text style={styles.infoValue}>{formatDateTime(accessCounter?.updatedAt ?? null)}</Text>
         </View>
         {role === 'commander' && (
           <TouchableOpacity
