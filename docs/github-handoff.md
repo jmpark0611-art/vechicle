@@ -1,8 +1,17 @@
 # GitHub 인수인계
 
+## 협업 기준
+
+- 기준 원본은 GitHub `main` 브랜치다.
+- 현재 레포는 `https://github.com/jmpark0611-art/vechicle` 이고 기본 브랜치는 `main`이다.
+- 로컬 미커밋 변경은 임시 작업으로 본다.
+- 작업 시작 전 반드시 `main` 최신 상태를 pull/fetch한다.
+- 작업 후 `npm.cmd run verify`를 통과시키고 `docs/handoff.md`, `docs/changelog.md`를 갱신한 뒤 커밋/푸시한다.
+- 여러 AI가 이어서 작업할 때는 GitHub `main` 최신 커밋 해시와 남은 작업을 함께 전달한다.
+
 ## 현재 상태
 
-현재 프로젝트 폴더 `my-sdk54-app`는 로컬 작업 폴더이며, 폴더 안에 `.git` 디렉터리가 없다. 따라서 이 파일들이 GitHub 레포지토리에 자동으로 올라가 있지는 않다.
+현재 프로젝트 폴더 `my-sdk54-app`는 GitHub `jmpark0611-art/vechicle` 레포지토리의 `main` 브랜치와 연결되어 있다.
 
 로컬 프로젝트 경로:
 

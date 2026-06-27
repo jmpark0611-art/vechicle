@@ -5,6 +5,7 @@
 - 앱 이름: 차량운행시스템
 - 기반: Expo SDK 54, Expo Router, Supabase
 - 주요 경로: `app/(tabs)/index.tsx`, `app/(tabs)/explore.tsx`, `app/(tabs)/vehicles.tsx`, `app/(tabs)/check.tsx`, `app/trips/[id].tsx`
+- 협업 기준: GitHub `main` 브랜치를 기준 원본으로 사용한다. 로컬 미커밋 변경은 임시 작업으로 보고, 작업 시작 전 `main` 최신 상태를 pull/fetch한 뒤 진행한다.
 
 ## 현재 화면
 
