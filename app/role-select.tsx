@@ -40,8 +40,13 @@ export default function RoleSelectScreen() {
         onPress={handleSelectDriver}
         disabled={isLoading}
         activeOpacity={0.85}>
-        <View style={[styles.roleTag, styles.driverTag]}>
-          <Text style={styles.driverTagText}>운전자</Text>
+        <View style={styles.cardTop}>
+          <View style={styles.iconBubble}>
+            <Text style={styles.roleIcon}>🚚</Text>
+          </View>
+          <View style={[styles.roleTag, styles.driverTag]}>
+            <Text style={styles.driverTagText}>운전자</Text>
+          </View>
         </View>
         <Text style={styles.cardTitle}>운전자 모드</Text>
         <Text style={styles.cardDesc}>차량 운행 시작·종료, 운행 기록 확인</Text>
@@ -52,8 +57,13 @@ export default function RoleSelectScreen() {
         onPress={handleSelectCommander}
         disabled={isLoading}
         activeOpacity={0.85}>
-        <View style={[styles.roleTag, styles.commanderTag]}>
-          <Text style={styles.commanderTagText}>수송부 간부</Text>
+        <View style={styles.cardTop}>
+          <View style={[styles.iconBubble, styles.commanderIconBubble]}>
+            <Text style={styles.roleIcon}>🛡️</Text>
+          </View>
+          <View style={[styles.roleTag, styles.commanderTag]}>
+            <Text style={styles.commanderTagText}>수송부 간부</Text>
+          </View>
         </View>
         <Text style={styles.cardTitle}>수송부 간부 모드</Text>
         <Text style={styles.cardDesc}>차량 현재 위치 조회, 실시간 운행 현황 확인</Text>
@@ -61,7 +71,7 @@ export default function RoleSelectScreen() {
       </TouchableOpacity>
 
       {isLoading && (
-        <ActivityIndicator style={styles.loader} color="#2563EB" size="large" />
+        <ActivityIndicator style={styles.loader} color="#A8FF5F" size="large" />
       )}
     </View>
   );
@@ -70,77 +80,96 @@ export default function RoleSelectScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#101112',
     paddingHorizontal: 24,
     justifyContent: 'center',
   },
   title: {
-    color: '#0F172A',
+    color: '#F8FAFC',
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 10,
   },
   subtitle: {
-    color: '#64748B',
+    color: '#B7BDC5',
     fontSize: 14,
     fontWeight: '400',
     lineHeight: 22,
     marginBottom: 36,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: '#1F2023',
+    borderColor: '#30343A',
+    borderRadius: 18,
+    borderWidth: 1,
     marginBottom: 16,
-    padding: 24,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    minHeight: 164,
+    padding: 20,
   },
   commanderCard: {
-    borderColor: '#BFDBFE',
-    borderWidth: 1.5,
+    borderColor: '#476A2D',
+    backgroundColor: '#20251F',
+  },
+  cardTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  iconBubble: {
+    alignItems: 'center',
+    backgroundColor: '#0B0C0D',
+    borderColor: '#3F463B',
+    borderRadius: 30,
+    borderWidth: 1,
+    height: 60,
+    justifyContent: 'center',
+    width: 60,
+  },
+  commanderIconBubble: {
+    borderColor: '#5F8B32',
+  },
+  roleIcon: {
+    fontSize: 32,
   },
   roleTag: {
     alignSelf: 'flex-start',
     borderRadius: 20,
-    marginBottom: 14,
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
   driverTag: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#24331D',
   },
   driverTagText: {
-    color: '#059669',
+    color: '#A8FF5F',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   commanderTag: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#2E421F',
   },
   commanderTagText: {
-    color: '#2563EB',
+    color: '#C6FF7A',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   cardTitle: {
-    color: '#0F172A',
+    color: '#F8FAFC',
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 6,
   },
   cardDesc: {
-    color: '#64748B',
+    color: '#BDC3CA',
     fontSize: 14,
     fontWeight: '400',
     lineHeight: 20,
   },
   pinHint: {
-    color: '#2563EB',
+    color: '#A8FF5F',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '800',
     marginTop: 8,
   },
   loader: {

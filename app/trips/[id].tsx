@@ -169,13 +169,25 @@ export default function TripDetailScreen() {
         },
       ]}
       refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={() => loadDetail(true)} />
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={() => loadDetail(true)}
+          tintColor="#A8FF5F"
+        />
       }>
-      <Text style={styles.title}>운행 상세</Text>
+      <View style={styles.headerRow}>
+        <View style={styles.iconBubble}>
+          <Text style={styles.headerIcon}>🧭</Text>
+        </View>
+        <View style={styles.headerCopy}>
+          <Text style={styles.title}>운행 상세</Text>
+          <Text style={styles.subtitle}>차량 운행 상태와 시간을 확인합니다</Text>
+        </View>
+      </View>
 
       {isLoading && (
         <View style={styles.noticeBox}>
-          <ActivityIndicator color="#2563EB" />
+          <ActivityIndicator color="#A8FF5F" />
           <Text style={styles.noticeText}>운행 상세를 불러오는 중입니다.</Text>
         </View>
       )}
@@ -190,7 +202,10 @@ export default function TripDetailScreen() {
         <>
           <View style={styles.summaryCard}>
             <View style={styles.cardHeader}>
-              <Text style={styles.vehicleText}>{vehicleNumber}</Text>
+              <View style={styles.vehicleTitleRow}>
+                <Text style={styles.vehicleIcon}>🚗</Text>
+                <Text style={styles.vehicleText}>{vehicleNumber}</Text>
+              </View>
               <Text
                 style={[
                   styles.statusBadge,
@@ -262,82 +277,127 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#101112',
     padding: 20,
   },
-  title: {
-    color: '#0F172A',
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 14,
-    padding: 18,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  cardHeader: {
+  headerRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    gap: 14,
+    marginBottom: 18,
+  },
+  iconBubble: {
+    alignItems: 'center',
+    backgroundColor: '#1F2023',
+    borderColor: '#3F463B',
+    borderRadius: 30,
+    borderWidth: 1,
+    height: 60,
+    justifyContent: 'center',
+    width: 60,
+  },
+  headerIcon: {
+    fontSize: 32,
+  },
+  headerCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  title: {
+    color: '#F8FAFC',
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  subtitle: {
+    color: '#AEB5BE',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  summaryCard: {
+    backgroundColor: '#1F2023',
+    borderColor: '#30343A',
+    borderRadius: 18,
+    borderWidth: 1,
+    marginBottom: 14,
+    padding: 18,
+  },
+  cardHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  vehicleTitleRow: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+    minWidth: 0,
+  },
+  vehicleIcon: {
+    fontSize: 28,
   },
   vehicleText: {
-    color: '#0F172A',
+    color: '#F8FAFC',
     flex: 1,
     fontSize: 18,
-    fontWeight: '700',
-    marginRight: 12,
+    fontWeight: '800',
+    minWidth: 0,
   },
   statusBadge: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#263A1D',
     borderRadius: 20,
-    color: '#059669',
+    color: '#A8FF5F',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '800',
     overflow: 'hidden',
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   runningBadge: {
-    backgroundColor: '#EFF6FF',
-    color: '#2563EB',
+    backgroundColor: '#1C352D',
+    color: '#76E4B5',
   },
   staleBadge: {
-    backgroundColor: '#FEF2F2',
-    color: '#DC2626',
+    backgroundColor: '#3F2424',
+    color: '#FF8A8A',
   },
   staleBox: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 10,
-    marginTop: 10,
+    backgroundColor: '#3A2424',
+    borderColor: '#5A2B2B',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 12,
     padding: 12,
   },
   staleText: {
-    color: '#DC2626',
+    color: '#FFB4B4',
     fontSize: 13,
     fontWeight: '500',
+    lineHeight: 19,
   },
   routeRow: {
     alignItems: 'center',
+    backgroundColor: '#151719',
+    borderRadius: 14,
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 14,
+    padding: 12,
   },
   routeText: {
-    color: '#334155',
+    color: '#E8EDF2',
     flex: 1,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
+    minWidth: 0,
   },
   routeArrow: {
-    color: '#94A3B8',
-    fontSize: 14,
+    color: '#A8FF5F',
+    fontSize: 16,
+    fontWeight: '800',
     marginHorizontal: 10,
   },
   infoRow: {
@@ -349,15 +409,15 @@ const styles = StyleSheet.create({
     minHeight: 30,
   },
   infoLabel: {
-    color: '#64748B',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  infoValue: {
-    color: '#334155',
-    flexShrink: 1,
+    color: '#9AA3AD',
     fontSize: 13,
     fontWeight: '600',
+  },
+  infoValue: {
+    color: '#F8FAFC',
+    flexShrink: 1,
+    fontSize: 13,
+    fontWeight: '700',
     marginLeft: 14,
     textAlign: 'right',
   },
@@ -369,7 +429,7 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     alignItems: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#A8FF5F',
     borderRadius: 12,
     flexBasis: 150,
     flexGrow: 1,
@@ -378,46 +438,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   secondaryBtn: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#1F2023',
+    borderColor: '#3F463B',
+    borderWidth: 1,
   },
   dangerOutlineBtn: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#3A2424',
+    borderColor: '#5A2B2B',
+    borderWidth: 1,
   },
   actionText: {
-    color: '#FFFFFF',
+    color: '#101112',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '800',
   },
   secondaryText: {
-    color: '#2563EB',
+    color: '#E8EDF2',
   },
   dangerOutlineText: {
-    color: '#DC2626',
+    color: '#FF8A8A',
   },
   noticeBox: {
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#1F2023',
+    borderColor: '#30343A',
     borderRadius: 12,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: 10,
     marginBottom: 14,
     padding: 14,
   },
   noticeText: {
-    color: '#1D4ED8',
+    color: '#D8DEE6',
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#3A2424',
+    borderColor: '#5A2B2B',
     borderRadius: 12,
+    borderWidth: 1,
     marginBottom: 14,
     padding: 14,
   },
   errorText: {
-    color: '#DC2626',
+    color: '#FFB4B4',
     fontSize: 14,
     fontWeight: '500',
+    lineHeight: 20,
   },
 });

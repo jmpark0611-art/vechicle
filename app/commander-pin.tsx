@@ -200,6 +200,9 @@ export default function CommanderPinScreen() {
         styles.container,
         { paddingTop: insets.top + 56, paddingBottom: insets.bottom + 32 },
       ]}>
+      <View style={styles.iconBubble}>
+        <Text style={styles.headerIcon}>🔐</Text>
+      </View>
       <Text style={styles.title}>수송부 간부</Text>
       <Text style={styles.subtitle}>{PHASE_SUBTITLE[phase]}</Text>
 
@@ -259,21 +262,35 @@ export default function CommanderPinScreen() {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#101112',
     flex: 1,
     paddingHorizontal: 32,
   },
+  iconBubble: {
+    alignItems: 'center',
+    backgroundColor: '#1F2023',
+    borderColor: '#3F463B',
+    borderRadius: 34,
+    borderWidth: 1,
+    height: 68,
+    justifyContent: 'center',
+    marginBottom: 16,
+    width: 68,
+  },
+  headerIcon: {
+    fontSize: 36,
+  },
   title: {
-    color: '#0F172A',
+    color: '#F8FAFC',
     fontSize: 26,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 8,
   },
   subtitle: {
-    color: '#64748B',
+    color: '#B7BDC5',
     fontSize: 15,
     fontWeight: '500',
-    marginBottom: 52,
+    marginBottom: 44,
     textAlign: 'center',
   },
   dotsRow: {
@@ -283,18 +300,18 @@ const styles = StyleSheet.create({
   },
   dot: {
     backgroundColor: 'transparent',
-    borderColor: '#CBD5E1',
+    borderColor: '#4B5563',
     borderRadius: 10,
     borderWidth: 2,
     height: 20,
     width: 20,
   },
   dotFilled: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
+    backgroundColor: '#A8FF5F',
+    borderColor: '#A8FF5F',
   },
   error: {
-    color: '#DC2626',
+    color: '#FF7B7B',
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 20,
@@ -315,28 +332,25 @@ const styles = StyleSheet.create({
   },
   padKey: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    elevation: 2,
+    backgroundColor: '#1F2023',
+    borderColor: '#30343A',
+    borderRadius: 18,
+    borderWidth: 1,
     flex: 1,
     height: 72,
     justifyContent: 'center',
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.09,
-    shadowRadius: 8,
   },
   padKeyEmpty: {
     flex: 1,
     height: 72,
   },
   keyText: {
-    color: '#0F172A',
+    color: '#F8FAFC',
     fontSize: 26,
-    fontWeight: '500',
+    fontWeight: '700',
   },
   deleteText: {
-    color: '#64748B',
+    color: '#A8FF5F',
     fontSize: 22,
   },
   backBtn: {
@@ -344,8 +358,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   backText: {
-    color: '#94A3B8',
+    color: '#A8FF5F',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '700',
   },
 });
