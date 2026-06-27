@@ -718,7 +718,7 @@ export default function DriverScreen() {
 
       {isLoadingDashboard && (
         <View style={styles.noticeBox}>
-          <ActivityIndicator color="#2563EB" />
+          <ActivityIndicator color="#A8FF5F" />
           <Text style={styles.noticeText}>운행 상태를 확인하는 중입니다.</Text>
         </View>
       )}
@@ -949,7 +949,7 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   title: {
-    color: '#0F172A',
+    color: '#F8FAFC',
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 16,

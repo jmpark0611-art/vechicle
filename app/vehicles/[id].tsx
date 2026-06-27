@@ -416,7 +416,7 @@ export default function VehicleMaintenanceScreen() {
 
       {isLoading && (
         <View style={styles.noticeBox}>
-          <ActivityIndicator color="#1565C0" />
+          <ActivityIndicator color="#A8FF5F" />
           <Text style={styles.noticeText}>정비 현황을 불러오는 중입니다.</Text>
         </View>
       )}

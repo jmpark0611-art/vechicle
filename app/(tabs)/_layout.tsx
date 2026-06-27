@@ -53,6 +53,12 @@ export default function TabLayout() {
           lineHeight: 14,
           marginTop: 2,
         },
+        tabBarBadgeStyle: {
+          backgroundColor: '#A8FF5F',
+          color: '#101112',
+          fontSize: 11,
+          fontWeight: '900',
+        },
         tabBarStyle: {
           backgroundColor: palette.card,
           borderTopColor: palette.border,

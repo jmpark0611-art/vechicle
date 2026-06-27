@@ -585,7 +585,7 @@ export default function TripHistoryScreen() {
 
       {isLoading && (
         <View style={styles.noticeBox}>
-          <ActivityIndicator color="#1565C0" />
+          <ActivityIndicator color="#A8FF5F" />
           <Text style={styles.noticeText}>운행 기록을 불러오는 중입니다.</Text>
         </View>
       )}
@@ -709,7 +709,7 @@ export default function TripHistoryScreen() {
           onPress={handleLoadMore}
           disabled={isLoadingMore || isLoading}>
           {isLoadingMore ? (
-            <ActivityIndicator color="#1565C0" />
+            <ActivityIndicator color="#A8FF5F" />
           ) : (
             <Text style={styles.loadMoreText}>운행 기록 더 보기</Text>
           )}

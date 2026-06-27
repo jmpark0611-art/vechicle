@@ -189,7 +189,7 @@ export default function MapScreen() {
   if (isCommander === null) {
     return (
       <View style={[styles.container, styles.centerBox, { paddingTop: insets.top }]}>
-        <ActivityIndicator color="#2563EB" size="large" />
+        <ActivityIndicator color="#A8FF5F" size="large" />
       </View>
     );
   }
@@ -244,7 +244,7 @@ export default function MapScreen() {
 
       {isLoading && !html ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator color="#2563EB" size="large" />
+          <ActivityIndicator color="#A8FF5F" size="large" />
           <Text style={styles.loadingText}>차량 위치를 불러오는 중...</Text>
         </View>
       ) : (

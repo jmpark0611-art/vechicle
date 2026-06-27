@@ -593,7 +593,7 @@ export default function VehiclesScreen() {
 
       {isLoading && (
         <View style={styles.noticeBox}>
-          <ActivityIndicator color="#1565C0" />
+          <ActivityIndicator color="#A8FF5F" />
           <Text style={styles.noticeText}>차량 상태를 불러오는 중입니다.</Text>
         </View>
       )}
