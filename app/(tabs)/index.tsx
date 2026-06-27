@@ -727,9 +727,13 @@ export default function DriverScreen() {
         <>
           <View style={styles.runningHeroCard}>
             <View style={styles.heroHeader}>
-              <View style={styles.statusDotActive} />
-              <Text style={styles.heroStatusText}>운행 중</Text>
-              <Text style={styles.heroVehicleText} numberOfLines={1}>{selectedVehicleText}</Text>
+              <View style={styles.heroIcon}>
+                <Text style={styles.heroEmoji}>🚚</Text>
+              </View>
+              <View style={styles.heroTitleBox}>
+                <Text style={styles.heroStatusText}>운행 중</Text>
+                <Text style={styles.heroVehicleText} numberOfLines={1}>{selectedVehicleText}</Text>
+              </View>
             </View>
             <View style={styles.heroMetrics}>
               <View style={styles.heroMetric}>
@@ -791,14 +795,18 @@ export default function DriverScreen() {
         <>
           <View style={styles.idleCard}>
             <View style={styles.idleRow}>
-              <View style={styles.statusDotIdle} />
-              <Text style={styles.idleStatusText}>대기 중</Text>
-              <Text style={styles.idleVehicleText} numberOfLines={1}>{selectedVehicleText}</Text>
+              <View style={styles.idleIcon}>
+                <Text style={styles.idleEmoji}>🚗</Text>
+              </View>
+              <View style={styles.idleTextBox}>
+                <Text style={styles.idleStatusText}>운행 대기</Text>
+                <Text style={styles.idleVehicleText} numberOfLines={1}>{selectedVehicleText}</Text>
+              </View>
             </View>
           </View>
 
           <View style={styles.inputCard}>
-            <Text style={styles.sectionTitle}>운행 정보</Text>
+            <Text style={styles.sectionTitle}>🧭 운행 정보</Text>
             <View style={styles.inputLabelRow}>
               <Text style={styles.inputLabel}>출발지</Text>
               <TouchableOpacity
@@ -937,8 +945,8 @@ export default function DriverScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#F8FAFC',
-    padding: 20,
+    backgroundColor: '#101314',
+    padding: 18,
   },
   title: {
     color: '#0F172A',
@@ -948,21 +956,40 @@ const styles = StyleSheet.create({
   },
   // Running hero card
   runningHeroCard: {
-    backgroundColor: '#1D4ED8',
-    borderRadius: 20,
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 22,
+    borderWidth: 1,
     marginBottom: 12,
     padding: 22,
-    shadowColor: '#1D4ED8',
+    shadowColor: '#A8FF5F',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.14,
     shadowRadius: 16,
-    elevation: 8,
+    elevation: 3,
   },
   heroHeader: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
     marginBottom: 22,
+  },
+  heroIcon: {
+    alignItems: 'center',
+    backgroundColor: '#0A0B0A',
+    borderColor: '#80FF2F',
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 58,
+    justifyContent: 'center',
+    width: 58,
+  },
+  heroEmoji: {
+    fontSize: 30,
+  },
+  heroTitleBox: {
+    flex: 1,
+    minWidth: 0,
   },
   statusDotActive: {
     backgroundColor: '#34D399',
@@ -971,16 +998,15 @@ const styles = StyleSheet.create({
     width: 8,
   },
   heroStatusText: {
-    color: '#BFDBFE',
+    color: '#A8FF5F',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   heroVehicleText: {
     color: '#FFFFFF',
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '700',
-    textAlign: 'right',
+    fontSize: 22,
+    fontWeight: '900',
+    marginTop: 2,
   },
   heroMetrics: {
     alignItems: 'center',
@@ -1002,13 +1028,13 @@ const styles = StyleSheet.create({
     color: '#FCA5A5',
   },
   heroMetricUnit: {
-    color: '#BFDBFE',
+    color: '#A6ADB8',
     fontSize: 13,
     fontWeight: '500',
     marginTop: 4,
   },
   heroMetricDivider: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: '#343A40',
     height: 52,
     width: 1,
   },
@@ -1018,36 +1044,33 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heroRouteText: {
-    color: '#DBEAFE',
+    color: '#E6EBF2',
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   heroRouteArrow: {
-    color: '#93C5FD',
+    color: '#A8FF5F',
     fontSize: 14,
     marginHorizontal: 10,
   },
   heroStartTime: {
-    color: '#93C5FD',
+    color: '#A6ADB8',
     fontSize: 12,
     fontWeight: '400',
   },
   // GPS status card
   gpsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    backgroundColor: '#232326',
+    borderColor: '#30343A',
+    borderRadius: 18,
+    borderWidth: 1,
     marginBottom: 14,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
   },
   gpsRow: {
     alignItems: 'center',
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#30343A',
     borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1057,37 +1080,49 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   gpsLabel: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   gpsValue: {
-    color: '#0F172A',
+    color: '#E6EBF2',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   successText: {
-    color: '#059669',
+    color: '#A8FF5F',
   },
   waitingText: {
-    color: '#D97706',
+    color: '#FFD65C',
   },
   // Idle status card
   idleCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
     marginBottom: 14,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 1,
   },
   idleRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
+  },
+  idleIcon: {
+    alignItems: 'center',
+    backgroundColor: '#080A08',
+    borderRadius: 16,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
+  },
+  idleEmoji: {
+    fontSize: 28,
+  },
+  idleTextBox: {
+    flex: 1,
+    minWidth: 0,
   },
   statusDotIdle: {
     backgroundColor: '#CBD5E1',
@@ -1096,31 +1131,28 @@ const styles = StyleSheet.create({
     width: 8,
   },
   idleStatusText: {
-    color: '#64748B',
-    fontSize: 14,
-    fontWeight: '500',
+    color: '#A8FF5F',
+    fontSize: 13,
+    fontWeight: '900',
   },
   idleVehicleText: {
-    color: '#0F172A',
+    color: '#FFFFFF',
     flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'right',
+    fontSize: 20,
+    fontWeight: '900',
+    marginTop: 2,
   },
   // Input form
   vehicleSection: {
     marginBottom: 24,
   },
   inputCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
     marginBottom: 14,
     padding: 20,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
   },
   inputLabelRow: {
     alignItems: 'center',
@@ -1130,40 +1162,40 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputLabel: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   voiceBtn: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#183F28',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
   voiceText: {
-    color: '#059669',
+    color: '#A8FF5F',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   voiceNoticeBox: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#182632',
     borderRadius: 10,
     marginTop: 14,
     padding: 12,
   },
   voiceNoticeText: {
-    color: '#0369A1',
+    color: '#9DDCFF',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   textInput: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    backgroundColor: '#101314',
+    borderColor: '#3D444D',
     borderRadius: 12,
     borderWidth: 1,
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '800',
     minHeight: 48,
     paddingHorizontal: 14,
   },
@@ -1174,15 +1206,15 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   presetBtn: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#2F3440',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   presetText: {
-    color: '#2563EB',
+    color: '#E6EBF2',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   sectionHeader: {
     alignItems: 'center',
@@ -1191,14 +1223,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   reloadText: {
-    color: '#2563EB',
+    color: '#A8FF5F',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   selectBox: {
     flexDirection: 'row',
@@ -1206,38 +1238,31 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   vehicleBtn: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: '#232326',
+    borderColor: '#30343A',
     borderRadius: 14,
     borderWidth: 1,
     minWidth: 100,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 1,
   },
   selectedBtn: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
-    shadowColor: '#2563EB',
-    shadowOpacity: 0.3,
+    backgroundColor: '#A8FF5F',
+    borderColor: '#A8FF5F',
   },
   vehicleTxt: {
-    color: '#0F172A',
+    color: '#E6EBF2',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '900',
     textAlign: 'center',
   },
   selectedVehicleTxt: {
-    color: '#FFFFFF',
+    color: '#111827',
   },
   // Notices
   noticeBox: {
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#1F2023',
     borderRadius: 12,
     flexDirection: 'row',
     gap: 10,
@@ -1245,42 +1270,42 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   noticeText: {
-    color: '#1D4ED8',
+    color: '#A8FF5F',
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   warningBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#4A3A12',
     borderRadius: 12,
     marginBottom: 12,
     padding: 14,
   },
   warningText: {
-    color: '#D97706',
+    color: '#FFD65C',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#3A1C1C',
     borderRadius: 12,
     marginBottom: 12,
     padding: 14,
   },
   errorText: {
-    color: '#DC2626',
+    color: '#FF8585',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   // Buttons
   startBtn: {
     alignItems: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#A8FF5F',
     borderRadius: 16,
     justifyContent: 'center',
     minHeight: 60,
     width: '100%',
-    shadowColor: '#2563EB',
+    shadowColor: '#A8FF5F',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -1288,11 +1313,11 @@ const styles = StyleSheet.create({
   },
   endBtn: {
     alignItems: 'center',
-    backgroundColor: '#DC2626',
+    backgroundColor: '#FF8585',
     borderRadius: 16,
     justifyContent: 'center',
     minHeight: 60,
-    shadowColor: '#DC2626',
+    shadowColor: '#FF8585',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -1308,9 +1333,9 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   btnText: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '900',
     letterSpacing: 0.3,
   },
   runningActionRow: {
@@ -1320,15 +1345,15 @@ const styles = StyleSheet.create({
   },
   detailBtn: {
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#2F3440',
     borderRadius: 16,
     justifyContent: 'center',
     minHeight: 60,
     width: 80,
   },
   detailBtnText: {
-    color: '#2563EB',
+    color: '#E6EBF2',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '900',
   },
 });
