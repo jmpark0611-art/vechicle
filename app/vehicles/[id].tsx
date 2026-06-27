@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatDbError } from '../../lib/errors';
+import { OBD_ODOMETER_PID } from '../../lib/obd/elm327';
 import { withTimeout } from '../../lib/request';
 import { supabase } from '../../lib/supabase';
 
@@ -387,6 +388,15 @@ export default function VehicleMaintenanceScreen() {
             </TouchableOpacity>
           </View>
         )}
+        <View style={styles.obdPrepBox}>
+          <Text style={styles.obdPrepIcon}>📡</Text>
+          <View style={styles.obdPrepTextBox}>
+            <Text style={styles.obdPrepTitle}>OBD 스캐너 준비중</Text>
+            <Text style={styles.obdPrepText}>
+              Vgate iCar Pro 도착 후 {OBD_ODOMETER_PID} 오도미터 값을 읽어 자동 입력으로 연결합니다.
+            </Text>
+          </View>
+        </View>
       </View>
 
       {/* 요약 */}
@@ -696,6 +706,36 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     marginTop: 12,
+  },
+  obdPrepBox: {
+    alignItems: 'center',
+    backgroundColor: '#102218',
+    borderColor: '#2F5A35',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+    padding: 12,
+  },
+  obdPrepIcon: {
+    fontSize: 24,
+  },
+  obdPrepTextBox: {
+    flex: 1,
+    minWidth: 0,
+  },
+  obdPrepTitle: {
+    color: '#A8FF5F',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+  obdPrepText: {
+    color: '#C8CED6',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
   },
   summaryGrid: {
     flexDirection: 'row',
