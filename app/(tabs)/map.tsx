@@ -217,7 +217,11 @@ export default function MapScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
+        <View style={styles.headerIcon}>
+          <Text style={styles.headerEmoji}>🗺️</Text>
+        </View>
         <View style={styles.headerLeft}>
+          <Text style={styles.eyebrow}>관제 지도</Text>
           <Text style={styles.title}>차량 위치</Text>
           <Text style={styles.subtitle}>
             운행 {summaries.length}대 · GPS {gpsCount}대
@@ -261,6 +265,9 @@ export default function MapScreen() {
                       : (s.startPlace ?? '-');
                   return (
                     <View key={s.tripId} style={styles.vehicleRow}>
+                      <View style={styles.vehicleIcon}>
+                        <Text style={styles.vehicleEmoji}>🚚</Text>
+                      </View>
                       <View style={styles.vehicleRowLeft}>
                         <Text style={styles.vehicleNum} numberOfLines={1} adjustsFontSizeToFit>
                           {s.vehicleNumber}
@@ -315,7 +322,7 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#101314',
   },
   centerBox: {
     alignItems: 'center',
@@ -323,78 +330,97 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   accessTitle: {
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 8,
   },
   accessDesc: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '700',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 28,
   },
   roleBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#A8FF5F',
     borderRadius: 14,
     paddingHorizontal: 24,
     paddingVertical: 14,
   },
   roleBtnText: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   header: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#1F2023',
+    borderBottomColor: '#2B312E',
     borderBottomWidth: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 12,
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  headerIcon: {
+    alignItems: 'center',
+    backgroundColor: '#0A0B0A',
+    borderColor: '#80FF2F',
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 50,
+    justifyContent: 'center',
+    width: 50,
+  },
+  headerEmoji: {
+    fontSize: 27,
   },
   headerLeft: {
     flex: 1,
     minWidth: 0,
   },
   title: {
-    color: '#0F172A',
-    fontSize: 20,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  eyebrow: {
+    color: '#A8FF5F',
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 2,
   },
   subtitle: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '700',
     marginTop: 2,
   },
   refreshBtn: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#A8FF5F',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   refreshText: {
-    color: '#2563EB',
+    color: '#111827',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#3A1C1C',
     borderRadius: 10,
     margin: 12,
     padding: 12,
   },
   errorText: {
-    color: '#DC2626',
+    color: '#FF8585',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   loadingBox: {
     alignItems: 'center',
@@ -403,16 +429,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   map: {
     flex: 1,
   },
   listPanel: {
-    backgroundColor: '#FFFFFF',
-    borderTopColor: '#E2E8F0',
+    backgroundColor: '#1F2023',
+    borderTopColor: '#2B312E',
     borderTopWidth: 1,
     maxHeight: 220,
   },
@@ -425,7 +451,7 @@ const styles = StyleSheet.create({
   },
   vehicleRow: {
     alignItems: 'center',
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#30343A',
     borderBottomWidth: 1,
     flexDirection: 'row',
     gap: 8,
@@ -437,21 +463,32 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  vehicleIcon: {
+    alignItems: 'center',
+    backgroundColor: '#080A08',
+    borderRadius: 14,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
+  vehicleEmoji: {
+    fontSize: 23,
+  },
   vehicleNum: {
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '900',
   },
   vehicleRoute: {
-    color: '#64748B',
+    color: '#E6EBF2',
     fontSize: 12,
-    fontWeight: '400',
+    fontWeight: '700',
     marginTop: 1,
   },
   vehicleGpsTime: {
-    color: '#94A3B8',
+    color: '#A6ADB8',
     fontSize: 11,
-    fontWeight: '400',
+    fontWeight: '700',
     marginTop: 1,
   },
   badges: {
@@ -464,35 +501,35 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   badgeGray: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#2F3440',
   },
   badgeGrayText: {
-    color: '#64748B',
+    color: '#C8D1DF',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   badgeYellow: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#4A3A12',
   },
   badgeYellowText: {
-    color: '#D97706',
+    color: '#FFD65C',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   badgeRed: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#4A1C1C',
   },
   badgeRedText: {
-    color: '#DC2626',
+    color: '#FF8585',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   badgeOrange: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: '#4A2C12',
   },
   badgeOrangeText: {
-    color: '#EA580C',
+    color: '#FFB25C',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '900',
   },
 });
