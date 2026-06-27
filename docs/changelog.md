@@ -14,6 +14,7 @@
 - 역할 선택, 수송부 간부 PIN, 운행 상세 화면도 다크 카드와 라임 포인트, 큰 이모지 아이콘 중심으로 정리해 주요 흐름의 UI 톤을 맞췄다.
 - 공통 테마와 하단 탭바, 탭 뱃지, 주요 로딩 인디케이터 색상을 다크 배경+라임 포인트 기준으로 통일했다.
 - OBD 스캐너 도착 전 준비 작업으로 `lib/obd/elm327.ts`를 추가해 ELM327 초기화 명령과 `01 A6` 오도미터 응답 파서를 마련하고, 정비 화면 오도미터 카드에 OBD 준비 안내를 표시했다.
+- `scripts/obd-parser-check.js`를 추가하고 `npm.cmd run verify`에 포함해 샘플 ELM327 오도미터 응답, compact 응답, `NO DATA`/미지원/불완전 응답 처리를 자동 검증한다.
 - Supabase에 `maintenance_items`, `vehicle_maintenance` 테이블과 RLS 정책(anon CRUD)을 적용했다.
 - 현대·기아 권장 12개 항목을 `maintenance_items`에 시드했다: 엔진오일, 에어클리너, 에어컨 필터, 냉각수, 미션오일, 브레이크오일, 와이퍼 블레이드, 점화플러그, 배터리, 브레이크패드, 타이어, 타이밍벨트/체인.
 - `docs/schema.sql`에 `maintenance_items`·`vehicle_maintenance` 테이블 DDL과 RLS 정책·시드를 추가했다.

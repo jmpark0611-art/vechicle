@@ -15,6 +15,7 @@
 현재 앱에는 **ELM327 응답 파서**와 정비 화면의 OBD 준비 안내가 들어가 있습니다.
 BLE 스캔/연결 코드는 아직 넣지 않았고, 스캐너 도착 후 실기기에서 권한·연결·응답 포맷을 확인하며 붙입니다.
 현재 차량 주행거리는 **수동 입력** 방식(정비 화면 상단 오도미터 섹션)으로 운용합니다.
+`npm.cmd run verify`에는 `scripts/obd-parser-check.js`가 포함되어 샘플 ELM327 응답과 오류 응답을 자동 검증합니다.
 
 ---
 
@@ -65,6 +66,8 @@ lib/obd/
   elm327.ts           ← ELM327 초기화 명령, Mode 01 응답 파싱, 01 A6 오도미터 km 변환
   ble-manager.ts      ← BleManager 싱글턴, 권한 요청 (예정)
   obd-service.ts      ← 스캔→연결→초기화→PID 루프 상위 API (예정)
+scripts/
+  obd-parser-check.js ← elm327.ts 샘플 응답 자동 검증
 ```
 
 ### 4. 오도미터 연동 흐름

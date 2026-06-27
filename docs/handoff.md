@@ -77,7 +77,7 @@ npm.cmd run health
 - **차량 카드 뱃지**: 교체 필요 항목 있으면 정비 버튼 빨간색+건수. 주의 항목만 있으면 노란색.
 - **탭바 뱃지**: 전체 차량 교체 필요 항목 수를 `차량` 탭에 숫자 뱃지로 표시.
 - 관련 테이블: `maintenance_items`, `vehicle_maintenance`, `vehicle_maintenance_history`.
-- OBD 스캐너(Vgate iCar Pro) 연동으로 오도미터 자동 입력 예정. 현재 `lib/obd/elm327.ts`에 ELM327 초기화 명령과 `01 A6` 오도미터 응답 파서가 있으며, 정비 화면에는 OBD 준비 안내만 표시한다. BLE 스캔/연결은 스캐너 도착 후 실기기에서 진행 → `docs/obd-integration.md` 참고.
+- OBD 스캐너(Vgate iCar Pro) 연동으로 오도미터 자동 입력 예정. 현재 `lib/obd/elm327.ts`에 ELM327 초기화 명령과 `01 A6` 오도미터 응답 파서가 있으며, `scripts/obd-parser-check.js`가 `npm.cmd run verify`에서 샘플 응답을 검증한다. 정비 화면에는 OBD 준비 안내만 표시한다. BLE 스캔/연결은 스캐너 도착 후 실기기에서 진행 → `docs/obd-integration.md` 참고.
 
 ## 오프라인 GPS 큐
 

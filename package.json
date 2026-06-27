@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "health": "node ./scripts/health-check.js",
     "source-check": "node ./scripts/source-check.js",
-    "verify": "node ./scripts/source-check.js && eslint . --no-cache && tsc --noEmit"
+    "verify": "node ./scripts/source-check.js && node ./scripts/obd-parser-check.js && eslint . --no-cache && tsc --noEmit"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
