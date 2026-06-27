@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { Link } from 'expo-router';
+import { Href, Link } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -678,7 +678,7 @@ export default function VehiclesScreen() {
                     const hasWarning = !hasOverdue && (warn?.warning ?? 0) > 0;
                     return (
                       <Link
-                        href={{ pathname: '/vehicles/[id]', params: { id: vehicle.id } }}
+                        href={(`/vehicles/${vehicle.id}` as unknown) as Href}
                         asChild>
                         <TouchableOpacity
                           accessibilityLabel={`${vehicle.vehicle_number} 정비 현황`}

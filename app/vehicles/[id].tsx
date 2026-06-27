@@ -92,6 +92,16 @@ function formatDateKr(dateStr: string | null): string {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
+function getItemEmoji(name: string): string {
+  if (name.includes('엔진') || name.includes('오일')) return '⛽';
+  if (name.includes('타이어')) return '🛞';
+  if (name.includes('브레이크')) return '🧰';
+  if (name.includes('배터리')) return '🔋';
+  if (name.includes('와이퍼')) return '🧽';
+  if (name.includes('필터')) return '🌬️';
+  return '🔧';
+}
+
 export default function VehicleMaintenanceScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -326,13 +336,23 @@ export default function VehicleMaintenanceScreen() {
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => loadData(true)} />}>
-      <Text style={styles.title}>{vehicleNumber || '차량'} 정비 현황</Text>
-      <Text style={styles.subtitle}>현대·기아 권장 교체 주기 기준</Text>
+      <View style={styles.heroCard}>
+        <View style={styles.heroIcon}>
+          <Text style={styles.heroEmoji}>🚗</Text>
+        </View>
+        <View style={styles.heroTextBox}>
+          <Text style={styles.heroEyebrow}>차량 정비</Text>
+          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
+            {vehicleNumber || '차량'}
+          </Text>
+          <Text style={styles.subtitle}>교체완료 시점부터 다음 알림을 다시 계산합니다.</Text>
+        </View>
+      </View>
 
       {/* 오도미터 */}
       <View style={styles.odometerCard}>
         <View style={styles.odometerRow}>
-          <View>
+          <View style={styles.odometerTextBox}>
             <Text style={styles.odometerLabel}>현재 주행거리</Text>
             <Text style={styles.odometerValue}>
               {currentMileageKm != null ? `${currentMileageKm.toLocaleString()} km` : '미입력'}
@@ -372,21 +392,24 @@ export default function VehicleMaintenanceScreen() {
       {/* 요약 */}
       <View style={styles.summaryGrid}>
         {([
-          ['정상', statusCounts.ok, false, false],
-          ['주의', statusCounts.warning, statusCounts.warning > 0, false],
-          ['교체 필요', statusCounts.overdue, false, statusCounts.overdue > 0],
-          ['미기록', statusCounts.unknown, false, false],
-        ] as [string, number, boolean, boolean][]).map(([label, count, isWarn, isDanger]) => (
+          ['✅', '정상', statusCounts.ok, false, false],
+          ['⚡', '주의', statusCounts.warning, statusCounts.warning > 0, false],
+          ['🚨', '교체 필요', statusCounts.overdue, false, statusCounts.overdue > 0],
+          ['📝', '미기록', statusCounts.unknown, false, false],
+        ] as [string, string, number, boolean, boolean][]).map(([emoji, label, count, isWarn, isDanger]) => (
           <View key={label} style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>{label}</Text>
-            <Text
-              style={[
-                styles.summaryValue,
-                isWarn && styles.warningValue,
-                isDanger && styles.dangerValue,
-              ]}>
-              {count}
-            </Text>
+            <Text style={styles.summaryEmoji}>{emoji}</Text>
+            <View>
+              <Text style={styles.summaryLabel}>{label}</Text>
+              <Text
+                style={[
+                  styles.summaryValue,
+                  isWarn && styles.warningValue,
+                  isDanger && styles.dangerValue,
+                ]}>
+                {count}
+              </Text>
+            </View>
           </View>
         ))}
       </View>
@@ -416,13 +439,18 @@ export default function VehicleMaintenanceScreen() {
           return (
             <View key={item.id} style={styles.itemCard}>
               <View style={styles.cardHeader}>
-                <Text
-                  style={styles.itemName}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.85}>
-                  {item.name}
-                </Text>
+                <View style={styles.itemTitleWrap}>
+                  <View style={styles.itemIcon}>
+                    <Text style={styles.itemEmoji}>{getItemEmoji(item.name)}</Text>
+                  </View>
+                  <Text
+                    style={styles.itemName}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}>
+                    {item.name}
+                  </Text>
+                </View>
                 <StatusBadge status={status} />
               </View>
 
@@ -543,16 +571,16 @@ export default function VehicleMaintenanceScreen() {
 }
 
 function StatusBadge({ status }: { status: ItemStatus }) {
-  const configs: Record<ItemStatus, { label: string; bg: string; text: string }> = {
-    ok:      { label: '정상',      bg: '#ECFDF5', text: '#059669' },
-    warning: { label: '주의',      bg: '#FFFBEB', text: '#D97706' },
-    overdue: { label: '교체 필요', bg: '#FEF2F2', text: '#DC2626' },
-    unknown: { label: '미기록',    bg: '#F1F5F9', text: '#64748B' },
+  const configs: Record<ItemStatus, { label: string; icon: string; bg: string; text: string }> = {
+    ok:      { label: '정상',      icon: '✓', bg: '#183F28', text: '#A8FF5F' },
+    warning: { label: '주의',      icon: '!', bg: '#4A3A12', text: '#FFD65C' },
+    overdue: { label: '교체 필요', icon: '!', bg: '#4A1C1C', text: '#FF8585' },
+    unknown: { label: '미기록',    icon: '-', bg: '#2F3440', text: '#C8D1DF' },
   };
-  const { label, bg, text } = configs[status];
+  const { label, icon, bg, text } = configs[status];
   return (
     <View style={[styles.badge, { backgroundColor: bg }]}>
-      <Text style={[styles.badgeText, { color: text }]}>{label}</Text>
+      <Text style={[styles.badgeText, { color: text }]}>{icon} {label}</Text>
     </View>
   );
 }
@@ -570,26 +598,63 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#101314',
     flexGrow: 1,
-    padding: 20,
+    padding: 18,
     paddingTop: 24,
   },
-  title: {
-    color: '#0F172A',
-    fontSize: 22,
-    fontWeight: '700',
+  heroCard: {
+    alignItems: 'center',
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 14,
+    marginBottom: 14,
+    padding: 16,
+  },
+  heroIcon: {
+    alignItems: 'center',
+    backgroundColor: '#0A0B0A',
+    borderColor: '#80FF2F',
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 58,
+    justifyContent: 'center',
+    width: 58,
+  },
+  heroEmoji: {
+    fontSize: 30,
+  },
+  heroTextBox: {
+    flex: 1,
+    minWidth: 0,
+  },
+  heroEyebrow: {
+    color: '#A8FF5F',
+    fontSize: 13,
+    fontWeight: '900',
     marginBottom: 4,
   },
+  title: {
+    color: '#F8FAFC',
+    fontSize: 24,
+    fontWeight: '900',
+    lineHeight: 30,
+  },
   subtitle: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 13,
-    fontWeight: '500',
-    marginBottom: 14,
+    fontWeight: '700',
+    lineHeight: 18,
+    marginTop: 4,
   },
   odometerCard: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 14,
+    backgroundColor: '#18351F',
+    borderColor: '#29552F',
+    borderRadius: 18,
+    borderWidth: 1,
     marginBottom: 14,
     padding: 16,
   },
@@ -598,29 +663,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  odometerTextBox: {
+    flex: 1,
+    minWidth: 0,
+  },
   odometerLabel: {
-    color: '#1D4ED8',
-    fontSize: 12,
-    fontWeight: '500',
+    color: '#A8FF5F',
+    fontSize: 13,
+    fontWeight: '900',
     marginBottom: 2,
   },
   odometerValue: {
-    color: '#1E3A8A',
-    fontSize: 20,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '900',
   },
   odometerBtn: {
     alignItems: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#A8FF5F',
     borderRadius: 10,
     justifyContent: 'center',
     minHeight: 44,
     paddingHorizontal: 16,
   },
   odometerBtnText: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   odometerForm: {
     flexDirection: 'row',
@@ -635,52 +704,52 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
     flexBasis: '47%',
     flexGrow: 1,
+    flexDirection: 'row',
+    gap: 12,
     padding: 14,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
+  },
+  summaryEmoji: {
+    fontSize: 24,
   },
   summaryLabel: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '500',
+    color: '#A6ADB8',
+    fontSize: 13,
+    fontWeight: '800',
     marginBottom: 4,
   },
   summaryValue: {
-    color: '#0F172A',
-    fontSize: 22,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '900',
   },
-  warningValue: { color: '#D97706' },
-  dangerValue: { color: '#DC2626' },
+  warningValue: { color: '#FFD65C' },
+  dangerValue: { color: '#FF8585' },
   noticeBox: {
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#1F2023',
     borderRadius: 12,
     flexDirection: 'row',
     gap: 10,
     marginBottom: 14,
     padding: 14,
   },
-  noticeText: { color: '#1D4ED8', flex: 1, fontSize: 14, fontWeight: '500' },
-  errorBox: { backgroundColor: '#FEF2F2', borderRadius: 12, marginBottom: 14, padding: 14 },
-  errorText: { color: '#DC2626', fontSize: 14, fontWeight: '500' },
+  noticeText: { color: '#A8FF5F', flex: 1, fontSize: 14, fontWeight: '800' },
+  errorBox: { backgroundColor: '#3A1C1C', borderRadius: 12, marginBottom: 14, padding: 14 },
+  errorText: { color: '#FF8585', fontSize: 14, fontWeight: '800' },
   list: { gap: 12 },
   itemCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: '#232326',
+    borderColor: '#30343A',
+    borderRadius: 18,
+    borderWidth: 1,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
   },
   cardHeader: {
     alignItems: 'center',
@@ -690,9 +759,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  itemName: { color: '#0F172A', flex: 1, fontSize: 16, fontWeight: '700', marginRight: 8, minWidth: 0 },
+  itemTitleWrap: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+    minWidth: 0,
+  },
+  itemIcon: {
+    alignItems: 'center',
+    backgroundColor: '#080A08',
+    borderRadius: 16,
+    height: 46,
+    justifyContent: 'center',
+    width: 46,
+  },
+  itemEmoji: {
+    fontSize: 25,
+  },
+  itemName: { color: '#FFFFFF', flex: 1, fontSize: 17, fontWeight: '900', marginRight: 8, minWidth: 0 },
   badge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  badgeText: { fontSize: 12, fontWeight: '600' },
+  badgeText: { fontSize: 12, fontWeight: '900' },
   infoRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -701,58 +788,58 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     minHeight: 28,
   },
-  infoLabel: { color: '#64748B', fontSize: 13, fontWeight: '500' },
+  infoLabel: { color: '#A6ADB8', fontSize: 13, fontWeight: '800' },
   infoValue: {
-    color: '#334155',
+    color: '#E6EBF2',
     flexShrink: 1,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '800',
     marginLeft: 14,
     textAlign: 'right',
   },
   historySection: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#181A1D',
     borderRadius: 10,
     marginTop: 10,
     padding: 10,
   },
-  historyTitle: { color: '#64748B', fontSize: 12, fontWeight: '600', marginBottom: 6 },
+  historyTitle: { color: '#A8FF5F', fontSize: 12, fontWeight: '900', marginBottom: 6 },
   historyRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     minHeight: 24,
   },
-  historyDate: { color: '#334155', fontSize: 12, fontWeight: '500' },
-  historyKm: { color: '#64748B', fontSize: 12, fontWeight: '500' },
+  historyDate: { color: '#E6EBF2', fontSize: 12, fontWeight: '700' },
+  historyKm: { color: '#A6ADB8', fontSize: 12, fontWeight: '700' },
   replaceBtn: {
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#A8FF5F',
     borderRadius: 10,
     justifyContent: 'center',
     marginTop: 12,
     minHeight: 44,
     paddingHorizontal: 14,
   },
-  replaceBtnOverdue: { backgroundColor: '#2563EB' },
-  replaceBtnText: { color: '#2563EB', fontSize: 14, fontWeight: '600' },
-  replaceBtnOverdueText: { color: '#FFFFFF' },
+  replaceBtnOverdue: { backgroundColor: '#FF8585' },
+  replaceBtnText: { color: '#111827', fontSize: 14, fontWeight: '900' },
+  replaceBtnOverdueText: { color: '#111827' },
   expandForm: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#181A1D',
     borderRadius: 12,
     marginTop: 12,
     padding: 14,
   },
-  formLabel: { color: '#64748B', fontSize: 13, fontWeight: '500', marginBottom: 8 },
+  formLabel: { color: '#A6ADB8', fontSize: 13, fontWeight: '800', marginBottom: 8 },
   mileageInput: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: '#101314',
+    borderColor: '#3D444D',
     borderRadius: 10,
     borderWidth: 1,
-    color: '#0F172A',
+    color: '#FFFFFF',
     flex: 1,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '800',
     minHeight: 46,
     paddingHorizontal: 12,
   },
@@ -764,7 +851,7 @@ const styles = StyleSheet.create({
   },
   confirmBtn: {
     alignItems: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#A8FF5F',
     borderRadius: 10,
     flexBasis: 160,
     flexGrow: 1,
@@ -772,10 +859,10 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 14,
   },
-  confirmBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  confirmBtnText: { color: '#111827', fontSize: 14, fontWeight: '900' },
   cancelBtn: {
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#2F3440',
     borderRadius: 10,
     flexBasis: 80,
     flexGrow: 1,
@@ -783,6 +870,6 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 14,
   },
-  cancelBtnText: { color: '#64748B', fontSize: 14, fontWeight: '600' },
+  cancelBtnText: { color: '#E6EBF2', fontSize: 14, fontWeight: '900' },
   disabledBtn: { opacity: 0.4 },
 });
