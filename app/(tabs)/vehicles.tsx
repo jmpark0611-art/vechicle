@@ -457,7 +457,7 @@ export default function VehiclesScreen() {
             value={newVehicleNumber}
             onChangeText={setNewVehicleNumber}
             placeholder="차량번호 입력"
-            placeholderTextColor="#98A2B3"
+            placeholderTextColor="rgba(255,255,255,0.25)"
           />
           <TouchableOpacity
             accessibilityLabel="차량 등록"
@@ -476,7 +476,7 @@ export default function VehiclesScreen() {
           value={searchText}
           onChangeText={setSearchText}
           placeholder="차량번호 검색"
-          placeholderTextColor="#98A2B3"
+          placeholderTextColor="rgba(255,255,255,0.25)"
         />
       </View>
 
@@ -509,7 +509,7 @@ export default function VehiclesScreen() {
 
       {isLoading && (
         <View style={styles.noticeBox}>
-          <ActivityIndicator color="#1565C0" />
+          <ActivityIndicator color="#F59E0B" />
           <Text style={styles.noticeText}>차량 상태를 불러오는 중입니다.</Text>
         </View>
       )}
@@ -555,7 +555,7 @@ export default function VehiclesScreen() {
                     onChangeText={setEditingVehicleNumber}
                     autoFocus
                     placeholder="차량번호"
-                    placeholderTextColor="#98A2B3"
+                    placeholderTextColor="rgba(255,255,255,0.25)"
                   />
                 ) : (
                   <Text
@@ -684,11 +684,11 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#07101C',
     padding: 20,
   },
   title: {
-    color: '#0F172A',
+    color: '#EAF0F8',
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 16,
@@ -702,15 +702,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   managePanel: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0D1B2A',
+    borderColor: 'rgba(255,255,255,0.07)',
     borderRadius: 16,
+    borderWidth: 1,
     marginBottom: 14,
     padding: 18,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
   },
   formRow: {
     alignItems: 'center',
@@ -720,11 +717,11 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   textInput: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 12,
     borderWidth: 1,
-    color: '#0F172A',
+    color: '#EAF0F8',
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
@@ -737,7 +734,7 @@ const styles = StyleSheet.create({
   },
   compactBtn: {
     alignItems: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#F59E0B',
     borderRadius: 12,
     justifyContent: 'center',
     minHeight: 46,
@@ -745,12 +742,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   compactBtnText: {
-    color: '#FFFFFF',
+    color: '#07101C',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   countText: {
-    color: '#64748B',
+    color: '#5A7A9A',
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
@@ -764,58 +761,52 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0D1B2A',
+    borderColor: 'rgba(255,255,255,0.07)',
     borderRadius: 14,
+    borderWidth: 1,
     flexBasis: '47%',
     flexGrow: 1,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
   },
   summaryWideCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0D1B2A',
+    borderColor: 'rgba(255,255,255,0.07)',
     borderRadius: 14,
+    borderWidth: 1,
     flexBasis: '100%',
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
   },
   summaryLabel: {
-    color: '#64748B',
+    color: '#5A7A9A',
     fontSize: 12,
     fontWeight: '500',
     marginBottom: 6,
   },
   summaryValue: {
-    color: '#0F172A',
+    color: '#EAF0F8',
     fontSize: 22,
     fontWeight: '700',
   },
   warningValue: {
-    color: '#DC2626',
+    color: '#EF4444',
   },
   sectionTitle: {
-    color: '#0F172A',
+    color: '#EAF0F8',
     fontSize: 16,
     fontWeight: '600',
   },
   reloadText: {
-    color: '#2563EB',
+    color: '#60A5FA',
     fontSize: 14,
     fontWeight: '600',
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 12,
     borderWidth: 1,
-    color: '#0F172A',
+    color: '#EAF0F8',
     fontSize: 15,
     fontWeight: '500',
     minHeight: 48,
@@ -825,13 +816,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   filterPanelTitle: {
-    color: '#64748B',
+    color: '#5A7A9A',
     fontSize: 12,
     fontWeight: '500',
     marginBottom: 8,
   },
   filterBar: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 12,
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -849,36 +840,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   activeFilterBtn: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 1,
+    backgroundColor: 'rgba(245,158,11,0.1)',
   },
   filterText: {
-    color: '#64748B',
+    color: '#5A7A9A',
     fontSize: 12,
     fontWeight: '500',
     lineHeight: 15,
     textAlign: 'center',
   },
   activeFilterText: {
-    color: '#2563EB',
-    fontWeight: '600',
+    color: '#F59E0B',
+    fontWeight: '700',
   },
   list: {
     gap: 12,
   },
   vehicleCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0D1B2A',
+    borderColor: 'rgba(255,255,255,0.07)',
     borderRadius: 16,
+    borderWidth: 1,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
   },
   cardHeader: {
     alignItems: 'center',
@@ -889,7 +872,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   vehicleNumber: {
-    color: '#0F172A',
+    color: '#EAF0F8',
     flex: 1,
     fontSize: 18,
     fontWeight: '700',
@@ -897,9 +880,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   statusBadge: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: 'rgba(245,158,11,0.08)',
     borderRadius: 20,
-    color: '#D97706',
+    color: '#F59E0B',
     fontSize: 12,
     fontWeight: '600',
     overflow: 'hidden',
@@ -907,12 +890,12 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   runningBadge: {
-    backgroundColor: '#EFF6FF',
-    color: '#2563EB',
+    backgroundColor: 'rgba(245,158,11,0.12)',
+    color: '#F59E0B',
   },
   staleBadge: {
-    backgroundColor: '#FEF2F2',
-    color: '#DC2626',
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    color: '#EF4444',
   },
   infoRow: {
     alignItems: 'center',
@@ -923,12 +906,12 @@ const styles = StyleSheet.create({
     minHeight: 28,
   },
   infoLabel: {
-    color: '#64748B',
+    color: '#5A7A9A',
     fontSize: 13,
     fontWeight: '500',
   },
   infoValue: {
-    color: '#334155',
+    color: '#9AB0C8',
     flexShrink: 1,
     fontSize: 13,
     fontWeight: '600',
@@ -936,24 +919,24 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   staleBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(239,68,68,0.08)',
     borderRadius: 10,
     marginTop: 10,
     padding: 12,
   },
   staleText: {
-    color: '#DC2626',
+    color: '#EF4444',
     fontSize: 13,
     fontWeight: '500',
   },
   warningInlineBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: 'rgba(245,158,11,0.08)',
     borderRadius: 10,
     marginTop: 10,
     padding: 12,
   },
   warningInlineText: {
-    color: '#D97706',
+    color: '#F59E0B',
     fontSize: 13,
     fontWeight: '500',
   },
@@ -965,7 +948,7 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     alignItems: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: 'rgba(245,158,11,0.1)',
     borderRadius: 10,
     flexBasis: 132,
     flexGrow: 1,
@@ -977,28 +960,46 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   secondaryBtn: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(96,165,250,0.08)',
   },
   dangerBtn: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(239,68,68,0.08)',
+  },
+  maintenanceBtn: {
+    backgroundColor: 'rgba(16,185,129,0.08)',
+  },
+  maintenanceBtnOverdue: {
+    backgroundColor: 'rgba(239,68,68,0.1)',
+  },
+  maintenanceBtnWarning: {
+    backgroundColor: 'rgba(245,158,11,0.1)',
+  },
+  maintenanceText: {
+    color: '#10B981',
+  },
+  maintenanceTextOverdue: {
+    color: '#EF4444',
+  },
+  maintenanceTextWarning: {
+    color: '#F59E0B',
   },
   actionText: {
-    color: '#FFFFFF',
+    color: '#F59E0B',
     fontSize: 14,
     fontWeight: '600',
   },
   secondaryText: {
-    color: '#2563EB',
+    color: '#60A5FA',
   },
   dangerText: {
-    color: '#DC2626',
+    color: '#EF4444',
   },
   disabledBtn: {
     opacity: 0.4,
   },
   noticeBox: {
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(96,165,250,0.07)',
     borderRadius: 12,
     flexDirection: 'row',
     gap: 10,
@@ -1006,30 +1007,30 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   noticeText: {
-    color: '#1D4ED8',
+    color: '#60A5FA',
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(239,68,68,0.08)',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   errorText: {
-    color: '#DC2626',
+    color: '#EF4444',
     fontSize: 14,
     fontWeight: '500',
   },
   warningBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: 'rgba(245,158,11,0.08)',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   warningText: {
-    color: '#D97706',
+    color: '#F59E0B',
     fontSize: 14,
     fontWeight: '500',
   },

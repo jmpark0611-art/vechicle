@@ -119,6 +119,15 @@ export default function MapScreen() {
     fetchPositions();
   }, [fetchPositions]);
 
+  if (isCommander === null) {
+    return (
+      <View style={[styles.container, styles.centerBox, { paddingTop: insets.top }]}>
+        <ActivityIndicator color="#F59E0B" size="large" />
+      </View>
+    );
+  }
+
+
   if (isCommander === false) {
     return (
       <View style={[styles.container, styles.centerBox, { paddingTop: insets.top }]}>
@@ -158,7 +167,7 @@ export default function MapScreen() {
 
       {isLoading && !html ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator color="#2563EB" size="large" />
+          <ActivityIndicator color="#F59E0B" size="large" />
           <Text style={styles.loadingText}>차량 위치를 불러오는 중...</Text>
         </View>
       ) : (
@@ -171,7 +180,7 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#07101C',
   },
   centerBox: {
     alignItems: 'center',
@@ -179,13 +188,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   accessTitle: {
-    color: '#0F172A',
+    color: '#EAF0F8',
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 8,
   },
   accessDesc: {
-    color: '#64748B',
+    color: '#5A7A9A',
     fontSize: 14,
     fontWeight: '400',
     textAlign: 'center',
@@ -193,20 +202,20 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   roleBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#F59E0B',
     borderRadius: 14,
     paddingHorizontal: 24,
     paddingVertical: 14,
   },
   roleBtnText: {
-    color: '#FFFFFF',
+    color: '#07101C',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   header: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#0D1B2A',
+    borderBottomColor: 'rgba(255,255,255,0.07)',
     borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -214,35 +223,35 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   title: {
-    color: '#0F172A',
+    color: '#EAF0F8',
     fontSize: 20,
     fontWeight: '700',
   },
   subtitle: {
-    color: '#64748B',
-    fontSize: 13,
+    color: '#5A7A9A',
+    fontSize: 12,
     fontWeight: '500',
     marginTop: 2,
   },
   refreshBtn: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(96,165,250,0.08)',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   refreshText: {
-    color: '#2563EB',
+    color: '#60A5FA',
     fontSize: 14,
     fontWeight: '600',
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(239,68,68,0.08)',
     borderRadius: 10,
     margin: 12,
     padding: 12,
   },
   errorText: {
-    color: '#DC2626',
+    color: '#EF4444',
     fontSize: 13,
     fontWeight: '500',
   },
@@ -253,11 +262,96 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: '#64748B',
+    color: '#5A7A9A',
     fontSize: 14,
     fontWeight: '500',
   },
   map: {
     flex: 1,
+  },
+  listPanel: {
+    backgroundColor: '#0D1B2A',
+    borderTopColor: 'rgba(255,255,255,0.07)',
+    borderTopWidth: 1,
+    maxHeight: 220,
+  },
+  listScroll: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  vehicleRow: {
+    alignItems: 'center',
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
+    minHeight: 56,
+    paddingVertical: 8,
+  },
+  vehicleRowLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
+  vehicleNum: {
+    color: '#EAF0F8',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  vehicleRoute: {
+    color: '#5A7A9A',
+    fontSize: 12,
+    fontWeight: '400',
+    marginTop: 1,
+  },
+  vehicleGpsTime: {
+    color: '#3D607A',
+    fontSize: 11,
+    fontWeight: '400',
+    marginTop: 1,
+  },
+  badges: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  badge: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeGray: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  badgeGrayText: {
+    color: '#5A7A9A',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  badgeYellow: {
+    backgroundColor: 'rgba(245,158,11,0.1)',
+  },
+  badgeYellowText: {
+    color: '#F59E0B',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  badgeRed: {
+    backgroundColor: 'rgba(239,68,68,0.1)',
+  },
+  badgeRedText: {
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  badgeOrange: {
+    backgroundColor: 'rgba(234,88,12,0.1)',
+  },
+  badgeOrangeText: {
+    color: '#EA580C',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

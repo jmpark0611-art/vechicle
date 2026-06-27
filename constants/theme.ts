@@ -8,6 +8,27 @@ import { Platform } from 'react-native';
 const tintColorLight = '#2563EB';
 const tintColorDark = '#fff';
 
+export const NAV = {
+  bg: '#07101C',
+  card: '#0D1B2A',
+  border: 'rgba(255,255,255,0.07)',
+  hero: '#0F2240',
+  accent: '#F59E0B',
+  accentBg: 'rgba(245,158,11,0.1)',
+  accentBorder: 'rgba(245,158,11,0.22)',
+  text: '#EAF0F8',
+  textSub: '#9AB0C8',
+  textMuted: '#5A7A9A',
+  link: '#60A5FA',
+  linkBg: 'rgba(96,165,250,0.08)',
+  success: '#10B981',
+  successBg: 'rgba(16,185,129,0.1)',
+  danger: '#EF4444',
+  dangerBg: 'rgba(239,68,68,0.08)',
+  warn: '#F59E0B',
+  warnBg: 'rgba(245,158,11,0.08)',
+};
+
 export const Colors = {
   light: {
     text: '#0F172A',

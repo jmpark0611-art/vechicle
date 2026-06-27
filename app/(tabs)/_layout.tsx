@@ -1,15 +1,14 @@
 import { Tabs } from 'expo-router';
-import { useEffect, useState } from 'react';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { TabIcon } from '@/components/ui/tab-icon';
+import { NAV } from '@/constants/theme';
 import { AppRole, getStoredRole } from '../../lib/role';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
   const [role, setRole] = useState<AppRole | null>(null);
 
   useEffect(() => {
@@ -19,43 +18,63 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: NAV.accent,
+        tabBarInactiveTintColor: 'rgba(255,255,255,0.3)',
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#F1F5F9',
-          borderTopWidth: 1,
-          paddingTop: 6,
+          position: 'absolute',
+          bottom: insets.bottom + 10,
+          left: 14,
+          right: 14,
+          borderRadius: 26,
+          height: 66,
+          backgroundColor: '#0B1C2E',
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.09)',
+          elevation: 20,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.5,
+          shadowRadius: 20,
+        },
+        tabBarItemStyle: {
+          borderRadius: 18,
+          paddingVertical: 4,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '700',
+          lineHeight: 13,
+          marginTop: 1,
         },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: '운행',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <TabIcon name="trip" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
           title: '기록',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="clock.fill" color={color} />,
+          tabBarIcon: ({ color }) => <TabIcon name="history" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
         name="vehicles"
         options={{
           title: '차량',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="car.fill" color={color} />,
+          tabBarIcon: ({ color }) => <TabIcon name="vehicle" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
         name="check"
         options={{
           title: '점검',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
+          tabBarIcon: ({ color }) => <TabIcon name="inspect" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -63,7 +82,7 @@ export default function TabLayout() {
         options={{
           title: '위치',
           href: role === 'commander' ? undefined : null,
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="map.fill" color={color} />,
+          tabBarIcon: ({ color }) => <TabIcon name="location" size={26} color={color} />,
         }}
       />
     </Tabs>

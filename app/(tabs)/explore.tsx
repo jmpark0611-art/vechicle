@@ -440,7 +440,7 @@ export default function TripHistoryScreen() {
         value={searchText}
         onChangeText={setSearchText}
         placeholder="차량번호, 출발지, 목적지 검색"
-        placeholderTextColor="#98A2B3"
+        placeholderTextColor="rgba(255,255,255,0.25)"
       />
 
       <View style={styles.filterPanel}>
@@ -555,7 +555,7 @@ export default function TripHistoryScreen() {
 
       {isLoading && (
         <View style={styles.noticeBox}>
-          <ActivityIndicator color="#1565C0" />
+          <ActivityIndicator color="#F59E0B" />
           <Text style={styles.noticeText}>운행 기록을 불러오는 중입니다.</Text>
         </View>
       )}
@@ -674,7 +674,7 @@ export default function TripHistoryScreen() {
           onPress={handleLoadMore}
           disabled={isLoadingMore || isLoading}>
           {isLoadingMore ? (
-            <ActivityIndicator color="#1565C0" />
+            <ActivityIndicator color="#F59E0B" />
           ) : (
             <Text style={styles.loadMoreText}>운행 기록 더 보기</Text>
           )}
@@ -687,11 +687,11 @@ export default function TripHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#07101C',
     padding: 20,
   },
   title: {
-    color: '#0F172A',
+    color: '#EAF0F8',
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 16,
@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   countText: {
-    color: '#64748B',
+    color: '#5A7A9A',
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
@@ -713,12 +713,12 @@ const styles = StyleSheet.create({
     minWidth: 180,
   },
   reloadText: {
-    color: '#2563EB',
+    color: '#60A5FA',
     fontSize: 14,
     fontWeight: '600',
   },
   filterBar: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 12,
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -727,11 +727,11 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 12,
     borderWidth: 1,
-    color: '#0F172A',
+    color: '#EAF0F8',
     fontSize: 15,
     fontWeight: '500',
     marginBottom: 14,
@@ -739,18 +739,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   filterPanel: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0D1B2A',
+    borderColor: 'rgba(255,255,255,0.07)',
     borderRadius: 16,
+    borderWidth: 1,
     marginBottom: 14,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
   },
   filterPanelTitle: {
-    color: '#64748B',
+    color: '#5A7A9A',
     fontSize: 12,
     fontWeight: '500',
     marginBottom: 8,
@@ -762,7 +759,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   chipBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 20,
     flexShrink: 1,
     minHeight: 34,
@@ -771,22 +768,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   activeChipBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: 'rgba(245,158,11,0.12)',
   },
   chipText: {
-    color: '#64748B',
+    color: '#5A7A9A',
     fontSize: 13,
     fontWeight: '500',
     textAlign: 'center',
   },
   activeChipText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: '#F59E0B',
+    fontWeight: '700',
   },
   exportBtn: {
     alignItems: 'center',
-    backgroundColor: '#059669',
+    backgroundColor: 'rgba(16,185,129,0.1)',
+    borderColor: 'rgba(16,185,129,0.2)',
     borderRadius: 12,
+    borderWidth: 1,
     justifyContent: 'center',
     marginBottom: 14,
     minHeight: 46,
@@ -795,7 +794,7 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   exportText: {
-    color: '#FFFFFF',
+    color: '#10B981',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -806,41 +805,35 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0D1B2A',
+    borderColor: 'rgba(255,255,255,0.07)',
     borderRadius: 14,
+    borderWidth: 1,
     flexBasis: '47%',
     flexGrow: 1,
     padding: 14,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
   },
   summaryWideCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0D1B2A',
+    borderColor: 'rgba(255,255,255,0.07)',
     borderRadius: 14,
+    borderWidth: 1,
     flexBasis: '100%',
     padding: 14,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
   },
   summaryLabel: {
-    color: '#64748B',
+    color: '#5A7A9A',
     fontSize: 12,
     fontWeight: '500',
     marginBottom: 6,
   },
   summaryValue: {
-    color: '#0F172A',
+    color: '#EAF0F8',
     fontSize: 22,
     fontWeight: '700',
   },
   warningValue: {
-    color: '#DC2626',
+    color: '#EF4444',
   },
   filterBtn: {
     alignItems: 'center',
@@ -852,36 +845,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   activeFilterBtn: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 1,
+    backgroundColor: 'rgba(245,158,11,0.1)',
   },
   filterText: {
-    color: '#64748B',
+    color: '#5A7A9A',
     fontSize: 12,
     fontWeight: '500',
     lineHeight: 16,
     textAlign: 'center',
   },
   activeFilterText: {
-    color: '#2563EB',
-    fontWeight: '600',
+    color: '#F59E0B',
+    fontWeight: '700',
   },
   list: {
     gap: 12,
   },
   tripCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0D1B2A',
+    borderColor: 'rgba(255,255,255,0.07)',
     borderRadius: 16,
+    borderWidth: 1,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
   },
   cardHeader: {
     alignItems: 'center',
@@ -892,7 +877,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   vehicleText: {
-    color: '#0F172A',
+    color: '#EAF0F8',
     flex: 1,
     fontSize: 17,
     fontWeight: '700',
@@ -900,9 +885,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   statusBadge: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: 'rgba(16,185,129,0.1)',
     borderRadius: 20,
-    color: '#059669',
+    color: '#10B981',
     fontSize: 12,
     fontWeight: '600',
     overflow: 'hidden',
@@ -910,12 +895,12 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   runningBadge: {
-    backgroundColor: '#EFF6FF',
-    color: '#2563EB',
+    backgroundColor: 'rgba(245,158,11,0.1)',
+    color: '#F59E0B',
   },
   staleBadge: {
-    backgroundColor: '#FEF2F2',
-    color: '#DC2626',
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    color: '#EF4444',
   },
   routeRow: {
     alignItems: 'center',
@@ -923,25 +908,25 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   routeText: {
-    color: '#334155',
+    color: '#9AB0C8',
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
   },
   routeArrow: {
-    color: '#94A3B8',
+    color: '#3D607A',
     fontSize: 14,
     marginHorizontal: 8,
   },
   staleBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(239,68,68,0.08)',
     borderRadius: 10,
     marginBottom: 8,
     marginTop: 6,
     padding: 12,
   },
   staleText: {
-    color: '#DC2626',
+    color: '#EF4444',
     fontSize: 13,
     fontWeight: '500',
   },
@@ -954,12 +939,12 @@ const styles = StyleSheet.create({
     minHeight: 26,
   },
   metaLabel: {
-    color: '#64748B',
+    color: '#5A7A9A',
     fontSize: 13,
     fontWeight: '500',
   },
   metaValue: {
-    color: '#334155',
+    color: '#9AB0C8',
     flexShrink: 1,
     fontSize: 13,
     fontWeight: '600',
@@ -967,22 +952,22 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   warningMetaValue: {
-    color: '#DC2626',
+    color: '#EF4444',
   },
   warningInlineBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: 'rgba(245,158,11,0.08)',
     borderRadius: 8,
     marginTop: 8,
     padding: 10,
   },
   warningInlineText: {
-    color: '#D97706',
+    color: '#F59E0B',
     fontSize: 13,
     fontWeight: '500',
   },
   tripActionBtn: {
     alignItems: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: 'rgba(245,158,11,0.1)',
     borderRadius: 10,
     flex: 1,
     minHeight: 42,
@@ -996,20 +981,20 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   secondaryActionBtn: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(96,165,250,0.08)',
   },
   tripActionText: {
-    color: '#FFFFFF',
+    color: '#F59E0B',
     fontSize: 14,
     fontWeight: '600',
   },
   secondaryActionText: {
-    color: '#2563EB',
+    color: '#60A5FA',
   },
   loadMoreBtn: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#BFDBFE',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 12,
     borderWidth: 1,
     justifyContent: 'center',
@@ -1017,13 +1002,13 @@ const styles = StyleSheet.create({
     minHeight: 46,
   },
   loadMoreText: {
-    color: '#2563EB',
+    color: '#60A5FA',
     fontSize: 15,
     fontWeight: '600',
   },
   noticeBox: {
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(96,165,250,0.07)',
     borderRadius: 12,
     flexDirection: 'row',
     gap: 10,
@@ -1031,30 +1016,30 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   noticeText: {
-    color: '#1D4ED8',
+    color: '#60A5FA',
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(239,68,68,0.08)',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   errorText: {
-    color: '#DC2626',
+    color: '#EF4444',
     fontSize: 14,
     fontWeight: '500',
   },
   warningBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: 'rgba(245,158,11,0.08)',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   warningText: {
-    color: '#D97706',
+    color: '#F59E0B',
     fontSize: 14,
     fontWeight: '500',
   },
