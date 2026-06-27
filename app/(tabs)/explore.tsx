@@ -393,7 +393,16 @@ export default function TripHistoryScreen() {
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
       }>
-      <Text style={styles.title}>운행 기록</Text>
+      <View style={styles.heroCard}>
+        <View style={styles.heroIcon}>
+          <Text style={styles.heroEmoji}>📒</Text>
+        </View>
+        <View style={styles.heroTextBox}>
+          <Text style={styles.heroEyebrow}>운행 로그</Text>
+          <Text style={styles.title}>운행 기록</Text>
+          <Text style={styles.heroSubtitle}>차량별 운행, GPS 누락, 장시간 운행을 빠르게 확인합니다.</Text>
+        </View>
+      </View>
 
       <View style={styles.toolbar}>
         <Text style={styles.countText}>
@@ -507,30 +516,48 @@ export default function TripHistoryScreen() {
 
       <View style={styles.summaryGrid}>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>필터 결과</Text>
-          <Text style={styles.summaryValue}>{filteredSummary.total}</Text>
+          <Text style={styles.summaryEmoji}>📋</Text>
+          <View>
+            <Text style={styles.summaryLabel}>필터 결과</Text>
+            <Text style={styles.summaryValue}>{filteredSummary.total}</Text>
+          </View>
         </View>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>완료</Text>
-          <Text style={styles.summaryValue}>{filteredSummary.completed}</Text>
+          <Text style={styles.summaryEmoji}>✅</Text>
+          <View>
+            <Text style={styles.summaryLabel}>완료</Text>
+            <Text style={styles.summaryValue}>{filteredSummary.completed}</Text>
+          </View>
         </View>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>운행 중</Text>
-          <Text style={styles.summaryValue}>{filteredSummary.active}</Text>
+          <Text style={styles.summaryEmoji}>⚡</Text>
+          <View>
+            <Text style={styles.summaryLabel}>운행 중</Text>
+            <Text style={styles.summaryValue}>{filteredSummary.active}</Text>
+          </View>
         </View>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>GPS</Text>
-          <Text style={styles.summaryValue}>{filteredSummary.gpsPoints}</Text>
+          <Text style={styles.summaryEmoji}>📍</Text>
+          <View>
+            <Text style={styles.summaryLabel}>GPS</Text>
+            <Text style={styles.summaryValue}>{filteredSummary.gpsPoints}</Text>
+          </View>
         </View>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>GPS 누락</Text>
-          <Text style={[styles.summaryValue, filteredSummary.completedWithoutGps > 0 && styles.warningValue]}>
-            {filteredSummary.completedWithoutGps}
-          </Text>
+          <Text style={styles.summaryEmoji}>🚨</Text>
+          <View>
+            <Text style={styles.summaryLabel}>GPS 누락</Text>
+            <Text style={[styles.summaryValue, filteredSummary.completedWithoutGps > 0 && styles.warningValue]}>
+              {filteredSummary.completedWithoutGps}
+            </Text>
+          </View>
         </View>
         <View style={styles.summaryWideCard}>
-          <Text style={styles.summaryLabel}>완료 평균 소요</Text>
-          <Text style={styles.summaryValue}>{formatMinutes(filteredSummary.averageDuration)}</Text>
+          <Text style={styles.summaryEmoji}>⏱️</Text>
+          <View>
+            <Text style={styles.summaryLabel}>완료 평균 소요</Text>
+            <Text style={styles.summaryValue}>{formatMinutes(filteredSummary.averageDuration)}</Text>
+          </View>
         </View>
       </View>
 
@@ -592,9 +619,14 @@ export default function TripHistoryScreen() {
           return (
             <View key={trip.id} style={styles.tripCard}>
               <View style={styles.cardHeader}>
-                <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.vehicleText}>
-                  {vehicleNumber}
-                </Text>
+                <View style={styles.vehicleTitleWrap}>
+                  <View style={styles.vehicleIcon}>
+                    <Text style={styles.vehicleEmoji}>{isRunning ? '🚚' : '🚗'}</Text>
+                  </View>
+                  <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.vehicleText}>
+                    {vehicleNumber}
+                  </Text>
+                </View>
                 <Text style={[styles.statusBadge, isRunning && styles.runningBadge, isStale && styles.staleBadge]}>
                   {isStale ? '장시간 운행' : getTripStatusText(trip.status)}
                 </Text>
@@ -690,14 +722,55 @@ export default function TripHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#F8FAFC',
-    padding: 20,
+    backgroundColor: '#101314',
+    padding: 18,
+  },
+  heroCard: {
+    alignItems: 'center',
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 14,
+    marginBottom: 14,
+    padding: 16,
+  },
+  heroIcon: {
+    alignItems: 'center',
+    backgroundColor: '#0A0B0A',
+    borderColor: '#80FF2F',
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 58,
+    justifyContent: 'center',
+    width: 58,
+  },
+  heroEmoji: {
+    fontSize: 30,
+  },
+  heroTextBox: {
+    flex: 1,
+    minWidth: 0,
+  },
+  heroEyebrow: {
+    color: '#A8FF5F',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 4,
   },
   title: {
-    color: '#0F172A',
+    color: '#F8FAFC',
     fontSize: 24,
+    fontWeight: '900',
+    lineHeight: 30,
+  },
+  heroSubtitle: {
+    color: '#A6ADB8',
+    fontSize: 13,
     fontWeight: '700',
-    marginBottom: 16,
+    lineHeight: 18,
+    marginTop: 4,
   },
   toolbar: {
     alignItems: 'center',
@@ -708,20 +781,20 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   countText: {
-    color: '#64748B',
+    color: '#A6ADB8',
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
     marginRight: 12,
     minWidth: 180,
   },
   reloadText: {
-    color: '#2563EB',
+    color: '#A8FF5F',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   filterBar: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#1B1D20',
     borderRadius: 12,
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -730,32 +803,29 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: '#1F2023',
+    borderColor: '#3D444D',
     borderRadius: 12,
     borderWidth: 1,
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '800',
     marginBottom: 14,
     minHeight: 48,
     paddingHorizontal: 14,
   },
   filterPanel: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
     marginBottom: 14,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
   },
   filterPanelTitle: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '800',
     marginBottom: 8,
   },
   chipRow: {
@@ -765,7 +835,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   chipBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#2F3440',
     borderRadius: 20,
     flexShrink: 1,
     minHeight: 44,
@@ -774,21 +844,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   activeChipBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#A8FF5F',
   },
   chipText: {
-    color: '#64748B',
+    color: '#E6EBF2',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '800',
     textAlign: 'center',
   },
   activeChipText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: '#111827',
+    fontWeight: '900',
   },
   exportBtn: {
     alignItems: 'center',
-    backgroundColor: '#059669',
+    backgroundColor: '#A8FF5F',
     borderRadius: 12,
     justifyContent: 'center',
     marginBottom: 14,
@@ -798,9 +868,9 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   exportText: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   summaryGrid: {
     flexDirection: 'row',
@@ -809,41 +879,44 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
     flexBasis: '47%',
     flexGrow: 1,
+    flexDirection: 'row',
+    gap: 12,
     padding: 14,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
   },
   summaryWideCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
     flexBasis: '100%',
+    flexDirection: 'row',
+    gap: 12,
     padding: 14,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
+  },
+  summaryEmoji: {
+    fontSize: 24,
   },
   summaryLabel: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '500',
+    color: '#A6ADB8',
+    fontSize: 13,
+    fontWeight: '800',
     marginBottom: 6,
   },
   summaryValue: {
-    color: '#0F172A',
-    fontSize: 22,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '900',
   },
   warningValue: {
-    color: '#DC2626',
+    color: '#FF8585',
   },
   filterBtn: {
     alignItems: 'center',
@@ -855,36 +928,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   activeFilterBtn: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 1,
+    backgroundColor: '#A8FF5F',
   },
   filterText: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '800',
     lineHeight: 16,
     textAlign: 'center',
   },
   activeFilterText: {
-    color: '#2563EB',
-    fontWeight: '600',
+    color: '#111827',
+    fontWeight: '900',
   },
   list: {
     gap: 12,
   },
   tripCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: '#232326',
+    borderColor: '#30343A',
+    borderRadius: 18,
+    borderWidth: 1,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
   },
   cardHeader: {
     alignItems: 'center',
@@ -895,30 +960,48 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   vehicleText: {
-    color: '#0F172A',
+    color: '#FFFFFF',
     flex: 1,
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '900',
     marginRight: 12,
     minWidth: 0,
   },
+  vehicleTitleWrap: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+    minWidth: 0,
+  },
+  vehicleIcon: {
+    alignItems: 'center',
+    backgroundColor: '#080A08',
+    borderRadius: 16,
+    height: 46,
+    justifyContent: 'center',
+    width: 46,
+  },
+  vehicleEmoji: {
+    fontSize: 25,
+  },
   statusBadge: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#183F28',
     borderRadius: 20,
-    color: '#059669',
+    color: '#A8FF5F',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '900',
     overflow: 'hidden',
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   runningBadge: {
-    backgroundColor: '#EFF6FF',
-    color: '#2563EB',
+    backgroundColor: '#183F28',
+    color: '#A8FF5F',
   },
   staleBadge: {
-    backgroundColor: '#FEF2F2',
-    color: '#DC2626',
+    backgroundColor: '#4A1C1C',
+    color: '#FF8585',
   },
   routeRow: {
     alignItems: 'center',
@@ -926,27 +1009,27 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   routeText: {
-    color: '#334155',
+    color: '#E6EBF2',
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   routeArrow: {
-    color: '#94A3B8',
+    color: '#A8FF5F',
     fontSize: 14,
     marginHorizontal: 8,
   },
   staleBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#3A1C1C',
     borderRadius: 10,
     marginBottom: 8,
     marginTop: 6,
     padding: 12,
   },
   staleText: {
-    color: '#DC2626',
+    color: '#FF8585',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   metaRow: {
     alignItems: 'center',
@@ -957,35 +1040,35 @@ const styles = StyleSheet.create({
     minHeight: 26,
   },
   metaLabel: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   metaValue: {
-    color: '#334155',
+    color: '#E6EBF2',
     flexShrink: 1,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '800',
     marginLeft: 14,
     textAlign: 'right',
   },
   warningMetaValue: {
-    color: '#DC2626',
+    color: '#FF8585',
   },
   warningInlineBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#4A3A12',
     borderRadius: 8,
     marginTop: 8,
     padding: 10,
   },
   warningInlineText: {
-    color: '#D97706',
+    color: '#FFD65C',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   tripActionBtn: {
     alignItems: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#A8FF5F',
     borderRadius: 10,
     flex: 1,
     minHeight: 44,
@@ -999,20 +1082,20 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   secondaryActionBtn: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#2F3440',
   },
   tripActionText: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   secondaryActionText: {
-    color: '#2563EB',
+    color: '#E6EBF2',
   },
   loadMoreBtn: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#BFDBFE',
+    backgroundColor: '#1F2023',
+    borderColor: '#3D444D',
     borderRadius: 12,
     borderWidth: 1,
     justifyContent: 'center',
@@ -1020,13 +1103,13 @@ const styles = StyleSheet.create({
     minHeight: 46,
   },
   loadMoreText: {
-    color: '#2563EB',
+    color: '#A8FF5F',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   noticeBox: {
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#1F2023',
     borderRadius: 12,
     flexDirection: 'row',
     gap: 10,
@@ -1034,31 +1117,31 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   noticeText: {
-    color: '#1D4ED8',
+    color: '#A8FF5F',
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#3A1C1C',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   errorText: {
-    color: '#DC2626',
+    color: '#FF8585',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   warningBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#4A3A12',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   warningText: {
-    color: '#D97706',
+    color: '#FFD65C',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
 });
