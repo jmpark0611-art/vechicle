@@ -458,7 +458,18 @@ export default function VehiclesScreen() {
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={() => loadVehicles(true)} />
       }>
-      <Text style={styles.title}>차량 상태</Text>
+      <View style={styles.heroCard}>
+        <View style={styles.heroIcon}>
+          <Text style={styles.heroEmoji}>🚘</Text>
+        </View>
+        <View style={styles.heroTextBox}>
+          <Text style={styles.heroEyebrow}>차량 관리</Text>
+          <Text style={styles.title}>차량 상태</Text>
+          <Text style={styles.heroSubtitle}>
+            운행, 정비, 장시간 미종료 차량을 한 화면에서 확인합니다.
+          </Text>
+        </View>
+      </View>
 
       <View style={styles.toolbar}>
         <Text style={styles.countText}>
@@ -474,28 +485,43 @@ export default function VehiclesScreen() {
 
       <View style={styles.summaryGrid}>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>등록</Text>
-          <Text style={styles.summaryValue}>{vehicleSummary.total}</Text>
+          <Text style={styles.summaryEmoji}>🚗</Text>
+          <View>
+            <Text style={styles.summaryLabel}>등록</Text>
+            <Text style={styles.summaryValue}>{vehicleSummary.total}</Text>
+          </View>
         </View>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>운행 중</Text>
-          <Text style={styles.summaryValue}>{vehicleSummary.active}</Text>
+          <Text style={styles.summaryEmoji}>⚡</Text>
+          <View>
+            <Text style={styles.summaryLabel}>운행 중</Text>
+            <Text style={styles.summaryValue}>{vehicleSummary.active}</Text>
+          </View>
         </View>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>대기 중</Text>
-          <Text style={styles.summaryValue}>{vehicleSummary.waiting}</Text>
+          <Text style={styles.summaryEmoji}>🅿️</Text>
+          <View>
+            <Text style={styles.summaryLabel}>대기 중</Text>
+            <Text style={styles.summaryValue}>{vehicleSummary.waiting}</Text>
+          </View>
         </View>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>장시간</Text>
-          <Text style={[styles.summaryValue, vehicleSummary.stale > 0 && styles.warningValue]}>
-            {vehicleSummary.stale}
-          </Text>
+          <Text style={styles.summaryEmoji}>⏱️</Text>
+          <View>
+            <Text style={styles.summaryLabel}>장시간</Text>
+            <Text style={[styles.summaryValue, vehicleSummary.stale > 0 && styles.warningValue]}>
+              {vehicleSummary.stale}
+            </Text>
+          </View>
         </View>
         <View style={styles.summaryWideCard}>
-          <Text style={styles.summaryLabel}>중복 미종료</Text>
-          <Text style={[styles.summaryValue, vehicleSummary.duplicatedActive > 0 && styles.warningValue]}>
-            {vehicleSummary.duplicatedActive}
-          </Text>
+          <Text style={styles.summaryEmoji}>🚨</Text>
+          <View>
+            <Text style={styles.summaryLabel}>중복 미종료</Text>
+            <Text style={[styles.summaryValue, vehicleSummary.duplicatedActive > 0 && styles.warningValue]}>
+              {vehicleSummary.duplicatedActive}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -606,24 +632,29 @@ export default function VehiclesScreen() {
           return (
             <View key={vehicle.id} style={styles.vehicleCard}>
               <View style={styles.cardHeader}>
-                {editingVehicleId === vehicle.id ? (
-                  <TextInput
-                    style={[styles.textInput, styles.editInput]}
-                    value={editingVehicleNumber}
-                    onChangeText={setEditingVehicleNumber}
-                    autoFocus
-                    placeholder="차량번호"
-                    placeholderTextColor="#98A2B3"
-                  />
-                ) : (
-                  <Text
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.82}
-                    numberOfLines={1}
-                    style={styles.vehicleNumber}>
-                    {vehicle.vehicle_number}
-                  </Text>
-                )}
+                <View style={styles.vehicleTitleWrap}>
+                  <View style={styles.vehicleIcon}>
+                    <Text style={styles.vehicleEmoji}>{activeTrip ? '🚚' : '🚗'}</Text>
+                  </View>
+                  {editingVehicleId === vehicle.id ? (
+                    <TextInput
+                      style={[styles.textInput, styles.editInput]}
+                      value={editingVehicleNumber}
+                      onChangeText={setEditingVehicleNumber}
+                      autoFocus
+                      placeholder="차량번호"
+                      placeholderTextColor="#98A2B3"
+                    />
+                  ) : (
+                    <Text
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.82}
+                      numberOfLines={1}
+                      style={styles.vehicleNumber}>
+                      {vehicle.vehicle_number}
+                    </Text>
+                  )}
+                </View>
                 <Text style={[styles.statusBadge, activeTrip && styles.runningBadge, isStale && styles.staleBadge]}>
                   {isStale ? '장시간 운행' : statusText}
                 </Text>
@@ -771,14 +802,55 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#F8FAFC',
-    padding: 20,
+    backgroundColor: '#101314',
+    padding: 18,
+  },
+  heroCard: {
+    alignItems: 'center',
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 14,
+    marginBottom: 14,
+    padding: 16,
+  },
+  heroIcon: {
+    alignItems: 'center',
+    backgroundColor: '#0A0B0A',
+    borderColor: '#80FF2F',
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 58,
+    justifyContent: 'center',
+    width: 58,
+  },
+  heroEmoji: {
+    fontSize: 30,
+  },
+  heroTextBox: {
+    flex: 1,
+    minWidth: 0,
+  },
+  heroEyebrow: {
+    color: '#A8FF5F',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 4,
   },
   title: {
-    color: '#0F172A',
+    color: '#F8FAFC',
     fontSize: 24,
+    fontWeight: '900',
+    lineHeight: 30,
+  },
+  heroSubtitle: {
+    color: '#A6ADB8',
+    fontSize: 13,
     fontWeight: '700',
-    marginBottom: 16,
+    lineHeight: 18,
+    marginTop: 4,
   },
   toolbar: {
     alignItems: 'center',
@@ -789,15 +861,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   managePanel: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
     marginBottom: 14,
     padding: 18,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
   },
   formRow: {
     alignItems: 'center',
@@ -807,14 +876,14 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   textInput: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    backgroundColor: '#101314',
+    borderColor: '#3D444D',
     borderRadius: 12,
     borderWidth: 1,
-    color: '#0F172A',
+    color: '#FFFFFF',
     flex: 1,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '800',
     minWidth: 180,
     minHeight: 46,
     paddingHorizontal: 12,
@@ -824,7 +893,7 @@ const styles = StyleSheet.create({
   },
   compactBtn: {
     alignItems: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#A8FF5F',
     borderRadius: 12,
     justifyContent: 'center',
     minHeight: 46,
@@ -832,15 +901,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   compactBtnText: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   countText: {
-    color: '#64748B',
+    color: '#A6ADB8',
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
     marginRight: 12,
     minWidth: 180,
   },
@@ -851,60 +920,63 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
     flexBasis: '47%',
     flexGrow: 1,
+    flexDirection: 'row',
+    gap: 12,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
   },
   summaryWideCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
     flexBasis: '100%',
+    flexDirection: 'row',
+    gap: 12,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
+  },
+  summaryEmoji: {
+    fontSize: 24,
   },
   summaryLabel: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '500',
+    color: '#A6ADB8',
+    fontSize: 13,
+    fontWeight: '800',
     marginBottom: 6,
   },
   summaryValue: {
-    color: '#0F172A',
-    fontSize: 22,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '900',
   },
   warningValue: {
-    color: '#DC2626',
+    color: '#FF8585',
   },
   sectionTitle: {
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   reloadText: {
-    color: '#2563EB',
+    color: '#A8FF5F',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: '#1F2023',
+    borderColor: '#3D444D',
     borderRadius: 12,
     borderWidth: 1,
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '800',
     minHeight: 48,
     paddingHorizontal: 14,
   },
@@ -912,13 +984,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   filterPanelTitle: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '800',
     marginBottom: 8,
   },
   filterBar: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#1B1D20',
     borderRadius: 12,
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -936,36 +1008,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   activeFilterBtn: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 1,
+    backgroundColor: '#A8FF5F',
   },
   filterText: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '800',
     lineHeight: 15,
     textAlign: 'center',
   },
   activeFilterText: {
-    color: '#2563EB',
-    fontWeight: '600',
+    color: '#111827',
+    fontWeight: '900',
   },
   list: {
     gap: 12,
   },
   vehicleCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: '#232326',
+    borderColor: '#30343A',
+    borderRadius: 18,
+    borderWidth: 1,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
   },
   cardHeader: {
     alignItems: 'center',
@@ -975,31 +1039,49 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
+  vehicleTitleWrap: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+    minWidth: 0,
+  },
+  vehicleIcon: {
+    alignItems: 'center',
+    backgroundColor: '#080A08',
+    borderRadius: 16,
+    height: 46,
+    justifyContent: 'center',
+    width: 46,
+  },
+  vehicleEmoji: {
+    fontSize: 25,
+  },
   vehicleNumber: {
-    color: '#0F172A',
+    color: '#FFFFFF',
     flex: 1,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '900',
     marginRight: 12,
     minWidth: 0,
   },
   statusBadge: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#4A3A12',
     borderRadius: 20,
-    color: '#D97706',
+    color: '#FFD65C',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '900',
     overflow: 'hidden',
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   runningBadge: {
-    backgroundColor: '#EFF6FF',
-    color: '#2563EB',
+    backgroundColor: '#183F28',
+    color: '#A8FF5F',
   },
   staleBadge: {
-    backgroundColor: '#FEF2F2',
-    color: '#DC2626',
+    backgroundColor: '#4A1C1C',
+    color: '#FF8585',
   },
   infoRow: {
     alignItems: 'center',
@@ -1010,39 +1092,39 @@ const styles = StyleSheet.create({
     minHeight: 28,
   },
   infoLabel: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   infoValue: {
-    color: '#334155',
+    color: '#E6EBF2',
     flexShrink: 1,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '800',
     marginLeft: 14,
     textAlign: 'right',
   },
   staleBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#3A1C1C',
     borderRadius: 10,
     marginTop: 10,
     padding: 12,
   },
   staleText: {
-    color: '#DC2626',
+    color: '#FF8585',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   warningInlineBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#4A3A12',
     borderRadius: 10,
     marginTop: 10,
     padding: 12,
   },
   warningInlineText: {
-    color: '#D97706',
+    color: '#FFD65C',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   actions: {
     flexDirection: 'row',
@@ -1052,7 +1134,7 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     alignItems: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#A8FF5F',
     borderRadius: 10,
     flexBasis: 132,
     flexGrow: 1,
@@ -1064,46 +1146,46 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   secondaryBtn: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#2F3440',
   },
   dangerBtn: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#3A1C1C',
   },
   maintenanceBtn: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#183F28',
   },
   maintenanceBtnOverdue: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#4A1C1C',
   },
   maintenanceBtnWarning: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#4A3A12',
   },
   maintenanceText: {
-    color: '#16A34A',
+    color: '#A8FF5F',
   },
   maintenanceTextOverdue: {
-    color: '#DC2626',
+    color: '#FF8585',
   },
   maintenanceTextWarning: {
-    color: '#D97706',
+    color: '#FFD65C',
   },
   actionText: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   secondaryText: {
-    color: '#2563EB',
+    color: '#E6EBF2',
   },
   dangerText: {
-    color: '#DC2626',
+    color: '#FF8585',
   },
   disabledBtn: {
     opacity: 0.4,
   },
   noticeBox: {
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#1F2023',
     borderRadius: 12,
     flexDirection: 'row',
     gap: 10,
@@ -1111,31 +1193,31 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   noticeText: {
-    color: '#1D4ED8',
+    color: '#A8FF5F',
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#3A1C1C',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   errorText: {
-    color: '#DC2626',
+    color: '#FF8585',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   warningBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#4A3A12',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   warningText: {
-    color: '#D97706',
+    color: '#FFD65C',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
 });
