@@ -263,16 +263,18 @@ export default function CheckScreen() {
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={() => loadStatus(true)} />
       }>
-      <Text style={styles.title}>시스템 점검</Text>
-
       <View style={[styles.statusPanel, status === 'error' && styles.errorPanel]}>
-        <View>
-          <Text style={styles.statusLabel}>상태</Text>
+        <View style={styles.statusIcon}>
+          <Text style={styles.statusEmoji}>{status === 'error' ? '🚨' : status === 'checking' ? '🔍' : '✅'}</Text>
+        </View>
+        <View style={styles.statusTextBox}>
+          <Text style={styles.statusLabel}>시스템 점검</Text>
           <Text style={[styles.statusValue, status === 'error' && styles.errorValue]}>
             {status === 'checking' ? '확인 중' : status === 'ok' ? '정상' : '확인 필요'}
           </Text>
+          <Text style={styles.statusSubText}>Supabase, GPS, 권한, 큐 상태를 확인합니다.</Text>
         </View>
-        {status === 'checking' && <ActivityIndicator color="#1565C0" />}
+        {status === 'checking' && <ActivityIndicator color="#A8FF5F" />}
       </View>
 
       {message && (
@@ -283,26 +285,41 @@ export default function CheckScreen() {
 
       <View style={styles.grid}>
         <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>차량</Text>
-          <Text style={styles.metricValue}>{summary.vehicles}</Text>
+          <Text style={styles.metricEmoji}>🚗</Text>
+          <View>
+            <Text style={styles.metricLabel}>차량</Text>
+            <Text style={styles.metricValue}>{summary.vehicles}</Text>
+          </View>
         </View>
         <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>운행 중</Text>
-          <Text style={[styles.metricValue, summary.activeTrips > 1 && styles.warningValue]}>
-            {summary.activeTrips}
-          </Text>
+          <Text style={styles.metricEmoji}>⚡</Text>
+          <View>
+            <Text style={styles.metricLabel}>운행 중</Text>
+            <Text style={[styles.metricValue, summary.activeTrips > 1 && styles.warningValue]}>
+              {summary.activeTrips}
+            </Text>
+          </View>
         </View>
         <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>완료</Text>
-          <Text style={styles.metricValue}>{summary.completedTrips}</Text>
+          <Text style={styles.metricEmoji}>✅</Text>
+          <View>
+            <Text style={styles.metricLabel}>완료</Text>
+            <Text style={styles.metricValue}>{summary.completedTrips}</Text>
+          </View>
         </View>
         <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>무효</Text>
-          <Text style={styles.metricValue}>{summary.canceledTrips}</Text>
+          <Text style={styles.metricEmoji}>🛑</Text>
+          <View>
+            <Text style={styles.metricLabel}>무효</Text>
+            <Text style={styles.metricValue}>{summary.canceledTrips}</Text>
+          </View>
         </View>
         <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>GPS</Text>
-          <Text style={styles.metricValue}>{summary.gpsPoints}</Text>
+          <Text style={styles.metricEmoji}>📍</Text>
+          <View>
+            <Text style={styles.metricLabel}>GPS</Text>
+            <Text style={styles.metricValue}>{summary.gpsPoints}</Text>
+          </View>
         </View>
       </View>
 
@@ -504,48 +521,68 @@ export default function CheckScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#F8FAFC',
-    padding: 20,
+    backgroundColor: '#101314',
+    padding: 18,
   },
   title: {
-    color: '#0F172A',
+    color: '#F8FAFC',
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 16,
   },
   statusPanel: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
     justifyContent: 'space-between',
     marginBottom: 14,
-    padding: 20,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
+    padding: 16,
   },
   errorPanel: {
-    borderColor: '#FECACA',
+    borderColor: '#633030',
+  },
+  statusIcon: {
+    alignItems: 'center',
+    backgroundColor: '#0A0B0A',
+    borderColor: '#80FF2F',
+    borderRadius: 18,
     borderWidth: 1,
+    height: 58,
+    justifyContent: 'center',
+    width: 58,
+  },
+  statusEmoji: {
+    fontSize: 30,
+  },
+  statusTextBox: {
+    flex: 1,
+    minWidth: 0,
   },
   statusLabel: {
-    color: '#64748B',
+    color: '#A8FF5F',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '900',
     marginBottom: 4,
   },
   statusValue: {
-    color: '#059669',
-    fontSize: 22,
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  statusSubText: {
+    color: '#A6ADB8',
+    fontSize: 13,
     fontWeight: '700',
+    lineHeight: 18,
+    marginTop: 4,
   },
   errorValue: {
-    color: '#DC2626',
+    color: '#FF8585',
   },
   grid: {
     flexDirection: 'row',
@@ -554,70 +591,70 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   metricCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
     flexBasis: '47%',
     flexGrow: 1,
+    flexDirection: 'row',
+    gap: 12,
     padding: 16,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
+  },
+  metricEmoji: {
+    fontSize: 24,
   },
   metricLabel: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '500',
+    color: '#A6ADB8',
+    fontSize: 13,
+    fontWeight: '800',
     marginBottom: 8,
   },
   metricValue: {
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontSize: 26,
-    fontWeight: '700',
+    fontWeight: '900',
   },
   warningValue: {
-    color: '#D97706',
+    color: '#FFD65C',
   },
   infoPanel: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: '#1F2023',
+    borderColor: '#2B312E',
+    borderRadius: 18,
+    borderWidth: 1,
     marginBottom: 14,
     padding: 18,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 2,
   },
   sectionTitle: {
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '900',
     marginBottom: 12,
   },
   sectionHint: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 13,
-    fontWeight: '400',
+    fontWeight: '700',
     marginBottom: 10,
   },
   activeTripRow: {
     alignItems: 'center',
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#30343A',
     borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     minHeight: 56,
   },
   staleTripRow: {
-    backgroundColor: '#FFF7F6',
+    backgroundColor: '#3A1C1C',
     borderRadius: 10,
     marginBottom: 6,
     paddingHorizontal: 10,
   },
   duplicatedTripRow: {
-    borderColor: '#FECACA',
+    borderColor: '#633030',
     borderWidth: 1,
     borderRadius: 10,
   },
@@ -626,32 +663,32 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   activeTripTitle: {
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   activeTripMeta: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 12,
-    fontWeight: '400',
+    fontWeight: '700',
     marginTop: 3,
   },
   staleTripMeta: {
-    color: '#DC2626',
-    fontWeight: '600',
+    color: '#FF8585',
+    fontWeight: '900',
   },
   detailBtn: {
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#A8FF5F',
     borderRadius: 20,
     justifyContent: 'center',
     minHeight: 44,
     paddingHorizontal: 14,
   },
   detailText: {
-    color: '#2563EB',
+    color: '#111827',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   infoRow: {
     alignItems: 'center',
@@ -662,102 +699,102 @@ const styles = StyleSheet.create({
     minHeight: 34,
   },
   infoLabel: {
-    color: '#64748B',
+    color: '#A6ADB8',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   infoValue: {
-    color: '#334155',
+    color: '#E6EBF2',
     flexShrink: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '800',
     marginLeft: 14,
     textAlign: 'right',
   },
   warningInfoValue: {
-    color: '#D97706',
+    color: '#FFD65C',
   },
   checkText: {
-    color: '#334155',
+    color: '#E6EBF2',
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '700',
     lineHeight: 22,
     marginTop: 6,
   },
   noticeBox: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#1F2023',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   noticeText: {
-    color: '#1D4ED8',
+    color: '#A8FF5F',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#3A1C1C',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   errorText: {
-    color: '#DC2626',
+    color: '#FF8585',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   warningBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#4A3A12',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   warningText: {
-    color: '#D97706',
+    color: '#FFD65C',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
   },
   changePinBtn: {
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#2F3440',
     borderRadius: 12,
     justifyContent: 'center',
     marginTop: 12,
     minHeight: 44,
   },
   changePinText: {
-    color: '#2563EB',
+    color: '#E6EBF2',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   changeRoleBtn: {
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#2F3440',
     borderRadius: 12,
     justifyContent: 'center',
     marginTop: 10,
     minHeight: 44,
   },
   changeRoleText: {
-    color: '#64748B',
+    color: '#E6EBF2',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   reloadBtn: {
     alignItems: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: '#A8FF5F',
     borderRadius: 14,
     minHeight: 52,
     justifyContent: 'center',
-    shadowColor: '#2563EB',
+    shadowColor: '#A8FF5F',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 4,
   },
   reloadText: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '900',
   },
 });
