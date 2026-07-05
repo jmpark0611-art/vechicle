@@ -60,7 +60,7 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: '기록',
-          href: role === 'commander' ? undefined : null,
+          href: role === 'driver' ? null : undefined,
           tabBarIcon: ({ color }) => <TabIcon name="history" size={26} color={color} />,
         }}
       />
@@ -68,7 +68,7 @@ export default function TabLayout() {
         name="vehicles"
         options={{
           title: '차량',
-          href: role === 'commander' ? undefined : null,
+          href: role === 'driver' ? null : undefined,
           tabBarIcon: ({ color }) => <TabIcon name="vehicle" size={26} color={color} />,
         }}
       />
@@ -76,7 +76,7 @@ export default function TabLayout() {
         name="check"
         options={{
           title: '점검',
-          href: role === 'commander' ? undefined : null,
+          href: role === 'driver' ? null : undefined,
           tabBarIcon: ({ color }) => <TabIcon name="inspect" size={26} color={color} />,
         }}
       />
@@ -84,7 +84,7 @@ export default function TabLayout() {
         name="map"
         options={{
           title: '위치',
-          href: role === 'commander' ? undefined : null,
+          href: role === 'driver' ? null : undefined,
           tabBarIcon: ({ color }) => <TabIcon name="location" size={26} color={color} />,
         }}
       />
