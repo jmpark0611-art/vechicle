@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -613,23 +613,39 @@ export default function VehiclesScreen() {
               )}
 
               {editingVehicleId !== vehicle.id && (
-                <View style={styles.actions}>
-                  <TouchableOpacity
-                    accessibilityLabel={`${vehicle.vehicle_number} 차량번호 수정`}
-                    style={[styles.actionBtn, styles.secondaryBtn]}
-                    onPress={() => startEditVehicle(vehicle)}>
-                    <Text style={[styles.actionText, styles.secondaryText]}>차량번호 수정</Text>
-                  </TouchableOpacity>
-                  {canDelete && (
+                <>
+                  <View style={styles.actions}>
                     <TouchableOpacity
-                      accessibilityLabel={`${vehicle.vehicle_number} 차량 삭제`}
-                      style={[styles.actionBtn, styles.dangerBtn]}
-                      onPress={() => handleDeleteVehicle(vehicle)}
-                      disabled={isSaving}>
-                      <Text style={[styles.actionText, styles.dangerText]}>삭제</Text>
+                      accessibilityLabel={`${vehicle.vehicle_number} 차량번호 수정`}
+                      style={[styles.actionBtn, styles.secondaryBtn]}
+                      onPress={() => startEditVehicle(vehicle)}>
+                      <Text style={[styles.actionText, styles.secondaryText]}>차량번호 수정</Text>
                     </TouchableOpacity>
-                  )}
-                </View>
+                    {canDelete && (
+                      <TouchableOpacity
+                        accessibilityLabel={`${vehicle.vehicle_number} 차량 삭제`}
+                        style={[styles.actionBtn, styles.dangerBtn]}
+                        onPress={() => handleDeleteVehicle(vehicle)}
+                        disabled={isSaving}>
+                        <Text style={[styles.actionText, styles.dangerText]}>삭제</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    accessibilityLabel={`${vehicle.vehicle_number} OBD 단말기 연결`}
+                    style={[styles.actionBtn, styles.obdBtn, styles.singleAction]}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/obd',
+                        params: {
+                          vehicleId: vehicle.id,
+                          ...(activeTrip ? { tripId: activeTrip.id } : {}),
+                        },
+                      })
+                    }>
+                    <Text style={[styles.actionText, styles.obdText]}>OBD 단말기 연결</Text>
+                  </TouchableOpacity>
+                </>
               )}
 
               {activeTrip ? (
@@ -981,6 +997,14 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
   maintenanceTextWarning: {
+    color: '#F59E0B',
+  },
+  obdBtn: {
+    backgroundColor: 'rgba(245,158,11,0.08)',
+    borderColor: 'rgba(245,158,11,0.22)',
+    borderWidth: 1,
+  },
+  obdText: {
     color: '#F59E0B',
   },
   actionText: {
