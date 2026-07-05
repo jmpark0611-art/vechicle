@@ -1,0 +1,39 @@
+name: EAS Build (Android APK)
+
+on:
+  push:
+    branches:
+      - claude/env-permissions-session-restart-154onb
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Android APK (preview)
+        run: eas build --profile preview --platform android --non-interactive
+
+      - name: Get build URL
+        run: |
+          echo "✅ 빌드 완료! Expo 대시보드에서 APK를 다운로드하세요:"
+          echo "https://expo.dev/accounts/[your-username]/projects/my-sdk54-app/builds"
