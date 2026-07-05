@@ -12,7 +12,9 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "운행 시작/종료 위치와 GPS 경로를 기록하기 위해 위치 권한이 필요합니다.",
-        "NSMicrophoneUsageDescription": "출발지와 목적지를 음성으로 입력하기 위해 마이크 권한이 필요합니다."
+        "NSMicrophoneUsageDescription": "출발지와 목적지를 음성으로 입력하기 위해 마이크 권한이 필요합니다.",
+        "NSBluetoothAlwaysUsageDescription": "OBD 단말기 연결을 위해 블루투스 권한이 필요합니다.",
+        "NSBluetoothPeripheralUsageDescription": "OBD 단말기 연결을 위해 블루투스 권한이 필요합니다."
       }
     },
     "android": {
@@ -20,7 +22,11 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -37,6 +43,7 @@
     },
     "plugins": [
       "expo-router",
+      "react-native-ble-plx",
       [
         "expo-location",
         {
