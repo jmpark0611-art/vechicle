@@ -19,7 +19,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: NAV.accent,
-        tabBarInactiveTintColor: 'rgba(255,255,255,0.3)',
+        tabBarInactiveTintColor: NAV.textMuted,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
@@ -29,14 +29,14 @@ export default function TabLayout() {
           right: 14,
           borderRadius: 26,
           height: 66,
-          backgroundColor: '#0B1C2E',
+          backgroundColor: '#FFFFFF',
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.09)',
-          elevation: 20,
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.5,
-          shadowRadius: 20,
+          borderColor: '#E2E8F0',
+          elevation: 12,
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 16,
         },
         tabBarItemStyle: {
           borderRadius: 18,
@@ -60,6 +60,7 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: '기록',
+          href: role === 'commander' ? undefined : null,
           tabBarIcon: ({ color }) => <TabIcon name="history" size={26} color={color} />,
         }}
       />
@@ -67,6 +68,7 @@ export default function TabLayout() {
         name="vehicles"
         options={{
           title: '차량',
+          href: role === 'commander' ? undefined : null,
           tabBarIcon: ({ color }) => <TabIcon name="vehicle" size={26} color={color} />,
         }}
       />
@@ -74,6 +76,7 @@ export default function TabLayout() {
         name="check"
         options={{
           title: '점검',
+          href: role === 'commander' ? undefined : null,
           tabBarIcon: ({ color }) => <TabIcon name="inspect" size={26} color={color} />,
         }}
       />

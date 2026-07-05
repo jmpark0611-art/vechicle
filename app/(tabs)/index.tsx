@@ -713,7 +713,7 @@ export default function DriverScreen() {
 
       {isLoadingDashboard && (
         <View style={styles.noticeBox}>
-          <ActivityIndicator color="#F59E0B" />
+          <ActivityIndicator color="#2563EB" />
           <Text style={styles.noticeText}>운행 상태를 확인하는 중입니다.</Text>
         </View>
       )}
@@ -808,7 +808,7 @@ export default function DriverScreen() {
               value={startPlace}
               onChangeText={setStartPlace}
               placeholder="출발지를 입력하세요"
-              placeholderTextColor="rgba(255,255,255,0.25)"
+              placeholderTextColor="#94A3B8"
             />
             <View style={styles.presetRow}>
               {PLACE_PRESETS.map((place) => (
@@ -831,7 +831,7 @@ export default function DriverScreen() {
               value={endPlace}
               onChangeText={setEndPlace}
               placeholder="목적지를 입력하세요"
-              placeholderTextColor="rgba(255,255,255,0.25)"
+              placeholderTextColor="#94A3B8"
             />
             <View style={styles.presetRow}>
               {PLACE_PRESETS.map((place) => (
@@ -932,26 +932,24 @@ export default function DriverScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#07101C',
+    backgroundColor: '#F8FAFC',
     padding: 20,
   },
   title: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 16,
   },
-  // Running hero card
+  // Running hero card (stays blue — active state needs to stand out)
   runningHeroCard: {
-    backgroundColor: '#0F2240',
-    borderColor: 'rgba(245,158,11,0.2)',
+    backgroundColor: '#1D4ED8',
     borderRadius: 20,
-    borderWidth: 1,
     marginBottom: 12,
     padding: 22,
-    shadowColor: '#000000',
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 8,
   },
@@ -962,18 +960,18 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   statusDotActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#4ADE80',
     borderRadius: 5,
     height: 8,
     width: 8,
   },
   heroStatusText: {
-    color: 'rgba(245,158,11,0.75)',
+    color: 'rgba(255,255,255,0.8)',
     fontSize: 13,
     fontWeight: '600',
   },
   heroVehicleText: {
-    color: '#EAF0F8',
+    color: '#FFFFFF',
     flex: 1,
     fontSize: 15,
     fontWeight: '700',
@@ -999,13 +997,13 @@ const styles = StyleSheet.create({
     color: '#FCA5A5',
   },
   heroMetricUnit: {
-    color: 'rgba(245,158,11,0.6)',
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 13,
     fontWeight: '500',
     marginTop: 4,
   },
   heroMetricDivider: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     height: 52,
     width: 1,
   },
@@ -1015,33 +1013,38 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heroRouteText: {
-    color: 'rgba(255,255,255,0.75)',
+    color: 'rgba(255,255,255,0.85)',
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
   },
   heroRouteArrow: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.4)',
     fontSize: 14,
     marginHorizontal: 10,
   },
   heroStartTime: {
-    color: 'rgba(255,255,255,0.38)',
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 12,
     fontWeight: '400',
   },
   // GPS status card
   gpsCard: {
-    backgroundColor: '#0D1B2A',
-    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     borderWidth: 1,
     marginBottom: 14,
     padding: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   gpsRow: {
     alignItems: 'center',
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: '#F1F5F9',
     borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1051,29 +1054,34 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   gpsLabel: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 14,
     fontWeight: '500',
   },
   gpsValue: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 14,
     fontWeight: '600',
   },
   successText: {
-    color: '#10B981',
+    color: '#059669',
   },
   waitingText: {
-    color: '#F59E0B',
+    color: '#D97706',
   },
   // Idle status card
   idleCard: {
-    backgroundColor: '#0D1B2A',
-    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     borderWidth: 1,
     marginBottom: 14,
     padding: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   idleRow: {
     alignItems: 'center',
@@ -1081,18 +1089,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   statusDotIdle: {
-    backgroundColor: '#3D607A',
+    backgroundColor: '#CBD5E1',
     borderRadius: 5,
     height: 8,
     width: 8,
   },
   idleStatusText: {
-    color: '#5A7A9A',
+    color: '#94A3B8',
     fontSize: 14,
     fontWeight: '500',
   },
   idleVehicleText: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
@@ -1103,12 +1111,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   inputCard: {
-    backgroundColor: '#0D1B2A',
-    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderRadius: 16,
     borderWidth: 1,
     marginBottom: 14,
     padding: 20,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   inputLabelRow: {
     alignItems: 'center',
@@ -1118,38 +1131,38 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputLabel: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 13,
     fontWeight: '500',
   },
   voiceBtn: {
-    backgroundColor: 'rgba(16,185,129,0.08)',
+    backgroundColor: '#ECFDF5',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
   voiceText: {
-    color: '#10B981',
+    color: '#059669',
     fontSize: 13,
     fontWeight: '600',
   },
   voiceNoticeBox: {
-    backgroundColor: 'rgba(96,165,250,0.08)',
+    backgroundColor: '#EFF6FF',
     borderRadius: 10,
     marginTop: 14,
     padding: 12,
   },
   voiceNoticeText: {
-    color: '#60A5FA',
+    color: '#1D4ED8',
     fontSize: 13,
     fontWeight: '500',
   },
   textInput: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     borderWidth: 1,
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 16,
     fontWeight: '500',
     minHeight: 48,
@@ -1162,13 +1175,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   presetBtn: {
-    backgroundColor: 'rgba(245,158,11,0.08)',
+    backgroundColor: '#EFF6FF',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   presetText: {
-    color: '#F59E0B',
+    color: '#2563EB',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -1179,12 +1192,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 16,
     fontWeight: '600',
   },
   reloadText: {
-    color: '#60A5FA',
+    color: '#2563EB',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1194,8 +1207,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   vehicleBtn: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     borderWidth: 1,
     minWidth: 100,
@@ -1203,22 +1216,22 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   selectedBtn: {
-    backgroundColor: 'rgba(245,158,11,0.12)',
-    borderColor: 'rgba(245,158,11,0.35)',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#93C5FD',
   },
   vehicleTxt: {
-    color: '#8FAFC8',
+    color: '#64748B',
     fontSize: 15,
     fontWeight: '600',
     textAlign: 'center',
   },
   selectedVehicleTxt: {
-    color: '#F59E0B',
+    color: '#2563EB',
   },
   // Notices
   noticeBox: {
     alignItems: 'center',
-    backgroundColor: 'rgba(96,165,250,0.07)',
+    backgroundColor: '#EFF6FF',
     borderRadius: 12,
     flexDirection: 'row',
     gap: 10,
@@ -1226,56 +1239,56 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   noticeText: {
-    color: '#60A5FA',
+    color: '#1D4ED8',
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
   },
   warningBox: {
-    backgroundColor: 'rgba(245,158,11,0.08)',
+    backgroundColor: '#FFFBEB',
     borderRadius: 12,
     marginBottom: 12,
     padding: 14,
   },
   warningText: {
-    color: '#F59E0B',
+    color: '#B45309',
     fontSize: 14,
     fontWeight: '500',
   },
   errorBox: {
-    backgroundColor: 'rgba(239,68,68,0.08)',
+    backgroundColor: '#FEF2F2',
     borderRadius: 12,
     marginBottom: 12,
     padding: 14,
   },
   errorText: {
-    color: '#EF4444',
+    color: '#B91C1C',
     fontSize: 14,
     fontWeight: '500',
   },
   // Buttons
   startBtn: {
     alignItems: 'center',
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#2563EB',
     borderRadius: 16,
     justifyContent: 'center',
     minHeight: 60,
     width: '100%',
-    shadowColor: '#F59E0B',
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 5,
   },
   endBtn: {
     alignItems: 'center',
-    backgroundColor: '#BE123C',
+    backgroundColor: '#DC2626',
     borderRadius: 16,
     justifyContent: 'center',
     minHeight: 60,
-    shadowColor: '#BE123C',
+    shadowColor: '#DC2626',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 5,
   },
@@ -1301,14 +1314,14 @@ const styles = StyleSheet.create({
   },
   detailBtn: {
     alignItems: 'center',
-    backgroundColor: 'rgba(96,165,250,0.08)',
+    backgroundColor: '#EFF6FF',
     borderRadius: 16,
     justifyContent: 'center',
     minHeight: 60,
     width: 80,
   },
   detailBtnText: {
-    color: '#60A5FA',
+    color: '#2563EB',
     fontSize: 15,
     fontWeight: '600',
   },

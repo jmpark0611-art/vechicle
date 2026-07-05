@@ -457,7 +457,7 @@ export default function VehiclesScreen() {
             value={newVehicleNumber}
             onChangeText={setNewVehicleNumber}
             placeholder="차량번호 입력"
-            placeholderTextColor="rgba(255,255,255,0.25)"
+            placeholderTextColor="#94A3B8"
           />
           <TouchableOpacity
             accessibilityLabel="차량 등록"
@@ -476,7 +476,7 @@ export default function VehiclesScreen() {
           value={searchText}
           onChangeText={setSearchText}
           placeholder="차량번호 검색"
-          placeholderTextColor="rgba(255,255,255,0.25)"
+          placeholderTextColor="#94A3B8"
         />
       </View>
 
@@ -509,7 +509,7 @@ export default function VehiclesScreen() {
 
       {isLoading && (
         <View style={styles.noticeBox}>
-          <ActivityIndicator color="#F59E0B" />
+          <ActivityIndicator color="#2563EB" />
           <Text style={styles.noticeText}>차량 상태를 불러오는 중입니다.</Text>
         </View>
       )}
@@ -555,7 +555,7 @@ export default function VehiclesScreen() {
                     onChangeText={setEditingVehicleNumber}
                     autoFocus
                     placeholder="차량번호"
-                    placeholderTextColor="rgba(255,255,255,0.25)"
+                    placeholderTextColor="#94A3B8"
                   />
                 ) : (
                   <Text
@@ -700,11 +700,11 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#07101C',
+    backgroundColor: '#F8FAFC',
     padding: 20,
   },
   title: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 16,
@@ -718,12 +718,17 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   managePanel: {
-    backgroundColor: '#0D1B2A',
-    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderRadius: 16,
     borderWidth: 1,
     marginBottom: 14,
     padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   formRow: {
     alignItems: 'center',
@@ -733,11 +738,11 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   textInput: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     borderWidth: 1,
-    color: '#EAF0F8',
+    color: '#0F172A',
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
@@ -750,7 +755,7 @@ const styles = StyleSheet.create({
   },
   compactBtn: {
     alignItems: 'center',
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#2563EB',
     borderRadius: 12,
     justifyContent: 'center',
     minHeight: 46,
@@ -758,12 +763,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   compactBtnText: {
-    color: '#07101C',
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },
   countText: {
-    color: '#5A7A9A',
+    color: '#64748B',
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
@@ -777,52 +782,62 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   summaryCard: {
-    backgroundColor: '#0D1B2A',
-    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     borderWidth: 1,
     flexBasis: '47%',
     flexGrow: 1,
     padding: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   summaryWideCard: {
-    backgroundColor: '#0D1B2A',
-    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     borderWidth: 1,
     flexBasis: '100%',
     padding: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   summaryLabel: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '500',
     marginBottom: 6,
   },
   summaryValue: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 22,
     fontWeight: '700',
   },
   warningValue: {
-    color: '#EF4444',
+    color: '#DC2626',
   },
   sectionTitle: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 16,
     fontWeight: '600',
   },
   reloadText: {
-    color: '#60A5FA',
+    color: '#2563EB',
     fontSize: 14,
     fontWeight: '600',
   },
   searchInput: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     borderWidth: 1,
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 15,
     fontWeight: '500',
     minHeight: 48,
@@ -832,13 +847,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   filterPanelTitle: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '500',
     marginBottom: 8,
   },
   filterBar: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: '#F1F5F9',
     borderRadius: 12,
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -856,28 +871,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   activeFilterBtn: {
-    backgroundColor: 'rgba(245,158,11,0.1)',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
   },
   filterText: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '500',
     lineHeight: 15,
     textAlign: 'center',
   },
   activeFilterText: {
-    color: '#F59E0B',
+    color: '#2563EB',
     fontWeight: '700',
   },
   list: {
     gap: 12,
   },
   vehicleCard: {
-    backgroundColor: '#0D1B2A',
-    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderRadius: 16,
     borderWidth: 1,
     padding: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   cardHeader: {
     alignItems: 'center',
@@ -888,7 +913,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   vehicleNumber: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     flex: 1,
     fontSize: 18,
     fontWeight: '700',
@@ -896,9 +921,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   statusBadge: {
-    backgroundColor: 'rgba(245,158,11,0.08)',
+    backgroundColor: '#F1F5F9',
     borderRadius: 20,
-    color: '#F59E0B',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '600',
     overflow: 'hidden',
@@ -906,12 +931,12 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   runningBadge: {
-    backgroundColor: 'rgba(245,158,11,0.12)',
-    color: '#F59E0B',
+    backgroundColor: '#DBEAFE',
+    color: '#1D4ED8',
   },
   staleBadge: {
-    backgroundColor: 'rgba(239,68,68,0.1)',
-    color: '#EF4444',
+    backgroundColor: '#FEE2E2',
+    color: '#B91C1C',
   },
   infoRow: {
     alignItems: 'center',
@@ -922,12 +947,12 @@ const styles = StyleSheet.create({
     minHeight: 28,
   },
   infoLabel: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 13,
     fontWeight: '500',
   },
   infoValue: {
-    color: '#9AB0C8',
+    color: '#0F172A',
     flexShrink: 1,
     fontSize: 13,
     fontWeight: '600',
@@ -935,24 +960,24 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   staleBox: {
-    backgroundColor: 'rgba(239,68,68,0.08)',
+    backgroundColor: '#FEF2F2',
     borderRadius: 10,
     marginTop: 10,
     padding: 12,
   },
   staleText: {
-    color: '#EF4444',
+    color: '#B91C1C',
     fontSize: 13,
     fontWeight: '500',
   },
   warningInlineBox: {
-    backgroundColor: 'rgba(245,158,11,0.08)',
+    backgroundColor: '#FFFBEB',
     borderRadius: 10,
     marginTop: 10,
     padding: 12,
   },
   warningInlineText: {
-    color: '#F59E0B',
+    color: '#B45309',
     fontSize: 13,
     fontWeight: '500',
   },
@@ -964,7 +989,7 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     alignItems: 'center',
-    backgroundColor: 'rgba(245,158,11,0.1)',
+    backgroundColor: '#EFF6FF',
     borderRadius: 10,
     flexBasis: 132,
     flexGrow: 1,
@@ -976,54 +1001,56 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   secondaryBtn: {
-    backgroundColor: 'rgba(96,165,250,0.08)',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
   },
   dangerBtn: {
-    backgroundColor: 'rgba(239,68,68,0.08)',
+    backgroundColor: '#FEF2F2',
   },
   maintenanceBtn: {
-    backgroundColor: 'rgba(16,185,129,0.08)',
+    backgroundColor: '#ECFDF5',
   },
   maintenanceBtnOverdue: {
-    backgroundColor: 'rgba(239,68,68,0.1)',
+    backgroundColor: '#FEF2F2',
   },
   maintenanceBtnWarning: {
-    backgroundColor: 'rgba(245,158,11,0.1)',
+    backgroundColor: '#FFFBEB',
   },
   maintenanceText: {
-    color: '#10B981',
+    color: '#059669',
   },
   maintenanceTextOverdue: {
-    color: '#EF4444',
+    color: '#DC2626',
   },
   maintenanceTextWarning: {
-    color: '#F59E0B',
+    color: '#D97706',
   },
   obdBtn: {
-    backgroundColor: 'rgba(245,158,11,0.08)',
-    borderColor: 'rgba(245,158,11,0.22)',
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
     borderWidth: 1,
   },
   obdText: {
-    color: '#F59E0B',
+    color: '#B45309',
   },
   actionText: {
-    color: '#F59E0B',
+    color: '#2563EB',
     fontSize: 14,
     fontWeight: '600',
   },
   secondaryText: {
-    color: '#60A5FA',
+    color: '#64748B',
   },
   dangerText: {
-    color: '#EF4444',
+    color: '#DC2626',
   },
   disabledBtn: {
     opacity: 0.4,
   },
   noticeBox: {
     alignItems: 'center',
-    backgroundColor: 'rgba(96,165,250,0.07)',
+    backgroundColor: '#EFF6FF',
     borderRadius: 12,
     flexDirection: 'row',
     gap: 10,
@@ -1031,30 +1058,30 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   noticeText: {
-    color: '#60A5FA',
+    color: '#1D4ED8',
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
   },
   errorBox: {
-    backgroundColor: 'rgba(239,68,68,0.08)',
+    backgroundColor: '#FEF2F2',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   errorText: {
-    color: '#EF4444',
+    color: '#B91C1C',
     fontSize: 14,
     fontWeight: '500',
   },
   warningBox: {
-    backgroundColor: 'rgba(245,158,11,0.08)',
+    backgroundColor: '#FFFBEB',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   warningText: {
-    color: '#F59E0B',
+    color: '#B45309',
     fontSize: 14,
     fontWeight: '500',
   },

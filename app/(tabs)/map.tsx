@@ -122,7 +122,7 @@ export default function MapScreen() {
   if (isCommander === null) {
     return (
       <View style={[styles.container, styles.centerBox, { paddingTop: insets.top }]}>
-        <ActivityIndicator color="#F59E0B" size="large" />
+        <ActivityIndicator color="#2563EB" size="large" />
       </View>
     );
   }
@@ -167,7 +167,7 @@ export default function MapScreen() {
 
       {isLoading && !html ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator color="#F59E0B" size="large" />
+          <ActivityIndicator color="#2563EB" size="large" />
           <Text style={styles.loadingText}>차량 위치를 불러오는 중...</Text>
         </View>
       ) : (
@@ -180,7 +180,7 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#07101C',
+    backgroundColor: '#F8FAFC',
   },
   centerBox: {
     alignItems: 'center',
@@ -188,13 +188,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   accessTitle: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 8,
   },
   accessDesc: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 14,
     fontWeight: '400',
     textAlign: 'center',
@@ -202,20 +202,20 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   roleBtn: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#2563EB',
     borderRadius: 14,
     paddingHorizontal: 24,
     paddingVertical: 14,
   },
   roleBtnText: {
-    color: '#07101C',
+    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },
   header: {
     alignItems: 'center',
-    backgroundColor: '#0D1B2A',
-    borderBottomColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#FFFFFF',
+    borderBottomColor: '#E2E8F0',
     borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -223,35 +223,35 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   title: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 20,
     fontWeight: '700',
   },
   subtitle: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '500',
     marginTop: 2,
   },
   refreshBtn: {
-    backgroundColor: 'rgba(96,165,250,0.08)',
+    backgroundColor: '#EFF6FF',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   refreshText: {
-    color: '#60A5FA',
+    color: '#2563EB',
     fontSize: 14,
     fontWeight: '600',
   },
   errorBox: {
-    backgroundColor: 'rgba(239,68,68,0.08)',
+    backgroundColor: '#FEF2F2',
     borderRadius: 10,
     margin: 12,
     padding: 12,
   },
   errorText: {
-    color: '#EF4444',
+    color: '#B91C1C',
     fontSize: 13,
     fontWeight: '500',
   },
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 14,
     fontWeight: '500',
   },

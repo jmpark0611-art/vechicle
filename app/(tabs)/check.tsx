@@ -42,26 +42,6 @@ type Vehicle = {
   vehicle_number: string;
 };
 
-function getSupabaseSourceText() {
-  if (supabaseConfig.source === 'env') {
-    return '환경변수';
-  }
-
-  if (supabaseConfig.source === 'fallback-invalid-env') {
-    return '환경변수 오류 fallback';
-  }
-
-  return 'fallback 개발값';
-}
-
-function getSupabaseWarningText() {
-  if (supabaseConfig.source === 'fallback-invalid-env') {
-    return 'Supabase URL 환경변수가 올바른 http/https URL이 아니어서 fallback 개발값으로 연결했습니다. .env.local의 EXPO_PUBLIC_SUPABASE_URL을 확인해 주세요.';
-  }
-
-  return '현재 Supabase 설정은 fallback 개발값입니다. 운영 또는 다른 PC에서는 .env.local에 EXPO_PUBLIC_SUPABASE_URL과 EXPO_PUBLIC_SUPABASE_ANON_KEY를 설정해 주세요.';
-}
-
 function getAgeHours(value: string | null) {
   if (!value) {
     return null;
@@ -256,7 +236,7 @@ export default function CheckScreen() {
             {status === 'checking' ? '확인 중' : status === 'ok' ? '정상' : '확인 필요'}
           </Text>
         </View>
-        {status === 'checking' && <ActivityIndicator color="#F59E0B" />}
+        {status === 'checking' && <ActivityIndicator color="#2563EB" />}
       </View>
 
       {message && (
@@ -389,12 +369,6 @@ export default function CheckScreen() {
           <Text style={styles.infoValue}>{supabaseConfig.urlHost}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>설정 출처</Text>
-          <Text style={[styles.infoValue, supabaseConfig.isUsingFallback && styles.warningInfoValue]}>
-            {getSupabaseSourceText()}
-          </Text>
-        </View>
-        <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>최근 GPS</Text>
           <Text style={styles.infoValue}>{formatDateTime(summary.latestGpsAt)}</Text>
         </View>
@@ -404,27 +378,6 @@ export default function CheckScreen() {
             {latestGpsAgeHours === null ? '-' : `${latestGpsAgeHours}시간 전`}
           </Text>
         </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>PC 실행</Text>
-          <Text style={styles.infoValue}>npm.cmd run start:offline</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>휴대폰 테스트</Text>
-          <Text style={styles.infoValue}>npm.cmd run start:lan</Text>
-        </View>
-      </View>
-
-      {supabaseConfig.isUsingFallback && (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningText}>{getSupabaseWarningText()}</Text>
-        </View>
-      )}
-
-      <View style={styles.infoPanel}>
-        <Text style={styles.sectionTitle}>실기기 확인</Text>
-        <Text style={styles.checkText}>1. PC와 Android 휴대폰을 같은 Wi-Fi에 연결</Text>
-        <Text style={styles.checkText}>2. npm.cmd run start:lan 실행 후 Expo Go에서 QR 스캔</Text>
-        <Text style={styles.checkText}>3. 위치 권한 허용 후 출발, GPS 수집, 종료 확인</Text>
       </View>
 
       <View style={styles.infoPanel}>
@@ -461,19 +414,19 @@ export default function CheckScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#07101C',
+    backgroundColor: '#F8FAFC',
     padding: 20,
   },
   title: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 16,
   },
   statusPanel: {
     alignItems: 'center',
-    backgroundColor: '#0D1B2A',
-    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
@@ -482,23 +435,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 14,
     padding: 20,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   errorPanel: {
-    borderColor: 'rgba(239,68,68,0.25)',
+    borderColor: '#FECACA',
   },
   statusLabel: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 13,
     fontWeight: '500',
     marginBottom: 4,
   },
   statusValue: {
-    color: '#10B981',
+    color: '#059669',
     fontSize: 22,
     fontWeight: '700',
   },
   errorValue: {
-    color: '#EF4444',
+    color: '#DC2626',
   },
   grid: {
     flexDirection: 'row',
@@ -507,64 +465,74 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   metricCard: {
-    backgroundColor: '#0D1B2A',
-    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     borderWidth: 1,
     flexBasis: '47%',
     flexGrow: 1,
     padding: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   metricLabel: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '500',
     marginBottom: 8,
   },
   metricValue: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 26,
     fontWeight: '700',
   },
   warningValue: {
-    color: '#F59E0B',
+    color: '#D97706',
   },
   infoPanel: {
-    backgroundColor: '#0D1B2A',
-    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     borderRadius: 16,
     borderWidth: 1,
     marginBottom: 14,
     padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   sectionTitle: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
   },
   sectionHint: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 13,
     fontWeight: '400',
     marginBottom: 10,
   },
   activeTripRow: {
     alignItems: 'center',
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: '#F1F5F9',
     borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     minHeight: 56,
   },
   staleTripRow: {
-    backgroundColor: 'rgba(239,68,68,0.05)',
+    backgroundColor: '#FEF2F2',
     borderRadius: 10,
     marginBottom: 6,
     paddingHorizontal: 10,
   },
   duplicatedTripRow: {
-    borderColor: 'rgba(239,68,68,0.2)',
+    borderColor: '#FECACA',
     borderWidth: 1,
     borderRadius: 10,
   },
@@ -573,30 +541,30 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   activeTripTitle: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 15,
     fontWeight: '600',
   },
   activeTripMeta: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '400',
     marginTop: 3,
   },
   staleTripMeta: {
-    color: '#EF4444',
+    color: '#DC2626',
     fontWeight: '600',
   },
   detailBtn: {
     alignItems: 'center',
-    backgroundColor: 'rgba(96,165,250,0.08)',
+    backgroundColor: '#EFF6FF',
     borderRadius: 20,
     justifyContent: 'center',
     minHeight: 36,
     paddingHorizontal: 14,
   },
   detailText: {
-    color: '#60A5FA',
+    color: '#2563EB',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -609,12 +577,12 @@ const styles = StyleSheet.create({
     minHeight: 34,
   },
   infoLabel: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 14,
     fontWeight: '500',
   },
   infoValue: {
-    color: '#9AB0C8',
+    color: '#0F172A',
     flexShrink: 1,
     fontSize: 14,
     fontWeight: '600',
@@ -622,52 +590,45 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   warningInfoValue: {
-    color: '#F59E0B',
-  },
-  checkText: {
-    color: '#9AB0C8',
-    fontSize: 14,
-    fontWeight: '400',
-    lineHeight: 22,
-    marginTop: 6,
+    color: '#D97706',
   },
   noticeBox: {
-    backgroundColor: 'rgba(96,165,250,0.07)',
+    backgroundColor: '#EFF6FF',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   noticeText: {
-    color: '#60A5FA',
+    color: '#1D4ED8',
     fontSize: 14,
     fontWeight: '500',
   },
   errorBox: {
-    backgroundColor: 'rgba(239,68,68,0.08)',
+    backgroundColor: '#FEF2F2',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   errorText: {
-    color: '#EF4444',
+    color: '#B91C1C',
     fontSize: 14,
     fontWeight: '500',
   },
   warningBox: {
-    backgroundColor: 'rgba(245,158,11,0.08)',
+    backgroundColor: '#FFFBEB',
     borderRadius: 12,
     marginBottom: 14,
     padding: 14,
   },
   warningText: {
-    color: '#F59E0B',
+    color: '#B45309',
     fontSize: 14,
     fontWeight: '500',
   },
   changePinBtn: {
     alignItems: 'center',
-    backgroundColor: 'rgba(245,158,11,0.08)',
-    borderColor: 'rgba(245,158,11,0.2)',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
     borderRadius: 12,
     borderWidth: 1,
     justifyContent: 'center',
@@ -675,14 +636,14 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   changePinText: {
-    color: '#F59E0B',
+    color: '#2563EB',
     fontSize: 14,
     fontWeight: '600',
   },
   changeRoleBtn: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     borderWidth: 1,
     justifyContent: 'center',
@@ -690,24 +651,24 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   changeRoleText: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 14,
     fontWeight: '600',
   },
   reloadBtn: {
     alignItems: 'center',
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#2563EB',
     borderRadius: 14,
     minHeight: 52,
     justifyContent: 'center',
-    shadowColor: '#F59E0B',
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 4,
   },
   reloadText: {
-    color: '#07101C',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },
