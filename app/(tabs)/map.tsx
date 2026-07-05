@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { VehicleMap } from '../../components/vehicle-map';
@@ -10,6 +10,15 @@ import { supabase } from '../../lib/supabase';
 
 const FALLBACK_POLL_MS = 60_000;
 
+function getGpsAge(recordedAt: string | null): { text: string; stale: boolean } {
+  if (!recordedAt) return { text: '시간 미상', stale: true };
+  const ageMs = Date.now() - new Date(recordedAt).getTime();
+  const ageMin = Math.floor(ageMs / 60000);
+  const stale = ageMs > 5 * 60 * 1000;
+  const text = ageMin < 1 ? '방금' : ageMin < 60 ? `${ageMin}분 전` : `${Math.floor(ageMin / 60)}시간 전`;
+  return { text, stale };
+}
+
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const [html, setHtml] = useState('');
@@ -18,6 +27,7 @@ export default function MapScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCommander, setIsCommander] = useState<boolean | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [positions, setPositions] = useState<VehiclePosition[]>([]);
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
@@ -39,6 +49,7 @@ export default function MapScreen() {
       if (!trips || trips.length === 0) {
         setHtml(generateVehicleMapHtml([]));
         setVehicleCount(0);
+        setPositions([]);
         setLastUpdated(new Date());
         setErrorMessage(null);
         setIsLoading(false);
@@ -85,6 +96,7 @@ export default function MapScreen() {
 
       setHtml(generateVehicleMapHtml(positions));
       setVehicleCount(positions.length);
+      setPositions(positions);
       setLastUpdated(new Date());
       setErrorMessage(null);
     } catch (error) {
@@ -172,6 +184,42 @@ export default function MapScreen() {
         </View>
       ) : (
         <VehicleMap html={html} style={styles.map} />
+      )}
+
+      {!isLoading && positions.length > 0 && (
+        <View style={styles.listPanel}>
+          <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent}>
+            {positions.map((pos) => {
+              const { text: ageText, stale } = getGpsAge(pos.recordedAt ?? null);
+              const speed = pos.speedKmh != null ? Math.round(pos.speedKmh) : null;
+              return (
+                <View key={pos.vehicleNumber} style={styles.vehicleRow}>
+                  <View style={styles.vehicleRowLeft}>
+                    <Text style={styles.vehicleNum}>{pos.vehicleNumber}</Text>
+                    <Text style={styles.vehicleRoute} numberOfLines={1}>
+                      {pos.startPlace ?? ''} → {pos.endPlace ?? ''}
+                    </Text>
+                    <Text style={styles.vehicleGpsTime}>GPS {ageText}</Text>
+                  </View>
+                  <View style={styles.badges}>
+                    {speed != null && (
+                      <View style={[styles.badge, speed > 0 ? styles.badgeYellow : styles.badgeGray]}>
+                        <Text style={speed > 0 ? styles.badgeYellowText : styles.badgeGrayText}>
+                          {speed}km/h
+                        </Text>
+                      </View>
+                    )}
+                    <View style={[styles.badge, stale ? styles.badgeRed : styles.badgeGray]}>
+                      <Text style={stale ? styles.badgeRedText : styles.badgeGrayText}>
+                        {stale ? `경보·${ageText}` : '정상'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
       )}
     </View>
   );
@@ -270,10 +318,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listPanel: {
-    backgroundColor: '#0D1B2A',
-    borderTopColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#FFFFFF',
+    borderTopColor: '#E2E8F0',
     borderTopWidth: 1,
-    maxHeight: 220,
+    maxHeight: 230,
   },
   listScroll: {
     flex: 1,
@@ -284,7 +332,7 @@ const styles = StyleSheet.create({
   },
   vehicleRow: {
     alignItems: 'center',
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: '#F1F5F9',
     borderBottomWidth: 1,
     flexDirection: 'row',
     gap: 8,
@@ -297,21 +345,21 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   vehicleNum: {
-    color: '#EAF0F8',
+    color: '#0F172A',
     fontSize: 15,
     fontWeight: '700',
   },
   vehicleRoute: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '400',
-    marginTop: 1,
+    marginTop: 2,
   },
   vehicleGpsTime: {
-    color: '#3D607A',
+    color: '#94A3B8',
     fontSize: 11,
     fontWeight: '400',
-    marginTop: 1,
+    marginTop: 2,
   },
   badges: {
     alignItems: 'flex-end',
@@ -323,31 +371,31 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   badgeGray: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#F1F5F9',
   },
   badgeGrayText: {
-    color: '#5A7A9A',
+    color: '#64748B',
     fontSize: 11,
     fontWeight: '600',
   },
   badgeYellow: {
-    backgroundColor: 'rgba(245,158,11,0.1)',
+    backgroundColor: '#FFFBEB',
   },
   badgeYellowText: {
-    color: '#F59E0B',
+    color: '#D97706',
     fontSize: 11,
     fontWeight: '600',
   },
   badgeRed: {
-    backgroundColor: 'rgba(239,68,68,0.1)',
+    backgroundColor: '#FEF2F2',
   },
   badgeRedText: {
-    color: '#EF4444',
+    color: '#DC2626',
     fontSize: 11,
     fontWeight: '600',
   },
   badgeOrange: {
-    backgroundColor: 'rgba(234,88,12,0.1)',
+    backgroundColor: '#FFF7ED',
   },
   badgeOrangeText: {
     color: '#EA580C',

@@ -58,6 +58,7 @@ export default function VehiclesScreen() {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatusFilter>('all');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedTabVehicleId, setSelectedTabVehicleId] = useState<string | null>(null);
 
   const activeTripsByVehicleId = useMemo(() => {
     const map = new Map<string, Trip>();
@@ -129,6 +130,20 @@ export default function VehiclesScreen() {
       return vehicle.vehicle_number.toLowerCase().includes(normalizedSearch);
     });
   }, [activeTripsByVehicleId, searchText, statusFilter, vehicles]);
+
+  const selectedTabVehicle = useMemo(() => {
+    return filteredVehicles.find((v) => v.id === selectedTabVehicleId) ?? filteredVehicles[0] ?? null;
+  }, [filteredVehicles, selectedTabVehicleId]);
+
+  const selectedVehicleDetail = useMemo(() => {
+    if (!selectedTabVehicle) return null;
+    const activeTrip = activeTripsByVehicleId.get(selectedTabVehicle.id) ?? null;
+    const latestTrip = latestTripsByVehicleId.get(selectedTabVehicle.id) ?? null;
+    const counts = exactTripCountsByVehicleId.get(selectedTabVehicle.id) ?? { total: 0, completed: 0, active: 0 };
+    const isStale = isStaleActiveTrip(activeTrip?.start_time ?? null);
+    const canDelete = counts.total === 0 && !activeTrip;
+    return { activeTrip, latestTrip, counts, isStale, canDelete };
+  }, [selectedTabVehicle, activeTripsByVehicleId, latestTripsByVehicleId, exactTripCountsByVehicleId]);
 
   const loadVehicles = useCallback(async (refreshing = false) => {
     if (refreshing) {
@@ -400,7 +415,7 @@ export default function VehiclesScreen() {
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={() => loadVehicles(true)} />
       }>
-      <Text style={styles.title}>차량 상태</Text>
+      <Text style={styles.title}>차량 진단</Text>
 
       <View style={styles.toolbar}>
         <Text style={styles.countText}>
@@ -532,21 +547,40 @@ export default function VehiclesScreen() {
         </View>
       )}
 
-      <View style={styles.list}>
-        {filteredVehicles.map((vehicle) => {
-          const activeTrip = activeTripsByVehicleId.get(vehicle.id) ?? null;
-          const latestTrip = latestTripsByVehicleId.get(vehicle.id) ?? null;
-          const counts = exactTripCountsByVehicleId.get(vehicle.id) ?? {
-            total: 0,
-            completed: 0,
-            active: 0,
-          };
-          const statusText = activeTrip ? '운행 중' : '대기 중';
-          const isStale = isStaleActiveTrip(activeTrip?.start_time ?? null);
-          const canDelete = counts.total === 0 && !activeTrip;
+      {filteredVehicles.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabsScroll}
+          contentContainerStyle={styles.tabsContent}>
+          {filteredVehicles.map((vehicle) => {
+            const isSelected = selectedTabVehicle?.id === vehicle.id;
+            const tabActiveTrip = activeTripsByVehicleId.get(vehicle.id) ?? null;
+            const isTabStale = isStaleActiveTrip(tabActiveTrip?.start_time ?? null);
+            return (
+              <TouchableOpacity
+                key={vehicle.id}
+                style={[styles.vehicleTab, isSelected && styles.vehicleTabActive, isTabStale && styles.vehicleTabStale]}
+                onPress={() => setSelectedTabVehicleId(vehicle.id)}>
+                <Text
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                  numberOfLines={1}
+                  style={[styles.vehicleTabText, isSelected && styles.vehicleTabTextActive]}>
+                  {vehicle.vehicle_number}
+                </Text>
+                {tabActiveTrip && <View style={[styles.tabDot, isTabStale && styles.tabDotStale]} />}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
 
+      {selectedTabVehicle && selectedVehicleDetail && (
+        (({ vehicle, activeTrip, latestTrip, counts, isStale, canDelete }) => {
+          const statusText = activeTrip ? '운행 중' : '대기 중';
           return (
-            <View key={vehicle.id} style={styles.vehicleCard}>
+            <View style={styles.vehicleCard}>
               <View style={styles.cardHeader}>
                 {editingVehicleId === vehicle.id ? (
                   <TextInput
@@ -558,11 +592,7 @@ export default function VehiclesScreen() {
                     placeholderTextColor="#94A3B8"
                   />
                 ) : (
-                  <Text
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.82}
-                    numberOfLines={1}
-                    style={styles.vehicleNumber}>
+                  <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.vehicleNumber}>
                     {vehicle.vehicle_number}
                   </Text>
                 )}
@@ -571,32 +601,61 @@ export default function VehiclesScreen() {
                 </Text>
               </View>
 
+              <InfoRow label="전체 운행" value={`${counts.total}건`} />
               <InfoRow label="최근 출발" value={formatDateTime(latestTrip?.start_time ?? null)} />
               <InfoRow label="최근 종료" value={formatDateTime(latestTrip?.end_time ?? null)} />
-              <InfoRow
-                label="최근 소요"
-                value={formatTripDuration(
-                  latestTrip?.start_time ?? null,
-                  latestTrip?.end_time ?? null
-                )}
-              />
-              <InfoRow label="전체 운행" value={`${counts.total}건`} />
-              <InfoRow label="완료 운행" value={`${counts.completed}건`} />
-              <InfoRow label="미종료 운행" value={`${counts.active}건`} />
 
               {isStale && (
                 <View style={styles.staleBox}>
-                  <Text style={styles.staleText}>8시간 이상 종료되지 않은 운행입니다. 운행 화면에서 상태를 확인해 주세요.</Text>
+                  <Text style={styles.staleText}>8시간 이상 종료되지 않은 운행입니다.</Text>
+                </View>
+              )}
+              {counts.active > 1 && (
+                <View style={styles.warningInlineBox}>
+                  <Text style={styles.warningInlineText}>미종료 운행 {counts.active}건 — 상세 화면에서 확인해 주세요.</Text>
                 </View>
               )}
 
-              {counts.active > 1 && (
-                <View style={styles.warningInlineBox}>
-                  <Text style={styles.warningInlineText}>
-                    이 차량에 미종료 운행이 {counts.active}건 있습니다. 최신 운행 외 기록은 상세 화면에서 확인해 주세요.
-                  </Text>
+              <View style={styles.obdSection}>
+                <Text style={styles.subSectionTitle}>OBD ECU 실시간 데이터</Text>
+                <View style={styles.obdGrid}>
+                  {[
+                    ['냉각수온도', '--', '°C'],
+                    ['배터리전압', '--', 'V'],
+                    ['엔진RPM', '--', 'rpm'],
+                    ['연료잔량', '--', '%'],
+                    ['흡기온도', '--', '°C'],
+                    ['주행가능', '--', 'km'],
+                  ].map(([label, value, unit]) => (
+                    <View key={label} style={styles.obdCell}>
+                      <Text style={styles.obdCellLabel}>{label}</Text>
+                      <Text style={styles.obdCellValue}>{value}</Text>
+                      <Text style={styles.obdCellUnit}>{unit}</Text>
+                    </View>
+                  ))}
                 </View>
-              )}
+                <View style={styles.dtcRow}>
+                  <Text style={styles.dtcLabel}>고장코드 (DTC)</Text>
+                  <Text style={styles.dtcOk}>이상없음</Text>
+                </View>
+              </View>
+
+              <View style={styles.maintenanceSection}>
+                <Text style={styles.subSectionTitle}>소모품 교환주기</Text>
+                {[
+                  { label: '엔진오일' },
+                  { label: '오일필터' },
+                  { label: '에어필터' },
+                ].map(({ label }) => (
+                  <View key={label} style={styles.maintenanceRow}>
+                    <Text style={styles.maintenanceLabel}>{label}</Text>
+                    <View style={styles.maintenanceBarTrack}>
+                      <View style={[styles.maintenanceBarFill, { width: '0%' }]} />
+                    </View>
+                    <Text style={styles.maintenanceInfo}>정보 없음</Text>
+                  </View>
+                ))}
+              </View>
 
               {editingVehicleId === vehicle.id && (
                 <View style={styles.actions}>
@@ -616,14 +675,25 @@ export default function VehiclesScreen() {
                 <>
                   <View style={styles.actions}>
                     <TouchableOpacity
-                      accessibilityLabel={`${vehicle.vehicle_number} 차량번호 수정`}
+                      accessibilityLabel="OBD 단말기 연결"
+                      style={[styles.actionBtn, styles.obdBtn]}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/obd',
+                          params: { vehicleId: vehicle.id, ...(activeTrip ? { tripId: activeTrip.id } : {}) },
+                        })
+                      }>
+                      <Text style={[styles.actionText, styles.obdText]}>OBD 단말기 연결</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      accessibilityLabel="차량번호 수정"
                       style={[styles.actionBtn, styles.secondaryBtn]}
                       onPress={() => startEditVehicle(vehicle)}>
-                      <Text style={[styles.actionText, styles.secondaryText]}>차량번호 수정</Text>
+                      <Text style={[styles.actionText, styles.secondaryText]}>번호 수정</Text>
                     </TouchableOpacity>
                     {canDelete && (
                       <TouchableOpacity
-                        accessibilityLabel={`${vehicle.vehicle_number} 차량 삭제`}
+                        accessibilityLabel="차량 삭제"
                         style={[styles.actionBtn, styles.dangerBtn]}
                         onPress={() => handleDeleteVehicle(vehicle)}
                         disabled={isSaving}>
@@ -631,59 +701,34 @@ export default function VehiclesScreen() {
                       </TouchableOpacity>
                     )}
                   </View>
-                  <TouchableOpacity
-                    accessibilityLabel={`${vehicle.vehicle_number} OBD 단말기 연결`}
-                    style={[styles.actionBtn, styles.obdBtn, styles.singleAction]}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/obd',
-                        params: {
-                          vehicleId: vehicle.id,
-                          ...(activeTrip ? { tripId: activeTrip.id } : {}),
-                        },
-                      })
-                    }>
-                    <Text style={[styles.actionText, styles.obdText]}>OBD 단말기 연결</Text>
-                  </TouchableOpacity>
+                  {activeTrip ? (
+                    <View style={styles.actions}>
+                      <Link href={{ pathname: '/trips/[id]', params: { id: activeTrip.id } }} asChild>
+                        <TouchableOpacity accessibilityLabel="운행 상세 보기" style={styles.actionBtn}>
+                          <Text style={styles.actionText}>운행 상세</Text>
+                        </TouchableOpacity>
+                      </Link>
+                      <Link href="/" asChild>
+                        <TouchableOpacity accessibilityLabel="운행 종료 화면으로 이동" style={[styles.actionBtn, styles.secondaryBtn]}>
+                          <Text style={[styles.actionText, styles.secondaryText]}>종료 화면</Text>
+                        </TouchableOpacity>
+                      </Link>
+                    </View>
+                  ) : latestTrip ? (
+                    <Link href={{ pathname: '/trips/[id]', params: { id: latestTrip.id } }} asChild>
+                      <TouchableOpacity
+                        accessibilityLabel="최근 운행 상세 보기"
+                        style={[styles.actionBtn, styles.secondaryBtn, styles.singleAction]}>
+                        <Text style={[styles.actionText, styles.secondaryText]}>최근 운행 상세</Text>
+                      </TouchableOpacity>
+                    </Link>
+                  ) : null}
                 </>
               )}
-
-              {activeTrip ? (
-                <View style={styles.actions}>
-                  <Link
-                    href={{
-                      pathname: '/trips/[id]',
-                      params: { id: activeTrip.id },
-                    }}
-                    asChild>
-                    <TouchableOpacity accessibilityLabel={`${vehicle.vehicle_number} 운행 상세 보기`} style={styles.actionBtn}>
-                      <Text style={styles.actionText}>운행 상세</Text>
-                    </TouchableOpacity>
-                  </Link>
-                <Link href="/" asChild>
-                    <TouchableOpacity accessibilityLabel="운행 종료 화면으로 이동" style={[styles.actionBtn, styles.secondaryBtn]}>
-                      <Text style={[styles.actionText, styles.secondaryText]}>종료 화면</Text>
-                    </TouchableOpacity>
-                  </Link>
-                </View>
-              ) : latestTrip ? (
-                <Link
-                  href={{
-                    pathname: '/trips/[id]',
-                    params: { id: latestTrip.id },
-                  }}
-                  asChild>
-                  <TouchableOpacity
-                    accessibilityLabel={`${vehicle.vehicle_number} 최근 운행 상세 보기`}
-                    style={[styles.actionBtn, styles.secondaryBtn, styles.singleAction]}>
-                    <Text style={[styles.actionText, styles.secondaryText]}>최근 운행 상세</Text>
-                  </TouchableOpacity>
-                </Link>
-              ) : null}
             </View>
           );
-        })}
-      </View>
+        })({ vehicle: selectedTabVehicle, ...selectedVehicleDetail })
+      )}
     </ScrollView>
   );
 }
@@ -1047,6 +1092,156 @@ const styles = StyleSheet.create({
   },
   disabledBtn: {
     opacity: 0.4,
+  },
+  // Vehicle tabs
+  tabsScroll: {
+    marginBottom: 14,
+  },
+  tabsContent: {
+    gap: 8,
+    paddingHorizontal: 2,
+    paddingVertical: 4,
+  },
+  vehicleTab: {
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minWidth: 80,
+  },
+  vehicleTabActive: {
+    backgroundColor: '#2563EB',
+  },
+  vehicleTabStale: {
+    backgroundColor: '#FEE2E2',
+  },
+  vehicleTabText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  vehicleTabTextActive: {
+    color: '#FFFFFF',
+  },
+  tabDot: {
+    backgroundColor: '#059669',
+    borderRadius: 4,
+    height: 7,
+    width: 7,
+  },
+  tabDotStale: {
+    backgroundColor: '#DC2626',
+  },
+  // OBD section
+  obdSection: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 14,
+    padding: 14,
+  },
+  subSectionTitle: {
+    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  obdGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  obdCell: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    borderWidth: 1,
+    flexBasis: '30%',
+    flexGrow: 1,
+    padding: 10,
+    alignItems: 'center',
+  },
+  obdCellLabel: {
+    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '500',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  obdCellValue: {
+    color: '#0F172A',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  obdCellUnit: {
+    color: '#94A3B8',
+    fontSize: 10,
+    fontWeight: '400',
+    marginTop: 2,
+  },
+  dtcRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopColor: '#E2E8F0',
+    borderTopWidth: 1,
+  },
+  dtcLabel: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  dtcOk: {
+    color: '#059669',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  // Maintenance section
+  maintenanceSection: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 10,
+    padding: 14,
+  },
+  maintenanceRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  maintenanceLabel: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '500',
+    width: 64,
+  },
+  maintenanceBarTrack: {
+    backgroundColor: '#E2E8F0',
+    borderRadius: 4,
+    flex: 1,
+    height: 6,
+    overflow: 'hidden',
+  },
+  maintenanceBarFill: {
+    backgroundColor: '#2563EB',
+    borderRadius: 4,
+    height: '100%',
+  },
+  maintenanceInfo: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '500',
+    width: 54,
+    textAlign: 'right',
   },
   noticeBox: {
     alignItems: 'center',

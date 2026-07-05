@@ -20,6 +20,7 @@ import { formatDbError } from '../../lib/errors';
 import { dequeueAllGpsPoints, enqueueGpsPoint, getGpsQueueSize, QueuedGpsPoint } from '../../lib/gps-queue';
 import { supabase } from '../../lib/supabase';
 import { withTimeout } from '../../lib/request';
+import { DriverInfo, getDriverInfo, RANKS, saveDriverInfo } from '../../lib/driver-info';
 
 type Vehicle = {
   id: string;
@@ -165,6 +166,7 @@ export default function DriverScreen() {
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
   const [listeningTarget, setListeningTarget] = useState<VoiceTarget | null>(null);
   const [, setMinuteTick] = useState(0);
+  const [driverInfo, setDriverInfoState] = useState<DriverInfo>({ unit: '', rank: '', name: '' });
   const locationSub = useRef<LocationSubscription | null>(null);
   const latestLocationRef = useRef<TripLocation | null>(null);
 
@@ -177,6 +179,18 @@ export default function DriverScreen() {
   useEffect(() => {
     latestLocationRef.current = location;
   }, [location]);
+
+  useEffect(() => {
+    getDriverInfo().then(setDriverInfoState);
+  }, []);
+
+  const updateDriverInfo = useCallback((partial: Partial<DriverInfo>) => {
+    setDriverInfoState((prev) => {
+      const next = { ...prev, ...partial };
+      void saveDriverInfo(next);
+      return next;
+    });
+  }, []);
 
   const stopLocationWatch = useCallback(() => {
     locationSub.current?.remove();
@@ -745,6 +759,12 @@ export default function DriverScreen() {
               <Text style={styles.heroRouteText} numberOfLines={1}>{endPlace}</Text>
             </View>
             <Text style={styles.heroStartTime}>출발 {formatDateTime(startTime)}</Text>
+            {(driverInfo.name || driverInfo.unit) && (
+              <Text style={styles.heroDriverText}>
+                {[driverInfo.rank, driverInfo.name].filter(Boolean).join(' ')}
+                {driverInfo.unit ? ` · ${driverInfo.unit}` : ''}
+              </Text>
+            )}
           </View>
 
           <View style={styles.gpsCard}>
@@ -754,6 +774,12 @@ export default function DriverScreen() {
                 {gpsStatusText}
               </Text>
             </View>
+            {location?.accuracy != null && (
+              <View style={styles.gpsRow}>
+                <Text style={styles.gpsLabel}>GPS 오차</Text>
+                <Text style={styles.gpsValue}>±{Math.round(location.accuracy)}m</Text>
+              </View>
+            )}
             <View style={styles.gpsRow}>
               <Text style={styles.gpsLabel}>위치 권한</Text>
               <Text style={[
@@ -784,61 +810,89 @@ export default function DriverScreen() {
         </>
       ) : (
         <>
-          <View style={styles.idleCard}>
-            <View style={styles.idleRow}>
-              <View style={styles.statusDotIdle} />
-              <Text style={styles.idleStatusText}>대기 중</Text>
-              <Text style={styles.idleVehicleText} numberOfLines={1}>{selectedVehicleText}</Text>
+          <View style={styles.driverCard}>
+            <Text style={styles.sectionTitle}>운전자 정보</Text>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>소속</Text>
+              <TextInput
+                style={styles.routeInput}
+                value={driverInfo.unit}
+                onChangeText={(text) => updateDriverInfo({ unit: text })}
+                placeholder="부대/소속"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>계급</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rankScroll}>
+                <View style={styles.rankRow}>
+                  {RANKS.map((rank) => (
+                    <TouchableOpacity
+                      key={rank}
+                      style={[styles.rankBtn, driverInfo.rank === rank && styles.rankBtnActive]}
+                      onPress={() => updateDriverInfo({ rank })}>
+                      <Text style={[styles.rankText, driverInfo.rank === rank && styles.rankTextActive]}>
+                        {rank}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>성명</Text>
+              <TextInput
+                style={styles.routeInput}
+                value={driverInfo.name}
+                onChangeText={(text) => updateDriverInfo({ name: text })}
+                placeholder="이름"
+                placeholderTextColor="#94A3B8"
+              />
             </View>
           </View>
 
-          <View style={styles.inputCard}>
-            <Text style={styles.sectionTitle}>운행 정보</Text>
-            <View style={styles.inputLabelRow}>
-              <Text style={styles.inputLabel}>출발지</Text>
-              <TouchableOpacity
-                accessibilityLabel="출발지 음성 입력"
-                style={styles.voiceBtn}
-                onPress={() => handleVoiceInput('start')}>
-                <Text style={styles.voiceText}>{listeningTarget === 'start' ? '듣는 중' : '음성'}</Text>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.textInput}
-              value={startPlace}
-              onChangeText={setStartPlace}
-              placeholder="출발지를 입력하세요"
-              placeholderTextColor="#94A3B8"
-            />
-            <View style={styles.presetRow}>
-              {PLACE_PRESETS.map((place) => (
-                <TouchableOpacity key={`start-${place}`} style={styles.presetBtn} onPress={() => setStartPlace(place)}>
-                  <Text style={styles.presetText}>{place}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.inputLabelRow}>
-              <Text style={styles.inputLabel}>목적지</Text>
-              <TouchableOpacity
-                accessibilityLabel="목적지 음성 입력"
-                style={styles.voiceBtn}
-                onPress={() => handleVoiceInput('end')}>
-                <Text style={styles.voiceText}>{listeningTarget === 'end' ? '듣는 중' : '음성'}</Text>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.textInput}
-              value={endPlace}
-              onChangeText={setEndPlace}
-              placeholder="목적지를 입력하세요"
-              placeholderTextColor="#94A3B8"
-            />
-            <View style={styles.presetRow}>
-              {PLACE_PRESETS.map((place) => (
-                <TouchableOpacity key={`end-${place}`} style={styles.presetBtn} onPress={() => setEndPlace(place)}>
-                  <Text style={styles.presetText}>{place}</Text>
-                </TouchableOpacity>
-              ))}
+          <View style={styles.routeCard}>
+            <Text style={styles.sectionTitle}>경로</Text>
+            <View style={styles.dotRouteRow}>
+              <View style={styles.dotCol}>
+                <View style={styles.dotFilled} />
+                <View style={styles.dotLine} />
+                <View style={styles.dotHollow} />
+              </View>
+              <View style={styles.routeFieldCol}>
+                <View style={styles.routeFieldBlock}>
+                  <TextInput
+                    style={styles.routeInput}
+                    value={startPlace}
+                    onChangeText={setStartPlace}
+                    placeholder="출발지"
+                    placeholderTextColor="#94A3B8"
+                  />
+                  <View style={styles.presetRow}>
+                    {PLACE_PRESETS.map((place) => (
+                      <TouchableOpacity key={`start-${place}`} style={styles.presetBtn} onPress={() => setStartPlace(place)}>
+                        <Text style={styles.presetText}>{place}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.routeFieldBlock}>
+                  <TextInput
+                    style={styles.routeInput}
+                    value={endPlace}
+                    onChangeText={setEndPlace}
+                    placeholder="목적지"
+                    placeholderTextColor="#94A3B8"
+                  />
+                  <View style={styles.presetRow}>
+                    {PLACE_PRESETS.map((place) => (
+                      <TouchableOpacity key={`end-${place}`} style={styles.presetBtn} onPress={() => setEndPlace(place)}>
+                        <Text style={styles.presetText}>{place}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
             </View>
             {voiceNotice && (
               <View style={styles.voiceNoticeBox}>
@@ -1324,5 +1378,124 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     fontSize: 15,
     fontWeight: '600',
+  },
+  // Driver info card
+  driverCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 14,
+    padding: 20,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  fieldGroup: {
+    marginBottom: 14,
+  },
+  fieldLabel: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  rankScroll: {
+    marginTop: 2,
+  },
+  rankRow: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingBottom: 2,
+  },
+  rankBtn: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  rankBtnActive: {
+    backgroundColor: '#2563EB',
+  },
+  rankText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  rankTextActive: {
+    color: '#FFFFFF',
+  },
+  // Route card with dot layout
+  routeCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 14,
+    padding: 20,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  dotRouteRow: {
+    flexDirection: 'row',
+    gap: 14,
+    marginTop: 14,
+  },
+  dotCol: {
+    alignItems: 'center',
+    paddingTop: 15,
+    width: 14,
+  },
+  dotFilled: {
+    backgroundColor: '#2563EB',
+    borderRadius: 5,
+    height: 10,
+    width: 10,
+  },
+  dotLine: {
+    backgroundColor: '#CBD5E1',
+    flex: 1,
+    marginVertical: 6,
+    width: 2,
+    minHeight: 28,
+  },
+  dotHollow: {
+    borderColor: '#2563EB',
+    borderRadius: 5,
+    borderWidth: 2,
+    height: 10,
+    width: 10,
+  },
+  routeFieldCol: {
+    flex: 1,
+    gap: 14,
+  },
+  routeFieldBlock: {
+    gap: 8,
+  },
+  routeInput: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    borderWidth: 1,
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '500',
+    minHeight: 48,
+    paddingHorizontal: 14,
+  },
+  // Hero driver info
+  heroDriverText: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 6,
   },
 });

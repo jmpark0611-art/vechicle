@@ -127,6 +127,7 @@ export default function TripHistoryScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [historyLimit, setHistoryLimit] = useState(HISTORY_TRIP_LIMIT);
   const [hasMoreTrips, setHasMoreTrips] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -265,6 +266,31 @@ export default function TripHistoryScreen() {
     };
   }, [filteredTrips, gpsSummaryByTripId]);
 
+  const groupedTrips = useMemo(() => {
+    const groups: { date: string; trips: Trip[] }[] = [];
+    const dateMap = new Map<string, Trip[]>();
+
+    for (const trip of filteredTrips) {
+      const dateKey = trip.start_time
+        ? new Date(trip.start_time).toLocaleDateString('ko-KR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })
+        : '날짜 미상';
+
+      if (!dateMap.has(dateKey)) {
+        const group: Trip[] = [];
+        dateMap.set(dateKey, group);
+        groups.push({ date: dateKey, trips: group });
+      }
+
+      dateMap.get(dateKey)!.push(trip);
+    }
+
+    return groups;
+  }, [filteredTrips]);
+
   const loadHistory = useCallback(async (options: LoadHistoryOptions = {}) => {
     const nextLimit = options.limit ?? HISTORY_TRIP_LIMIT;
 
@@ -390,7 +416,21 @@ export default function TripHistoryScreen() {
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
       }>
-      <Text style={styles.title}>운행 기록</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>운행 기록</Text>
+        <View style={styles.viewToggleBar}>
+          <TouchableOpacity
+            style={[styles.viewToggleBtn, viewMode === 'card' && styles.viewToggleBtnActive]}
+            onPress={() => setViewMode('card')}>
+            <Text style={[styles.viewToggleText, viewMode === 'card' && styles.viewToggleTextActive]}>카드형</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.viewToggleBtn, viewMode === 'list' && styles.viewToggleBtnActive]}
+            onPress={() => setViewMode('list')}>
+            <Text style={[styles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>리스트형</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <View style={styles.toolbar}>
         <Text style={styles.countText}>
@@ -579,92 +619,108 @@ export default function TripHistoryScreen() {
       )}
 
       <View style={styles.list}>
-        {filteredTrips.map((trip) => {
-          const vehicleNumber =
-            (trip.vehicle_id && vehicleMap.get(trip.vehicle_id)) || '차량 정보 없음';
-          const isRunning = trip.status === 'in_progress';
-          const isStale = isRunning && isStaleActiveTrip(trip.start_time);
-          const gpsSummary = gpsSummaryByTripId.get(trip.id);
+        {groupedTrips.map(({ date, trips: dateTrips }) => (
+          <View key={date}>
+            <Text style={styles.dateHeader}>{date}</Text>
+            {dateTrips.map((trip) => {
+              const vehicleNumber =
+                (trip.vehicle_id && vehicleMap.get(trip.vehicle_id)) || '차량 정보 없음';
+              const isRunning = trip.status === 'in_progress';
+              const isStale = isRunning && isStaleActiveTrip(trip.start_time);
+              const gpsSummary = gpsSummaryByTripId.get(trip.id);
 
-          return (
-            <View key={trip.id} style={styles.tripCard}>
-              <View style={styles.cardHeader}>
-                <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.vehicleText}>
-                  {vehicleNumber}
-                </Text>
-                <Text style={[styles.statusBadge, isRunning && styles.runningBadge, isStale && styles.staleBadge]}>
-                  {isStale ? '장시간 운행' : getTripStatusText(trip.status)}
-                </Text>
-              </View>
-              <View style={styles.routeRow}>
-                <Text style={styles.routeText}>{trip.start_place ?? '출발지'}</Text>
-                <Text style={styles.routeArrow}>→</Text>
-                <Text style={styles.routeText}>{trip.end_place ?? '목적지'}</Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>출발</Text>
-                <Text style={styles.metaValue}>{formatDateTime(trip.start_time)}</Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>종료</Text>
-                <Text style={styles.metaValue}>{formatDateTime(trip.end_time)}</Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>소요</Text>
-                <Text style={styles.metaValue}>
-                  {formatTripDuration(trip.start_time, trip.end_time)}
-                </Text>
-              </View>
-              {isStale && (
-                <View style={styles.staleBox}>
-                  <Text style={styles.staleText}>8시간 이상 진행 중인 운행입니다. 실제 운행이 끝났다면 종료 화면에서 마감해 주세요.</Text>
-                </View>
-              )}
-              <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>GPS</Text>
-                <Text
-                  style={[
-                    styles.metaValue,
-                    trip.status === 'completed' && !gpsSummary?.count && styles.warningMetaValue,
-                  ]}>
-                  {gpsSummary?.count ?? 0}개 수집
-                </Text>
-              </View>
-              {trip.status === 'completed' && !gpsSummary?.count && (
-                <View style={styles.warningInlineBox}>
-                  <Text style={styles.warningInlineText}>완료 운행이지만 GPS 포인트가 없습니다.</Text>
-                </View>
-              )}
-              <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>최근 수집</Text>
-                <Text style={styles.metaValue}>
-                  {formatDateTime(gpsSummary?.latestRecordedAt ?? null)}
-                </Text>
-              </View>
-              <View style={styles.cardActions}>
-                <Link
-                  href={{
-                    pathname: '/trips/[id]',
-                    params: { id: trip.id },
-                  }}
-                  asChild>
-                  <TouchableOpacity
-                    accessibilityLabel="운행 상세 보기"
-                    style={[styles.tripActionBtn, styles.secondaryActionBtn]}>
-                    <Text style={[styles.tripActionText, styles.secondaryActionText]}>상세</Text>
-                  </TouchableOpacity>
-                </Link>
-                {isRunning && (
-                  <Link href="/" asChild>
-                    <TouchableOpacity accessibilityLabel="운행 탭에서 종료하기" style={styles.tripActionBtn}>
-                      <Text style={styles.tripActionText}>운행 탭에서 종료</Text>
+              if (viewMode === 'list') {
+                return (
+                  <Link
+                    key={trip.id}
+                    href={{ pathname: '/trips/[id]', params: { id: trip.id } }}
+                    asChild>
+                    <TouchableOpacity accessibilityLabel="운행 상세 보기" style={styles.listRow}>
+                      <View style={styles.listRowLeft}>
+                        <Text style={styles.listVehicle} numberOfLines={1}>{vehicleNumber}</Text>
+                        <Text style={styles.listRoute} numberOfLines={1}>
+                          {trip.start_place ?? '-'} → {trip.end_place ?? '-'}
+                        </Text>
+                        <Text style={styles.listTime}>{formatDateTime(trip.start_time)}</Text>
+                      </View>
+                      <Text style={[styles.statusBadge, isRunning && styles.runningBadge, isStale && styles.staleBadge]}>
+                        {isStale ? '장시간' : getTripStatusText(trip.status)}
+                      </Text>
                     </TouchableOpacity>
                   </Link>
-                )}
-              </View>
-            </View>
-          );
-        })}
+                );
+              }
+
+              return (
+                <View key={trip.id} style={styles.tripCard}>
+                  <View style={styles.cardHeader}>
+                    <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.vehicleText}>
+                      {vehicleNumber}
+                    </Text>
+                    <Text style={[styles.statusBadge, isRunning && styles.runningBadge, isStale && styles.staleBadge]}>
+                      {isStale ? '장시간 운행' : getTripStatusText(trip.status)}
+                    </Text>
+                  </View>
+                  <View style={styles.routeRow}>
+                    <Text style={styles.routeText}>{trip.start_place ?? '출발지'}</Text>
+                    <Text style={styles.routeArrow}>→</Text>
+                    <Text style={styles.routeText}>{trip.end_place ?? '목적지'}</Text>
+                  </View>
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>출발</Text>
+                    <Text style={styles.metaValue}>{formatDateTime(trip.start_time)}</Text>
+                  </View>
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>종료</Text>
+                    <Text style={styles.metaValue}>{formatDateTime(trip.end_time)}</Text>
+                  </View>
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>소요</Text>
+                    <Text style={styles.metaValue}>
+                      {formatTripDuration(trip.start_time, trip.end_time)}
+                    </Text>
+                  </View>
+                  {isStale && (
+                    <View style={styles.staleBox}>
+                      <Text style={styles.staleText}>8시간 이상 진행 중인 운행입니다. 실제 운행이 끝났다면 종료 화면에서 마감해 주세요.</Text>
+                    </View>
+                  )}
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>GPS</Text>
+                    <Text
+                      style={[
+                        styles.metaValue,
+                        trip.status === 'completed' && !gpsSummary?.count && styles.warningMetaValue,
+                      ]}>
+                      {gpsSummary?.count ?? 0}개 수집
+                    </Text>
+                  </View>
+                  <View style={styles.cardActions}>
+                    <Link
+                      href={{
+                        pathname: '/trips/[id]',
+                        params: { id: trip.id },
+                      }}
+                      asChild>
+                      <TouchableOpacity
+                        accessibilityLabel="운행 상세 보기"
+                        style={[styles.tripActionBtn, styles.secondaryActionBtn]}>
+                        <Text style={[styles.tripActionText, styles.secondaryActionText]}>상세</Text>
+                      </TouchableOpacity>
+                    </Link>
+                    {isRunning && (
+                      <Link href="/" asChild>
+                        <TouchableOpacity accessibilityLabel="운행 탭에서 종료하기" style={styles.tripActionBtn}>
+                          <Text style={styles.tripActionText}>운행 탭에서 종료</Text>
+                        </TouchableOpacity>
+                      </Link>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ))}
       </View>
 
       {hasMoreTrips && !errorMessage && (
@@ -694,7 +750,6 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: 16,
   },
   toolbar: {
     alignItems: 'center',
@@ -1069,5 +1124,81 @@ const styles = StyleSheet.create({
     color: '#B45309',
     fontSize: 14,
     fontWeight: '500',
+  },
+  titleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  viewToggleBar: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 2,
+    padding: 3,
+  },
+  viewToggleBtn: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  viewToggleBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  viewToggleText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  viewToggleTextActive: {
+    color: '#2563EB',
+    fontWeight: '700',
+  },
+  dateHeader: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  listRow: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  listRowLeft: {
+    flex: 1,
+    marginRight: 10,
+  },
+  listVehicle: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  listRoute: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  listTime: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '400',
   },
 });
