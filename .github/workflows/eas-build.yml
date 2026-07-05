@@ -11,6 +11,8 @@ jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,16 +26,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Check Expo login
+        run: eas whoami
 
       - name: Build Android APK (preview)
         run: eas build --profile preview --platform android --non-interactive
-
-      - name: Get build URL
-        run: |
-          echo "✅ 빌드 완료! Expo 대시보드에서 APK를 다운로드하세요:"
-          echo "https://expo.dev/accounts/[your-username]/projects/my-sdk54-app/builds"
