@@ -32,5 +32,9 @@ jobs:
       - name: Check Expo login
         run: eas whoami
 
+      - name: Initialize EAS project
+        run: eas init --non-interactive --force
+        continue-on-error: true
+
       - name: Build Android APK (preview)
         run: eas build --profile preview --platform android --non-interactive
