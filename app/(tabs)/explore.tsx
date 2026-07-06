@@ -66,7 +66,6 @@ type GpsSummary = {
 };
 
 type HistoryFilter = 'all' | 'running' | 'completed' | 'canceled';
-type DateFilter = 'all' | 'today' | '7d' | '30d';
 const HISTORY_TRIP_LIMIT = 30;
 
 type LoadHistoryOptions = {
@@ -84,25 +83,6 @@ function getTripTime(value: string | null) {
   return Number.isFinite(time) ? time : null;
 }
 
-function getDateFilterStart(filter: DateFilter) {
-  const now = new Date();
-
-  if (filter === 'today') {
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    return start.getTime();
-  }
-
-  if (filter === '7d') {
-    return now.getTime() - 7 * 24 * 60 * 60 * 1000;
-  }
-
-  if (filter === '30d') {
-    return now.getTime() - 30 * 24 * 60 * 60 * 1000;
-  }
-
-  return null;
-}
 
 function escapeCsvValue(value: string | number | null | undefined) {
   const text = String(value ?? '');
@@ -229,8 +209,8 @@ export default function TripHistoryScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [gpsSummaryByTripId, setGpsSummaryByTripId] = useState<Map<string, GpsSummary>>(new Map());
   const [filter, setFilter] = useState<HistoryFilter>('all');
-  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [showVehiclePicker, setShowVehiclePicker] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -302,21 +282,12 @@ export default function TripHistoryScreen() {
         return false;
       }
 
-      const filterStart = getDateFilterStart(dateFilter);
-      if (filterStart !== null) {
-        const startTime = getTripTime(trip.start_time);
-
-        if (startTime === null || startTime < filterStart) {
-          return false;
-        }
-      }
-
       const vehicleNumber = (trip.vehicle_id && vehicleMap.get(trip.vehicle_id)) || '차량 정보 없음';
       const routeText = `${vehicleNumber} ${trip.start_place ?? ''} ${trip.end_place ?? ''}`;
 
       return !normalizedSearchText || routeText.toLowerCase().includes(normalizedSearchText);
     });
-  }, [dateFilter, filter, searchText, selectedVehicleId, trips, vehicleMap]);
+  }, [filter, searchText, selectedVehicleId, trips, vehicleMap]);
 
   const handleExportCsv = useCallback(() => {
     if (filteredTrips.length === 0) {
@@ -621,21 +592,6 @@ export default function TripHistoryScreen() {
         </TouchableOpacity>
       </View>
 
-      {false && (
-        <View style={styles.viewToggleBar}>
-          <TouchableOpacity
-            style={[styles.viewToggleBtn, viewMode === 'card' && styles.viewToggleBtnActive]}
-            onPress={() => setViewMode('card')}>
-            <Text style={[styles.viewToggleText, viewMode === 'card' && styles.viewToggleTextActive]}>카드형</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.viewToggleBtn, viewMode === 'list' && styles.viewToggleBtnActive]}
-            onPress={() => setViewMode('list')}>
-            <Text style={[styles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>리스트형</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       <View style={styles.toolbar}>
         <Text style={styles.countText}>
           표시 {filteredTrips.length}건 · 불러온 기록 {trips.length}건
@@ -648,37 +604,6 @@ export default function TripHistoryScreen() {
         </TouchableOpacity>
       </View>
 
-      {false && <View style={styles.filterBar}>
-        <TouchableOpacity
-          style={[styles.filterBtn, filter === 'all' && styles.activeFilterBtn]}
-          onPress={() => setFilter('all')}>
-          <Text style={[styles.filterText, filter === 'all' && styles.activeFilterText]}>
-            전체 {trips.length}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterBtn, filter === 'running' && styles.activeFilterBtn]}
-          onPress={() => setFilter('running')}>
-          <Text style={[styles.filterText, filter === 'running' && styles.activeFilterText]}>
-            운행 중 {runningCount}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterBtn, filter === 'completed' && styles.activeFilterBtn]}
-          onPress={() => setFilter('completed')}>
-          <Text style={[styles.filterText, filter === 'completed' && styles.activeFilterText]}>
-            완료 {completedCount}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterBtn, filter === 'canceled' && styles.activeFilterBtn]}
-          onPress={() => setFilter('canceled')}>
-          <Text style={[styles.filterText, filter === 'canceled' && styles.activeFilterText]}>
-            무효 {canceledCount}
-          </Text>
-        </TouchableOpacity>
-      </View>}
-
       <TextInput
         style={styles.searchInput}
         value={searchText}
@@ -687,56 +612,12 @@ export default function TripHistoryScreen() {
         placeholderTextColor="#94A3B8"
       />
 
-      <View style={styles.filterPanel}>
-        <Text style={styles.filterPanelTitle}>기간</Text>
-        <View style={styles.chipRow}>
-          {[
-            ['all', '전체'],
-            ['today', '오늘'],
-            ['7d', '7일'],
-            ['30d', '30일'],
-          ].map(([value, label]) => {
-            const nextFilter = value as DateFilter;
-            const isSelected = dateFilter === nextFilter;
-
-            return (
-              <TouchableOpacity
-                key={value}
-                style={[styles.chipBtn, isSelected && styles.activeChipBtn]}
-                onPress={() => setDateFilter(nextFilter)}>
-                <Text style={[styles.chipText, isSelected && styles.activeChipText]}>{label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Text style={styles.filterPanelTitle}>차량</Text>
-        <View style={styles.chipRow}>
-          <TouchableOpacity
-            style={[styles.chipBtn, selectedVehicleId === null && styles.activeChipBtn]}
-            onPress={() => setSelectedVehicleId(null)}>
-            <Text style={[styles.chipText, selectedVehicleId === null && styles.activeChipText]}>전체</Text>
-          </TouchableOpacity>
-          {vehicles.map((vehicle) => {
-            const isSelected = selectedVehicleId === vehicle.id;
-
-            return (
-              <TouchableOpacity
-                key={vehicle.id}
-                style={[styles.chipBtn, isSelected && styles.activeChipBtn]}
-                onPress={() => setSelectedVehicleId(vehicle.id)}>
-                <Text
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.82}
-                  numberOfLines={1}
-                  style={[styles.chipText, isSelected && styles.activeChipText]}>
-                  {vehicle.vehicle_number}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+      <TouchableOpacity style={styles.vehicleDropdownBtn} onPress={() => setShowVehiclePicker(true)}>
+        <Text style={selectedVehicleId ? styles.vehicleDropdownText : styles.vehicleDropdownPlaceholder}>
+          {selectedVehicleId ? (selectedVehicle?.vehicle_number ?? '차량 선택') : '전체 차량'}
+        </Text>
+        <Text style={styles.dropdownArrow}>▾</Text>
+      </TouchableOpacity>
 
       <View style={styles.exportRow}>
         <TouchableOpacity
@@ -978,6 +859,47 @@ export default function TripHistoryScreen() {
         </TouchableOpacity>
       )}
 
+      {/* 차량 선택 모달 */}
+      <Modal
+        visible={showVehiclePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowVehiclePicker(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowVehiclePicker(false)}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>차량 선택</Text>
+            <ScrollView style={styles.modalScroll}>
+              <TouchableOpacity
+                style={[styles.modalItem, selectedVehicleId === null && styles.modalItemActive]}
+                onPress={() => { setSelectedVehicleId(null); setShowVehiclePicker(false); }}>
+                <Text style={[styles.modalItemText, selectedVehicleId === null && styles.modalItemTextActive]}>전체 차량</Text>
+                {selectedVehicleId === null && <Text style={styles.modalCheckmark}>✓</Text>}
+              </TouchableOpacity>
+              {vehicles.map((vehicle) => {
+                const isSelected = selectedVehicleId === vehicle.id;
+                return (
+                  <TouchableOpacity
+                    key={vehicle.id}
+                    style={[styles.modalItem, isSelected && styles.modalItemActive]}
+                    onPress={() => { setSelectedVehicleId(vehicle.id); setShowVehiclePicker(false); }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.modalItemText, isSelected && styles.modalItemTextActive]}>{vehicle.vehicle_number}</Text>
+                      {vehicle.equipment_name ? (
+                        <Text style={styles.modalItemSub}>{vehicle.equipment_name}</Text>
+                      ) : null}
+                    </View>
+                    {isSelected && <Text style={styles.modalCheckmark}>✓</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* 장비운행증 출력 모달 */}
       <Modal
         visible={pvModalVisible}
@@ -1089,15 +1011,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  filterBar: {
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginBottom: 14,
-    padding: 4,
-  },
   searchInput: {
     backgroundColor: '#FFFFFF',
     borderColor: '#E2E8F0',
@@ -1110,52 +1023,73 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: 14,
   },
-  filterPanel: {
+  vehicleDropdownBtn: {
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderColor: '#E2E8F0',
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 14,
-    padding: 16,
+    minHeight: 52,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
   },
-  filterPanelTitle: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 8,
+  vehicleDropdownText: {
+    color: '#0F172A',
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
   },
-  chipRow: {
+  vehicleDropdownPlaceholder: {
+    color: '#94A3B8',
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  dropdownArrow: {
+    color: '#94A3B8',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  modalItem: {
+    alignItems: 'center',
+    borderBottomColor: '#F1F5F9',
+    borderBottomWidth: 1,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
+    paddingVertical: 14,
   },
-  chipBtn: {
-    backgroundColor: '#F1F5F9',
-    borderRadius: 20,
-    flexShrink: 1,
-    minHeight: 34,
-    justifyContent: 'center',
-    maxWidth: '100%',
-    paddingHorizontal: 14,
+  modalItemActive: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 10,
+    marginHorizontal: -8,
+    paddingHorizontal: 8,
   },
-  activeChipBtn: {
-    backgroundColor: '#DBEAFE',
+  modalItemText: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '600',
   },
-  chipText: {
-    color: '#64748B',
+  modalItemTextActive: {
+    color: '#2563EB',
+  },
+  modalItemSub: {
+    color: '#94A3B8',
     fontSize: 13,
-    fontWeight: '500',
-    textAlign: 'center',
+    fontWeight: '400',
+    marginTop: 2,
   },
-  activeChipText: {
-    color: '#1D4ED8',
+  modalCheckmark: {
+    color: '#2563EB',
+    fontSize: 18,
     fontWeight: '700',
+    marginLeft: 10,
   },
   exportBtn: {
     alignItems: 'center',
@@ -1221,34 +1155,6 @@ const styles = StyleSheet.create({
   },
   warningValue: {
     color: '#DC2626',
-  },
-  filterBtn: {
-    alignItems: 'center',
-    borderRadius: 9,
-    flexBasis: '48%',
-    flexGrow: 1,
-    minHeight: 38,
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  activeFilterBtn: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  filterText: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 16,
-    textAlign: 'center',
-  },
-  activeFilterText: {
-    color: '#2563EB',
-    fontWeight: '700',
   },
   list: {
     gap: 12,

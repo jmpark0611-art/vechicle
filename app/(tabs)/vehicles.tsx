@@ -33,12 +33,6 @@ type Vehicle = {
   air_filter_changed_km: number | null;
 };
 
-const VEHICLE_COLORS: { label: string; value: string; hex: string }[] = [
-  { label: '카키', value: '카키', hex: '#6B7C3C' },
-  { label: '검정', value: '검정', hex: '#2D2D2D' },
-  { label: '흰색', value: '흰색', hex: '#E8E8E8' },
-];
-
 type Trip = {
   id: string;
   vehicle_id: string | null;
@@ -81,7 +75,6 @@ export default function VehiclesScreen() {
   const [newVehicleNumber, setNewVehicleNumber] = useState('');
   const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
   const [editingVehicleNumber, setEditingVehicleNumber] = useState('');
-  const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatusFilter>('all');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedTabVehicleId, setSelectedTabVehicleId] = useState<string | null>(null);
@@ -170,28 +163,17 @@ export default function VehiclesScreen() {
   }, [vehicles]);
 
   const filteredVehicles = useMemo(() => {
-    const normalizedSearch = searchText.trim().toLowerCase();
-
     return vehicles.filter((vehicle) => {
       const activeTrip = activeTripsByVehicleId.get(vehicle.id) ?? null;
       const isStale = isStaleActiveTrip(activeTrip?.start_time ?? null);
-      const matchesStatus =
+      return (
         statusFilter === 'all' ||
         (statusFilter === 'active' && activeTrip) ||
         (statusFilter === 'waiting' && !activeTrip) ||
-        (statusFilter === 'stale' && isStale);
-
-      if (!matchesStatus) {
-        return false;
-      }
-
-      if (!normalizedSearch) {
-        return true;
-      }
-
-      return vehicle.vehicle_number.toLowerCase().includes(normalizedSearch);
+        (statusFilter === 'stale' && isStale)
+      );
     });
-  }, [activeTripsByVehicleId, searchText, statusFilter, vehicles]);
+  }, [activeTripsByVehicleId, statusFilter, vehicles]);
 
   const selectedTabVehicle = useMemo(() => {
     return filteredVehicles.find((v) => v.id === selectedTabVehicleId) ?? filteredVehicles[0] ?? null;
@@ -552,27 +534,6 @@ export default function VehiclesScreen() {
         </TouchableOpacity>
       </View>
 
-      {vehicles.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.vehicleChipRow}>
-          {vehicles.map((vehicle) => {
-            const isSelected = selectedTabVehicle?.id === vehicle.id;
-            return (
-              <TouchableOpacity
-                key={vehicle.id}
-                style={[styles.vehicleChip, isSelected && styles.vehicleChipActive]}
-                onPress={() => setSelectedTabVehicleId(vehicle.id)}>
-                <Text style={[styles.vehicleChipText, isSelected && styles.vehicleChipTextActive]}>
-                  {vehicle.vehicle_number}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      )}
-
       <View style={styles.toolbar}>
         <Text style={styles.countText}>
           표시 {filteredVehicles.length}대 · 등록 {vehicles.length}대
@@ -637,17 +598,6 @@ export default function VehiclesScreen() {
           ))}
         </View>
       )}
-
-      <View style={styles.searchPanel}>
-        <Text style={styles.filterPanelTitle}>차량 검색</Text>
-        <TextInput
-          style={styles.searchInput}
-          value={searchText}
-          onChangeText={setSearchText}
-          placeholder="차량번호 검색"
-          placeholderTextColor="#94A3B8"
-        />
-      </View>
 
       <View style={styles.filterBar}>
         {[
@@ -956,22 +906,13 @@ export default function VehiclesScreen() {
               </Text>
               <Text style={styles.dropdownArrow}>▾</Text>
             </TouchableOpacity>
-            <View style={styles.colorPickerRow}>
-              <Text style={styles.colorPickerLabel}>차량 색상</Text>
-              <View style={styles.colorOptions}>
-                {VEHICLE_COLORS.map((c) => (
-                  <TouchableOpacity
-                    key={c.value}
-                    style={[styles.colorOption, newVehicleColor === c.value && styles.colorOptionSelected]}
-                    onPress={() => setNewVehicleColor(newVehicleColor === c.value ? null : c.value)}>
-                    <View style={[styles.colorSwatch, { backgroundColor: c.hex }]} />
-                    <Text style={[styles.colorOptionText, newVehicleColor === c.value && styles.colorOptionTextSelected]}>
-                      {c.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+            <TextInput
+              style={[styles.textInput, { marginBottom: 10 }]}
+              value={newVehicleColor ?? ''}
+              onChangeText={(text) => setNewVehicleColor(text || null)}
+              placeholder="차량 색상 (예: 카키, 검정, 흰색)"
+              placeholderTextColor="#94A3B8"
+            />
             <TouchableOpacity
               accessibilityLabel="차량 등록"
               style={[styles.compactBtn, styles.fullWidthBtn, { marginTop: 14 }, (!newVehicleNumber.trim() || isSaving) && styles.disabledBtn]}
