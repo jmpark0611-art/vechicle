@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '../../lib/supabase';
-import { formatDateTime, formatTripDuration, isStaleActiveTrip } from '../../lib/format';
+import { formatDateTime, isStaleActiveTrip } from '../../lib/format';
 import { formatDbError } from '../../lib/errors';
 import { withTimeout } from '../../lib/request';
 
@@ -369,7 +369,7 @@ export default function VehiclesScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, loadVehicles, newVehicleNumber, newEquipmentName, newEquipmentNumber, newFuelType, newVehicleColor, vehicles]);
+  }, [isSaving, loadVehicles, newEquipmentName, newEquipmentNumber, newFuelType, newInitialOdometer, newVehicleColor, newVehicleNumber, vehicles]);
 
   const startEditVehicle = useCallback((vehicle: Vehicle) => {
     setEditingVehicleId(vehicle.id);
@@ -548,9 +548,30 @@ export default function VehiclesScreen() {
         <TouchableOpacity
           style={styles.registerBtn}
           onPress={() => setShowRegisterModal(true)}>
-          <Text style={styles.registerBtnText}>+ 차량 등록</Text>
+          <Text style={styles.registerBtnText}>+ 등록</Text>
         </TouchableOpacity>
       </View>
+
+      {vehicles.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.vehicleChipRow}>
+          {vehicles.map((vehicle) => {
+            const isSelected = selectedTabVehicle?.id === vehicle.id;
+            return (
+              <TouchableOpacity
+                key={vehicle.id}
+                style={[styles.vehicleChip, isSelected && styles.vehicleChipActive]}
+                onPress={() => setSelectedTabVehicleId(vehicle.id)}>
+                <Text style={[styles.vehicleChipText, isSelected && styles.vehicleChipTextActive]}>
+                  {vehicle.vehicle_number}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
 
       <View style={styles.toolbar}>
         <Text style={styles.countText}>
@@ -704,109 +725,74 @@ export default function VehiclesScreen() {
       {selectedTabVehicle && selectedVehicleDetail && (
         (({ vehicle, activeTrip, latestTrip, counts, isStale, canDelete }) => {
           const statusText = activeTrip ? '운행 중' : '대기 중';
+          const latestObd = latestObdByVehicleId.get(vehicle.id) ?? null;
           return (
             <View style={styles.vehicleCard}>
-              <View style={styles.cardHeader}>
-                {editingVehicleId === vehicle.id ? (
-                  <TextInput
-                    style={[styles.textInput, styles.editInput]}
-                    value={editingVehicleNumber}
-                    onChangeText={setEditingVehicleNumber}
-                    autoFocus
-                    placeholder="차량번호"
-                    placeholderTextColor="#94A3B8"
-                  />
-                ) : (
-                  <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={styles.vehicleNumber}>
-                    {vehicle.vehicle_number}
+              <View style={styles.obdStatusCard}>
+                <View style={styles.obdIconBox}>
+                  <Text style={styles.obdIconText}>▣</Text>
+                </View>
+                <View style={styles.obdStatusCopy}>
+                  <Text style={styles.obdStatusTitle}>
+                    {latestObd ? 'OBD 스캐너 연결됨' : 'OBD 스캐너 대기'}
                   </Text>
-                )}
-                <Text style={[styles.statusBadge, activeTrip && styles.runningBadge, isStale && styles.staleBadge]}>
-                  {isStale ? '장시간 운행' : statusText}
-                </Text>
+                  <Text style={styles.obdStatusSub}>ELM327 · Bluetooth</Text>
+                </View>
+                <View style={[styles.obdStateBadge, !latestObd && styles.obdStateBadgeIdle]}>
+                  <Text style={[styles.obdStateText, !latestObd && styles.obdStateTextIdle]}>
+                    {latestObd ? '● 연결됨' : '대기'}
+                  </Text>
+                </View>
               </View>
 
-              {vehicle.equipment_name ? <InfoRow label="장비명" value={vehicle.equipment_name} /> : null}
-              {vehicle.equipment_number ? <InfoRow label="장비 호수" value={vehicle.equipment_number} /> : null}
-              {vehicle.fuel_type ? <InfoRow label="사용 유류" value={vehicle.fuel_type} /> : null}
-              {vehicle.color ? (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>차량 색상</Text>
-                  <View style={styles.colorInfoValue}>
-                    <View style={[styles.colorSwatchSmall, { backgroundColor: VEHICLE_COLORS.find((c) => c.value === vehicle.color)?.hex ?? '#CCC' }]} />
-                    <Text style={styles.infoValue}>{vehicle.color}</Text>
+              <Text style={styles.ecuSectionLabel}>ECU 실시간 데이터</Text>
+              <View style={styles.obdGrid}>
+                {([
+                  ['냉각수 온도', latestObd?.coolant_temp_c != null ? `${latestObd.coolant_temp_c}` : '--', '°C'],
+                  ['배터리 전압', latestObd?.battery_voltage != null ? latestObd.battery_voltage.toFixed(1) : '--', 'V'],
+                  ['엔진 회전수', latestObd?.rpm != null ? latestObd.rpm.toLocaleString() : '--', 'rpm'],
+                  ['연료 잔량', latestObd?.fuel_level_percent != null ? `${latestObd.fuel_level_percent}` : '--', '%'],
+                  ['흡기 온도', latestObd?.intake_air_temp_c != null ? `${latestObd.intake_air_temp_c}` : '--', '°C'],
+                  ['엔진 부하', latestObd?.engine_load_percent != null ? `${latestObd.engine_load_percent}` : '--', '%'],
+                ] as [string, string, string][]).map(([label, value, unit]) => (
+                  <View key={label} style={styles.obdCell}>
+                    <Text style={styles.obdCellLabel}>{label}</Text>
+                    <Text style={styles.obdCellValue}>{value}</Text>
+                    <Text style={styles.obdCellUnit}>{unit}</Text>
                   </View>
-                </View>
-              ) : null}
-              <InfoRow label="현재 오도미터" value={vehicle.current_odometer != null ? `${vehicle.current_odometer.toLocaleString()} km` : '미설정'} />
-              <InfoRow label="전체 운행" value={`${counts.total}건`} />
-              <InfoRow label="최근 출발" value={formatDateTime(latestTrip?.start_time ?? null)} />
-              <InfoRow label="최근 종료" value={formatDateTime(latestTrip?.end_time ?? null)} />
+                ))}
+              </View>
 
-              {isStale && (
-                <View style={styles.staleBox}>
-                  <Text style={styles.staleText}>8시간 이상 종료되지 않은 운행입니다.</Text>
-                </View>
-              )}
-              {counts.active > 1 && (
-                <View style={styles.warningInlineBox}>
-                  <Text style={styles.warningInlineText}>미종료 운행 {counts.active}건 — 상세 화면에서 확인해 주세요.</Text>
-                </View>
-              )}
+              <View style={styles.dtcRow}>
+                <Text style={styles.dtcLabel}>● 고장 코드 (DTC)</Text>
+                {latestObd?.dtc_codes && latestObd.dtc_codes.length > 0 ? (
+                  <Text style={styles.dtcError}>{latestObd.dtc_codes.join(', ')}</Text>
+                ) : (
+                  <Text style={styles.dtcOk}>정상 · 코드 없음</Text>
+                )}
+              </View>
 
-              {(() => {
-                const latestObd = latestObdByVehicleId.get(vehicle.id) ?? null;
-                return (
-                  <View style={styles.obdSection}>
-                    <View style={styles.obdSectionHeader}>
-                      <Text style={styles.subSectionTitle}>최근 OBD 진단 데이터</Text>
-                      <TouchableOpacity
-                        onPress={() =>
-                          router.push((`/obd?vehicleId=${vehicle.id}${activeTrip ? `&tripId=${activeTrip.id}` : ''}` as unknown) as Href)
-                        }>
-                        <Text style={styles.obdConnectLink}>단말기 연결 →</Text>
-                      </TouchableOpacity>
-                    </View>
-                    {latestObd ? (
-                      <>
-                        <View style={styles.obdGrid}>
-                          {([
-                            ['냉각수온도', latestObd.coolant_temp_c != null ? `${latestObd.coolant_temp_c}` : '--', '°C'],
-                            ['배터리전압', latestObd.battery_voltage != null ? latestObd.battery_voltage.toFixed(1) : '--', 'V'],
-                            ['엔진RPM', latestObd.rpm != null ? latestObd.rpm.toLocaleString() : '--', 'rpm'],
-                            ['연료잔량', latestObd.fuel_level_percent != null ? `${latestObd.fuel_level_percent}` : '--', '%'],
-                            ['흡기온도', latestObd.intake_air_temp_c != null ? `${latestObd.intake_air_temp_c}` : '--', '°C'],
-                            ['엔진부하', latestObd.engine_load_percent != null ? `${latestObd.engine_load_percent}` : '--', '%'],
-                          ] as [string, string, string][]).map(([label, value, unit]) => (
-                            <View key={label} style={styles.obdCell}>
-                              <Text style={styles.obdCellLabel}>{label}</Text>
-                              <Text style={styles.obdCellValue}>{value}</Text>
-                              <Text style={styles.obdCellUnit}>{unit}</Text>
-                            </View>
-                          ))}
-                        </View>
-                        <View style={styles.dtcRow}>
-                          <Text style={styles.dtcLabel}>고장코드 (DTC)</Text>
-                          {latestObd.dtc_codes && latestObd.dtc_codes.length > 0 ? (
-                            <Text style={styles.dtcError}>{latestObd.dtc_codes.join(', ')}</Text>
-                          ) : (
-                            <Text style={styles.dtcOk}>이상없음</Text>
-                          )}
-                        </View>
-                        {latestObd.recorded_at && (
-                          <Text style={styles.obdRecordedAt}>
-                            기록: {new Date(latestObd.recorded_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </Text>
-                        )}
-                      </>
-                    ) : (
-                      <View style={styles.obdNoData}>
-                        <Text style={styles.obdNoDataText}>OBD 데이터 없음 — 단말기 연결 후 데이터가 저장됩니다.</Text>
-                      </View>
-                    )}
+              <View style={styles.vehicleInfoPanel}>
+                <Text style={styles.subSectionTitle}>차량 정보</Text>
+                {vehicle.equipment_name ? <InfoRow label="장비명" value={vehicle.equipment_name} /> : null}
+                {vehicle.equipment_number ? <InfoRow label="장비 호수" value={vehicle.equipment_number} /> : null}
+                {vehicle.fuel_type ? <InfoRow label="사용 유류" value={vehicle.fuel_type} /> : null}
+                <InfoRow label="현재 오도미터" value={vehicle.current_odometer != null ? `${vehicle.current_odometer.toLocaleString()} km` : '미설정'} />
+                <InfoRow label="운행 상태" value={isStale ? '장시간 운행' : statusText} />
+                <InfoRow label="전체 운행" value={`${counts.total}건`} />
+                <InfoRow label="최근 출발" value={formatDateTime(latestTrip?.start_time ?? null)} />
+                <InfoRow label="최근 종료" value={formatDateTime(latestTrip?.end_time ?? null)} />
+                {isStale && (
+                  <View style={styles.staleBox}>
+                    <Text style={styles.staleText}>8시간 이상 종료되지 않은 운행입니다.</Text>
                   </View>
-                );
-              })()}
+                )}
+                {counts.active > 1 && (
+                  <View style={styles.warningInlineBox}>
+                    <Text style={styles.warningInlineText}>미종료 운행 {counts.active}건 — 상세 화면에서 확인해 주세요.</Text>
+                  </View>
+                )}
+              </View>
 
               <View style={styles.maintenanceSection}>
                 <Text style={styles.subSectionTitle}>소모품 교환주기</Text>
@@ -1071,6 +1057,52 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
   },
+  titleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  registerBtn: {
+    alignItems: 'center',
+    backgroundColor: '#0F8F7B',
+    borderRadius: 12,
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: 16,
+  },
+  registerBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  vehicleChipRow: {
+    gap: 8,
+    paddingBottom: 14,
+  },
+  vehicleChip: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 42,
+    minWidth: 86,
+    paddingHorizontal: 14,
+  },
+  vehicleChipActive: {
+    backgroundColor: '#0F8F7B',
+    borderColor: '#0F8F7B',
+  },
+  vehicleChipText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  vehicleChipTextActive: {
+    color: '#FFFFFF',
+  },
   toolbar: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -1256,8 +1288,8 @@ const styles = StyleSheet.create({
   },
   vehicleCard: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
+    borderColor: '#ECEAE4',
+    borderRadius: 18,
     borderWidth: 1,
     padding: 16,
     shadowColor: '#0F172A',
@@ -1265,6 +1297,62 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
+  },
+  obdStatusCard: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#ECEAE4',
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+    padding: 16,
+  },
+  obdIconBox: {
+    alignItems: 'center',
+    backgroundColor: '#E6FAF4',
+    borderRadius: 14,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
+  },
+  obdIconText: {
+    color: '#0F8F7B',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  obdStatusCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  obdStatusTitle: {
+    color: '#1C2434',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  obdStatusSub: {
+    color: '#8C8F98',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 3,
+  },
+  obdStateBadge: {
+    backgroundColor: '#ECFDF3',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  obdStateBadgeIdle: {
+    backgroundColor: '#F1F5F9',
+  },
+  obdStateText: {
+    color: '#059669',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  obdStateTextIdle: {
+    color: '#64748B',
   },
   cardHeader: {
     alignItems: 'center',
@@ -1551,6 +1639,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 12,
   },
+  ecuSectionLabel: {
+    color: '#8C8F98',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
   obdGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1559,25 +1654,24 @@ const styles = StyleSheet.create({
   },
   obdCell: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
+    borderColor: '#ECEAE4',
+    borderRadius: 12,
     borderWidth: 1,
-    flexBasis: '30%',
+    flexBasis: '47%',
     flexGrow: 1,
-    padding: 10,
-    alignItems: 'center',
+    minHeight: 84,
+    padding: 13,
   },
   obdCellLabel: {
-    color: '#64748B',
-    fontSize: 10,
-    fontWeight: '500',
+    color: '#8C8F98',
+    fontSize: 12,
+    fontWeight: '700',
     marginBottom: 4,
-    textAlign: 'center',
   },
   obdCellValue: {
-    color: '#0F172A',
-    fontSize: 18,
-    fontWeight: '700',
+    color: '#1C2434',
+    fontSize: 25,
+    fontWeight: '900',
   },
   obdCellUnit: {
     color: '#94A3B8',
@@ -1587,27 +1681,38 @@ const styles = StyleSheet.create({
   },
   dtcRow: {
     alignItems: 'center',
+    backgroundColor: '#ECFDF3',
+    borderRadius: 13,
+    borderTopWidth: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: 8,
-    borderTopColor: '#E2E8F0',
-    borderTopWidth: 1,
+    marginBottom: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
   },
   dtcLabel: {
-    color: '#64748B',
-    fontSize: 13,
-    fontWeight: '500',
+    color: '#15803D',
+    fontSize: 14,
+    fontWeight: '900',
   },
   dtcOk: {
     color: '#059669',
     fontSize: 13,
     fontWeight: '700',
   },
-  // Maintenance section
-  maintenanceSection: {
+  vehicleInfoPanel: {
     backgroundColor: '#F8FAFC',
     borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 2,
+    padding: 14,
+  },
+  // Maintenance section
+  maintenanceSection: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#ECEAE4',
+    borderRadius: 16,
     borderWidth: 1,
     marginTop: 10,
     padding: 14,
@@ -1844,24 +1949,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginLeft: 10,
-  },
-  // Title row with register button
-  titleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  registerBtn: {
-    backgroundColor: '#2563EB',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-  registerBtnText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
   },
   // Color picker
   colorPickerRow: {
