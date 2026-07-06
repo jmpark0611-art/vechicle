@@ -1,24 +1,14 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const PIN_KEY = '@commander_pin';
+// Fixed PIN — not user-configurable during the OBD test period.
+const TRANSPORT_PIN = '1862';
 
 export async function getStoredPin(): Promise<string | null> {
-  try {
-    return await AsyncStorage.getItem(PIN_KEY);
-  } catch {
-    return null;
-  }
+  return TRANSPORT_PIN;
 }
 
-export async function setStoredPin(pin: string): Promise<void> {
-  await AsyncStorage.setItem(PIN_KEY, pin);
-}
+export async function setStoredPin(_pin: string): Promise<void> {}
 
-export async function clearStoredPin(): Promise<void> {
-  await AsyncStorage.removeItem(PIN_KEY);
-}
+export async function clearStoredPin(): Promise<void> {}
 
 export async function verifyPin(pin: string): Promise<boolean> {
-  const stored = await getStoredPin();
-  return stored !== null && stored === pin;
+  return pin === TRANSPORT_PIN;
 }

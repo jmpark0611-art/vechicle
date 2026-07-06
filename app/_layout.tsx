@@ -5,7 +5,6 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { getStoredPin } from '../lib/commander-pin';
 import { getStoredRole } from '../lib/role';
 
 export const unstable_settings = {
@@ -21,10 +20,8 @@ export default function RootLayout() {
       if (!role) {
         router.replace('/role-select');
       } else if (role === 'commander') {
-        const pin = await getStoredPin();
-        if (pin) {
-          router.replace('/commander-pin');
-        }
+        // Re-verify PIN on every app launch for commander mode.
+        router.replace('/commander-pin');
       }
     })();
   }, []);

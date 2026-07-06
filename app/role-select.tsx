@@ -1,63 +1,50 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { setStoredRole } from '../lib/role';
 
 export default function RoleSelectScreen() {
   const insets = useSafeAreaInsets();
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSelectDriver = async () => {
-    setIsLoading(true);
+  const handleDriver = async () => {
     await setStoredRole('driver');
     router.replace('/(tabs)');
   };
 
-  const handleSelectCommander = () => {
+  const handleCommander = () => {
     router.replace('/commander-pin');
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 32 },
-      ]}>
-      <Text style={styles.title}>사용자 유형 선택</Text>
-      <Text style={styles.subtitle}>
-        이 기기의 사용 목적에 맞는 유형을 선택해 주세요.{'\n'}나중에 점검 탭에서 변경할 수 있습니다.
-      </Text>
+    <View style={[styles.container, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 32 }]}>
+      <View style={styles.logoBox}>
+        <Text style={styles.logoIcon}>🚗</Text>
+      </View>
+      <Text style={styles.title}>차량관리시스템</Text>
+      <Text style={styles.subtitle}>모드를 선택하세요</Text>
 
-      <TouchableOpacity
-        style={styles.card}
-        onPress={handleSelectDriver}
-        disabled={isLoading}
-        activeOpacity={0.85}>
-        <View style={[styles.roleTag, styles.driverTag]}>
-          <Text style={styles.driverTagText}>운전자</Text>
+      <TouchableOpacity style={styles.card} onPress={handleDriver} activeOpacity={0.85}>
+        <View style={[styles.accent, { backgroundColor: '#EFF6FF' }]}>
+          <Text style={styles.accentIcon}>🏠</Text>
         </View>
-        <Text style={styles.cardTitle}>운전자 모드</Text>
-        <Text style={styles.cardDesc}>차량 운행 시작·종료, 운행 기록 확인</Text>
+        <Text style={styles.cardTitle}>운행 모드</Text>
+        <Text style={styles.cardDesc}>운전자 · 운용자용{'\n'}운행 시작/종료</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.card, styles.commanderCard]}
-        onPress={handleSelectCommander}
-        disabled={isLoading}
-        activeOpacity={0.85}>
-        <View style={[styles.roleTag, styles.commanderTag]}>
-          <Text style={styles.commanderTagText}>수송부 간부</Text>
+      <TouchableOpacity style={[styles.card, styles.commanderCard]} onPress={handleCommander} activeOpacity={0.85}>
+        <View style={[styles.accent, { backgroundColor: '#F1F5F9' }]}>
+          <Text style={styles.accentIcon}>📋</Text>
         </View>
-        <Text style={styles.cardTitle}>수송부 간부 모드</Text>
-        <Text style={styles.cardDesc}>차량 현재 위치 조회, 실시간 운행 현황 확인</Text>
-        <Text style={styles.pinHint}>PIN 설정 후 입장</Text>
+        <Text style={styles.cardTitle}>수송부 모드</Text>
+        <Text style={styles.cardDesc}>관리자용{'\n'}기록·차량 진단·위치 관리</Text>
+        <Text style={styles.pinHint}>비밀번호 입력 후 입장</Text>
       </TouchableOpacity>
-
-      {isLoading && (
-        <ActivityIndicator style={styles.loader} color="#2563EB" size="large" />
-      )}
     </View>
   );
 }
@@ -69,67 +56,68 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     justifyContent: 'center',
   },
+  logoBox: {
+    width: 56,
+    height: 56,
+    backgroundColor: '#2563EB',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    alignSelf: 'center',
+  },
+  logoIcon: {
+    fontSize: 26,
+  },
   title: {
     color: '#0F172A',
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 10,
+    fontSize: 24,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 6,
   },
   subtitle: {
     color: '#64748B',
     fontSize: 14,
-    fontWeight: '400',
-    lineHeight: 22,
+    textAlign: 'center',
     marginBottom: 36,
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    marginBottom: 16,
-    padding: 24,
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    marginBottom: 14,
+    padding: 22,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   commanderCard: {
-    borderColor: '#BFDBFE',
-    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
   },
-  roleTag: {
-    alignSelf: 'flex-start',
-    borderRadius: 20,
-    marginBottom: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+  accent: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
-  driverTag: {
-    backgroundColor: '#F0FDF4',
-  },
-  driverTagText: {
-    color: '#059669',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  commanderTag: {
-    backgroundColor: '#EFF6FF',
-  },
-  commanderTagText: {
-    color: '#2563EB',
-    fontSize: 12,
-    fontWeight: '700',
+  accentIcon: {
+    fontSize: 20,
   },
   cardTitle: {
     color: '#0F172A',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 5,
   },
   cardDesc: {
     color: '#64748B',
-    fontSize: 14,
-    fontWeight: '400',
+    fontSize: 13,
     lineHeight: 20,
   },
   pinHint: {
@@ -137,8 +125,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginTop: 8,
-  },
-  loader: {
-    marginTop: 28,
   },
 });
