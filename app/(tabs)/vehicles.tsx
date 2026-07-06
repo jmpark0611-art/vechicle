@@ -26,11 +26,18 @@ type Vehicle = {
   equipment_name: string | null;
   equipment_number: string | null;
   fuel_type: string | null;
+  color: string | null;
   current_odometer: number | null;
   oil_changed_km: number | null;
   oil_filter_changed_km: number | null;
   air_filter_changed_km: number | null;
 };
+
+const VEHICLE_COLORS: { label: string; value: string; hex: string }[] = [
+  { label: '카키', value: '카키', hex: '#6B7C3C' },
+  { label: '검정', value: '검정', hex: '#2D2D2D' },
+  { label: '흰색', value: '흰색', hex: '#E8E8E8' },
+];
 
 type Trip = {
   id: string;
@@ -70,9 +77,11 @@ export default function VehiclesScreen() {
   const [newEquipmentName, setNewEquipmentName] = useState('');
   const [newEquipmentNumber, setNewEquipmentNumber] = useState('');
   const [newFuelType, setNewFuelType] = useState('');
+  const [newVehicleColor, setNewVehicleColor] = useState<string | null>(null);
   const [newInitialOdometer, setNewInitialOdometer] = useState('');
   const [showFuelTypeModal, setShowFuelTypeModal] = useState(false);
   const [showVehicleSelectorModal, setShowVehicleSelectorModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   const activeTripsByVehicleId = useMemo(() => {
     const map = new Map<string, Trip>();
@@ -198,7 +207,7 @@ export default function VehiclesScreen() {
     try {
       const [vehiclesResult, tripsResult] = await Promise.all([
         withTimeout(
-          supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number, fuel_type, current_odometer, oil_changed_km, oil_filter_changed_km, air_filter_changed_km').order('vehicle_number'),
+          supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number, fuel_type, color, current_odometer, oil_changed_km, oil_filter_changed_km, air_filter_changed_km').order('vehicle_number'),
           '차량 목록'
         ),
         withTimeout(
@@ -311,6 +320,7 @@ export default function VehiclesScreen() {
           equipment_name: newEquipmentName.trim() || null,
           equipment_number: newEquipmentNumber.trim() || null,
           fuel_type: newFuelType.trim() || null,
+          color: newVehicleColor || null,
           current_odometer: !isNaN(parsedOdometer as number) ? parsedOdometer : null,
         }),
         '차량 등록'
@@ -325,14 +335,16 @@ export default function VehiclesScreen() {
       setNewEquipmentName('');
       setNewEquipmentNumber('');
       setNewFuelType('');
+      setNewVehicleColor(null);
       setNewInitialOdometer('');
+      setShowRegisterModal(false);
       await loadVehicles(true);
     } catch (error) {
       setErrorMessage(formatDbError(error, '차량 등록 중 오류가 발생했습니다.'));
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, loadVehicles, newVehicleNumber, newEquipmentName, newEquipmentNumber, newFuelType, vehicles]);
+  }, [isSaving, loadVehicles, newVehicleNumber, newEquipmentName, newEquipmentNumber, newFuelType, newVehicleColor, vehicles]);
 
   const startEditVehicle = useCallback((vehicle: Vehicle) => {
     setEditingVehicleId(vehicle.id);
@@ -506,7 +518,14 @@ export default function VehiclesScreen() {
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={() => loadVehicles(true)} />
       }>
-      <Text style={styles.title}>차량 진단</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>차량 진단</Text>
+        <TouchableOpacity
+          style={styles.registerBtn}
+          onPress={() => setShowRegisterModal(true)}>
+          <Text style={styles.registerBtnText}>+ 차량 등록</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.toolbar}>
         <Text style={styles.countText}>
@@ -572,54 +591,6 @@ export default function VehiclesScreen() {
           ))}
         </View>
       )}
-
-      <View style={styles.managePanel}>
-        <Text style={styles.sectionTitle}>차량 등록</Text>
-        <TextInput
-          style={[styles.textInput, { marginBottom: 10 }]}
-          value={newVehicleNumber}
-          onChangeText={setNewVehicleNumber}
-          placeholder="차량번호 입력 (필수)"
-          placeholderTextColor="#94A3B8"
-        />
-        <View style={styles.formRowTwo}>
-          <TextInput
-            style={[styles.textInput, { flex: 1, marginRight: 8 }]}
-            value={newEquipmentName}
-            onChangeText={setNewEquipmentName}
-            placeholder="장비명"
-            placeholderTextColor="#94A3B8"
-          />
-          <TextInput
-            style={[styles.textInput, { flex: 1 }]}
-            value={newEquipmentNumber}
-            onChangeText={setNewEquipmentNumber}
-            placeholder="장비 호수"
-            placeholderTextColor="#94A3B8"
-          />
-        </View>
-        <TextInput
-          style={[styles.textInput, { marginBottom: 10 }]}
-          value={newInitialOdometer}
-          onChangeText={setNewInitialOdometer}
-          placeholder="초기 오도미터 km (선택)"
-          placeholderTextColor="#94A3B8"
-          keyboardType="numeric"
-        />
-        <TouchableOpacity style={[styles.dropdownBtn, { marginBottom: 10 }]} onPress={() => setShowFuelTypeModal(true)}>
-          <Text style={newFuelType ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
-            {newFuelType || '사용 유류 선택'}
-          </Text>
-          <Text style={styles.dropdownArrow}>▾</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          accessibilityLabel="차량 등록"
-          style={[styles.compactBtn, styles.fullWidthBtn, (!newVehicleNumber.trim() || isSaving) && styles.disabledBtn]}
-          onPress={handleCreateVehicle}
-          disabled={!newVehicleNumber.trim() || isSaving}>
-          <Text style={styles.compactBtnText}>{isSaving ? '저장 중' : '등록'}</Text>
-        </TouchableOpacity>
-      </View>
 
       <View style={styles.searchPanel}>
         <Text style={styles.filterPanelTitle}>차량 검색</Text>
@@ -733,6 +704,15 @@ export default function VehiclesScreen() {
               {vehicle.equipment_name ? <InfoRow label="장비명" value={vehicle.equipment_name} /> : null}
               {vehicle.equipment_number ? <InfoRow label="장비 호수" value={vehicle.equipment_number} /> : null}
               {vehicle.fuel_type ? <InfoRow label="사용 유류" value={vehicle.fuel_type} /> : null}
+              {vehicle.color ? (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>차량 색상</Text>
+                  <View style={styles.colorInfoValue}>
+                    <View style={[styles.colorSwatchSmall, { backgroundColor: VEHICLE_COLORS.find((c) => c.value === vehicle.color)?.hex ?? '#CCC' }]} />
+                    <Text style={styles.infoValue}>{vehicle.color}</Text>
+                  </View>
+                </View>
+              ) : null}
               <InfoRow label="현재 오도미터" value={vehicle.current_odometer != null ? `${vehicle.current_odometer.toLocaleString()} km` : '미설정'} />
               <InfoRow label="전체 운행" value={`${counts.total}건`} />
               <InfoRow label="최근 출발" value={formatDateTime(latestTrip?.start_time ?? null)} />
@@ -896,6 +876,75 @@ export default function VehiclesScreen() {
           );
         })({ vehicle: selectedTabVehicle, ...selectedVehicleDetail })
       )}
+      {/* Vehicle register modal */}
+      <Modal visible={showRegisterModal} transparent animationType="slide" onRequestClose={() => setShowRegisterModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowRegisterModal(false)}>
+          <View style={styles.modalSheet} onStartShouldSetResponder={() => true}>
+            <Text style={styles.modalTitle}>차량 등록</Text>
+            <TextInput
+              style={[styles.textInput, { marginBottom: 10 }]}
+              value={newVehicleNumber}
+              onChangeText={setNewVehicleNumber}
+              placeholder="차량번호 입력 (필수)"
+              placeholderTextColor="#94A3B8"
+            />
+            <View style={styles.formRowTwo}>
+              <TextInput
+                style={[styles.textInput, { flex: 1, marginRight: 8 }]}
+                value={newEquipmentName}
+                onChangeText={setNewEquipmentName}
+                placeholder="장비명"
+                placeholderTextColor="#94A3B8"
+              />
+              <TextInput
+                style={[styles.textInput, { flex: 1 }]}
+                value={newEquipmentNumber}
+                onChangeText={setNewEquipmentNumber}
+                placeholder="장비 호수"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+            <TextInput
+              style={[styles.textInput, { marginBottom: 10 }]}
+              value={newInitialOdometer}
+              onChangeText={setNewInitialOdometer}
+              placeholder="초기 오도미터 km (선택)"
+              placeholderTextColor="#94A3B8"
+              keyboardType="numeric"
+            />
+            <TouchableOpacity style={[styles.dropdownBtn, { marginBottom: 10 }]} onPress={() => setShowFuelTypeModal(true)}>
+              <Text style={newFuelType ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
+                {newFuelType || '사용 유류 선택'}
+              </Text>
+              <Text style={styles.dropdownArrow}>▾</Text>
+            </TouchableOpacity>
+            <View style={styles.colorPickerRow}>
+              <Text style={styles.colorPickerLabel}>차량 색상</Text>
+              <View style={styles.colorOptions}>
+                {VEHICLE_COLORS.map((c) => (
+                  <TouchableOpacity
+                    key={c.value}
+                    style={[styles.colorOption, newVehicleColor === c.value && styles.colorOptionSelected]}
+                    onPress={() => setNewVehicleColor(newVehicleColor === c.value ? null : c.value)}>
+                    <View style={[styles.colorSwatch, { backgroundColor: c.hex }]} />
+                    <Text style={[styles.colorOptionText, newVehicleColor === c.value && styles.colorOptionTextSelected]}>
+                      {c.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <TouchableOpacity
+              accessibilityLabel="차량 등록"
+              style={[styles.compactBtn, styles.fullWidthBtn, { marginTop: 14 }, (!newVehicleNumber.trim() || isSaving) && styles.disabledBtn]}
+              onPress={handleCreateVehicle}
+              disabled={!newVehicleNumber.trim() || isSaving}>
+              <Text style={styles.compactBtnText}>{isSaving ? '저장 중...' : '등록하기'}</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Fuel type modal */}
       <Modal visible={showFuelTypeModal} transparent animationType="slide" onRequestClose={() => setShowFuelTypeModal(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowFuelTypeModal(false)}>
@@ -969,7 +1018,6 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: 16,
   },
   toolbar: {
     alignItems: 'center',
@@ -1713,5 +1761,80 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginLeft: 10,
+  },
+  // Title row with register button
+  titleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  registerBtn: {
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  registerBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  // Color picker
+  colorPickerRow: {
+    marginBottom: 4,
+  },
+  colorPickerLabel: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 10,
+  },
+  colorOptions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  colorOption: {
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    borderWidth: 2,
+    flex: 1,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  colorOptionSelected: {
+    borderColor: '#2563EB',
+    backgroundColor: '#EFF6FF',
+  },
+  colorSwatch: {
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 30,
+    width: 30,
+  },
+  colorOptionText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  colorOptionTextSelected: {
+    color: '#2563EB',
+  },
+  // Color in vehicle detail
+  colorInfoValue: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'flex-end',
+  },
+  colorSwatchSmall: {
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    borderWidth: 1,
+    height: 16,
+    width: 16,
   },
 });
