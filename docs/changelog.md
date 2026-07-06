@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-06 APK 배포 정리
+
+- EAS Android 빌드는 Expo 무료 플랜 월간 Android 빌드 한도 초과로 실패했다.
+- GitHub Actions에서 EAS 대신 Gradle로 APK를 직접 만드는 워크플로를 추가했다.
+- 최초 debug APK artifact(`vehicle-system-debug-apk`)는 생성됐지만 실기기에서 스플래시 화면에 멈췄다. 단독 테스트용으로 부적합하다고 판단했다.
+- 워크플로를 `assembleRelease` 기반으로 변경해 JS 번들이 포함된 release APK artifact(`vehicle-system-release-apk`)를 만들도록 수정했다.
+- 최신 release APK run은 `28794479728`이며, 다음 작업자는 완료 후 artifact 다운로드 링크를 확인해야 한다.
+
 ## 최신 작업
 
 - 차량 진단 화면을 `Vehicle system UI improvement.zip`의 333 화면 흐름에 맞춰 라이트/딥네이비 계열 구조로 정리했다.

@@ -1,5 +1,24 @@
 # 인수인계 메모
 
+## 2026-07-06 APK / 스플래시 이슈 인수인계
+
+- 현재 작업 브랜치: `claude/env-permissions-session-restart-154onb`
+- GitHub repo: `jmpark0611-art/vechicle`
+- 사용자가 처음 받은 artifact는 `vehicle-system-debug-apk`였고, 실기기에서 Expo 기본 스플래시 화면에 멈췄다.
+- 원인 판단: `assembleDebug` APK는 단독 실행용 release APK가 아니어서 JS 번들이 포함되지 않거나 Metro 개발 서버 의존 상태가 되어 실기기에서 스플래시 화면에 머물 수 있다.
+- 대응 완료 커밋:
+  - `b90338e` `Align vehicle diagnosis with demo`
+  - `46aee12` `Build Android APK with GitHub Actions`
+  - `d988cdb` `Stabilize GitHub APK build`
+  - `954c54a` `Build standalone release APK`
+- 최신 워크플로는 `.github/workflows/eas-build.yml`에서 `npx expo prebuild --platform android --no-install` 후 `./gradlew :app:assembleRelease --no-daemon --stacktrace`를 실행하고 `vehicle-system-release-apk` artifact를 업로드한다.
+- 최신 release APK run: `28794479728`
+  - URL: `https://github.com/jmpark0611-art/vechicle/actions/runs/28794479728`
+  - 2026-07-06 22:18 KST 기준 `Build release APK` 진행 중이었다.
+- 다음 AI는 먼저 run `28794479728` 완료 여부를 확인한다. 성공하면 artifact `vehicle-system-release-apk`를 사용자에게 안내한다. 실패하면 job 로그의 `Build release APK` 단계 오류를 확인한다.
+- 사용자가 설치 테스트할 때는 기존 debug APK 앱을 삭제한 뒤 release APK를 설치하게 안내한다.
+- `npm.cmd run verify`는 통과한다. 남은 경고는 `app/(tabs)/index.tsx`의 기존 미사용 음성/OBD 상태 변수 5건이다.
+
 ## 최신 작업 메모
 
 - 현재 브랜치: `claude/env-permissions-session-restart-154onb`
