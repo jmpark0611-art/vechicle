@@ -1,8 +1,10 @@
 import * as Location from 'expo-location';
-import { Link } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Link, router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   AppState,
   Alert,
   Linking,
@@ -191,6 +193,7 @@ export default function DriverScreen() {
   const [obdLiveData, setObdLiveData] = useState<ObdLiveData | null>(null);
   const [obdDevices, setObdDevices] = useState<ObdDevice[]>([]);
   const [obdMessage, setObdMessage] = useState<string | null>(null);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const selectedVehicleText = selectedVehicle?.vehicle_number ?? '선택 안 됨';
   const speedKmh = useMemo(() => (isRunning ? getSpeedKmh(location) : 0), [isRunning, location]);
@@ -497,6 +500,23 @@ export default function DriverScreen() {
       clearInterval(timer);
     };
   }, [isRunning]);
+
+  useEffect(() => {
+    if (!isRunning) {
+      pulseAnim.stopAnimation();
+      pulseAnim.setValue(1);
+      return;
+    }
+
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.3, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [isRunning, pulseAnim]);
 
   const handleVoiceInput = useCallback((target: VoiceTarget) => {
     setVoiceNotice(null);
@@ -809,7 +829,14 @@ export default function DriverScreen() {
           paddingTop: Math.max(insets.top + 24, 56),
         },
       ]}>
-      <Text style={styles.title}>차량운행시스템</Text>
+      <View style={styles.topRow}>
+        <Text style={styles.title}>차량운행시스템</Text>
+        {!isRunning && (
+          <TouchableOpacity style={styles.modeSwitchBtn} onPress={() => router.replace('/role-select')}>
+            <Text style={styles.modeSwitchText}>⇄ 수송부 모드</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {gpsWarning && (
         <View style={styles.warningBox}>
@@ -838,9 +865,13 @@ export default function DriverScreen() {
 
       {isRunning ? (
         <>
-          <View style={styles.runningHeroCard}>
+          <LinearGradient
+            colors={['#1D4ED8', '#2563EB']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.runningHeroCard}>
             <View style={styles.heroHeader}>
-              <View style={styles.statusDotActive} />
+              <Animated.View style={[styles.statusDotActive, { opacity: pulseAnim }]} />
               <Text style={styles.heroStatusText}>운행 중</Text>
               <Text style={styles.heroVehicleText} numberOfLines={1}>{selectedVehicleText}</Text>
             </View>
@@ -881,7 +912,7 @@ export default function DriverScreen() {
                 <Text style={styles.heroObdItem}>🌡 {obdLiveData.coolantTempC ?? '-'}°C</Text>
               </View>
             )}
-          </View>
+          </LinearGradient>
 
           <View style={styles.gpsCard}>
             <View style={styles.gpsRow}>
@@ -966,6 +997,44 @@ export default function DriverScreen() {
             </View>
           </View>
 
+          <View style={styles.vehicleSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>차량 선택</Text>
+              <TouchableOpacity
+                accessibilityLabel="차량 목록 새로고침"
+                onPress={loadDashboard}
+                disabled={isLoadingDashboard}>
+                <Text style={styles.reloadText}>새로고침</Text>
+              </TouchableOpacity>
+            </View>
+
+            {vehicleError && (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>차량 조회 실패: {vehicleError}</Text>
+              </View>
+            )}
+
+            {!isLoadingDashboard && !vehicleError && vehicles.length === 0 && (
+              <View style={styles.noticeBox}>
+                <Text style={styles.noticeText}>등록된 차량이 없습니다.</Text>
+              </View>
+            )}
+
+            {vehicles.length > 0 && (
+              <TouchableOpacity style={styles.dropdownBtn} onPress={() => setShowVehicleModal(true)}>
+                <View style={{ flex: 1 }}>
+                  <Text style={selectedVehicle ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
+                    {selectedVehicle ? selectedVehicle.vehicle_number : '차량 선택'}
+                  </Text>
+                  {selectedVehicle?.equipment_name ? (
+                    <Text style={styles.dropdownSubText}>{selectedVehicle.equipment_name}</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.dropdownArrow}>▾</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
           <View style={styles.routeCard}>
             <Text style={styles.sectionTitle}>경로</Text>
             <View style={styles.dotRouteRow}>
@@ -1019,17 +1088,7 @@ export default function DriverScreen() {
           <View style={styles.driverCard}>
             <Text style={styles.sectionTitle}>운행 정보</Text>
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>운행 목적</Text>
-              <TextInput
-                style={styles.routeInput}
-                value={purpose}
-                onChangeText={setPurpose}
-                placeholder="운행 목적 입력"
-                placeholderTextColor="#94A3B8"
-              />
-            </View>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>운용자</Text>
+              <Text style={styles.fieldLabel}>운용자 성명 *</Text>
               <TextInput
                 style={styles.routeInput}
                 value={operatorName}
@@ -1039,12 +1098,22 @@ export default function DriverScreen() {
               />
             </View>
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>사용자</Text>
+              <Text style={styles.fieldLabel}>사용자 성명 *</Text>
               <TextInput
                 style={styles.routeInput}
                 value={userName}
                 onChangeText={setUserName}
                 placeholder="사용자 성명"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>운행 목적</Text>
+              <TextInput
+                style={styles.routeInput}
+                value={purpose}
+                onChangeText={setPurpose}
+                placeholder="운행 목적 입력"
                 placeholderTextColor="#94A3B8"
               />
             </View>
@@ -1057,44 +1126,6 @@ export default function DriverScreen() {
               </Text>
             </View>
             <Text style={styles.obdHint}>일일 주행·누적·유류 정보는 종료 시 입력합니다.</Text>
-          </View>
-
-          <View style={styles.vehicleSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>차량 선택</Text>
-              <TouchableOpacity
-                accessibilityLabel="차량 목록 새로고침"
-                onPress={loadDashboard}
-                disabled={isLoadingDashboard}>
-                <Text style={styles.reloadText}>새로고침</Text>
-              </TouchableOpacity>
-            </View>
-
-            {vehicleError && (
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>차량 조회 실패: {vehicleError}</Text>
-              </View>
-            )}
-
-            {!isLoadingDashboard && !vehicleError && vehicles.length === 0 && (
-              <View style={styles.noticeBox}>
-                <Text style={styles.noticeText}>등록된 차량이 없습니다.</Text>
-              </View>
-            )}
-
-            {vehicles.length > 0 && (
-              <TouchableOpacity style={styles.dropdownBtn} onPress={() => setShowVehicleModal(true)}>
-                <View style={{ flex: 1 }}>
-                  <Text style={selectedVehicle ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
-                    {selectedVehicle ? selectedVehicle.vehicle_number : '차량 선택'}
-                  </Text>
-                  {selectedVehicle?.equipment_name ? (
-                    <Text style={styles.dropdownSubText}>{selectedVehicle.equipment_name}</Text>
-                  ) : null}
-                </View>
-                <Text style={styles.dropdownArrow}>▾</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           {/* OBD 출발 전 점검 */}
@@ -1308,23 +1339,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     padding: 20,
   },
+  topRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   title: {
     color: '#0F172A',
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: 16,
   },
-  // Running hero card (stays blue — active state needs to stand out)
+  modeSwitchBtn: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  modeSwitchText: {
+    color: '#2563EB',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  // Running hero card — LinearGradient provides the colour
   runningHeroCard: {
-    backgroundColor: '#1D4ED8',
     borderRadius: 20,
     marginBottom: 12,
     padding: 22,
     shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 18,
+    elevation: 9,
   },
   heroHeader: {
     alignItems: 'center',
@@ -1362,9 +1408,9 @@ const styles = StyleSheet.create({
   },
   heroMetricValue: {
     color: '#FFFFFF',
-    fontSize: 52,
-    fontWeight: '700',
-    lineHeight: 58,
+    fontSize: 40,
+    fontWeight: '800',
+    lineHeight: 46,
   },
   heroStaleValue: {
     color: '#FCA5A5',
