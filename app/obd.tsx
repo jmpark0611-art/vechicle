@@ -115,6 +115,9 @@ export default function ObdScreen() {
       coolant_temp_c: liveData.coolantTempC,
       battery_voltage: liveData.batteryVoltage,
       fuel_level_percent: liveData.fuelLevelPercent,
+      engine_load_percent: liveData.engineLoadPercent,
+      throttle_percent: liveData.throttlePercent,
+      intake_air_temp_c: liveData.intakeAirTempC,
       ignition_status: liveData.ignitionOn ? 'on' : 'off',
       dtc_codes: liveData.dtcCodes,
       recorded_at: liveData.recordedAt,
@@ -261,16 +264,34 @@ export default function ObdScreen() {
                   highlight={liveData?.coolantTempC != null && liveData.coolantTempC > 100}
                 />
                 <DataTile
-                  label="전압"
+                  label="배터리"
                   value={liveData?.batteryVoltage != null ? `${liveData.batteryVoltage.toFixed(1)}` : '-'}
                   unit="V"
                   highlight={liveData?.batteryVoltage != null && liveData.batteryVoltage < 11.5}
                 />
                 <DataTile
-                  label="연료"
+                  label="연료잔량"
                   value={liveData?.fuelLevelPercent != null ? `${liveData.fuelLevelPercent}` : '-'}
                   unit="%"
                   highlight={liveData?.fuelLevelPercent != null && liveData.fuelLevelPercent < 15}
+                />
+                <DataTile
+                  label="엔진부하"
+                  value={liveData?.engineLoadPercent != null ? `${liveData.engineLoadPercent}` : '-'}
+                  unit="%"
+                  highlight={liveData?.engineLoadPercent != null && liveData.engineLoadPercent > 80}
+                />
+                <DataTile
+                  label="스로틀"
+                  value={liveData?.throttlePercent != null ? `${liveData.throttlePercent}` : '-'}
+                  unit="%"
+                  highlight={false}
+                />
+                <DataTile
+                  label="흡기온도"
+                  value={liveData?.intakeAirTempC != null ? `${liveData.intakeAirTempC}` : '-'}
+                  unit="°C"
+                  highlight={liveData?.intakeAirTempC != null && liveData.intakeAirTempC > 50}
                 />
               </View>
 
