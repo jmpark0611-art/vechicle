@@ -575,7 +575,51 @@ export default function TripHistoryScreen() {
         <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
       }>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>운행 기록</Text>
+        <View>
+          <Text style={styles.headerMeta}>수송부</Text>
+          <Text style={styles.title}>운행 기록</Text>
+        </View>
+        <TouchableOpacity
+          accessibilityLabel="운행 기록 CSV 내보내기"
+          style={[styles.headerCsvBtn, filteredTrips.length === 0 && styles.disabledBtn]}
+          onPress={handleExportCsv}
+          disabled={filteredTrips.length === 0}>
+          <Text style={styles.headerCsvText}>↓ CSV</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.viewToggleBar}>
+        <TouchableOpacity
+          style={[styles.viewToggleBtn, viewMode === 'card' && styles.viewToggleBtnActive]}
+          onPress={() => setViewMode('card')}>
+          <Text style={[styles.viewToggleText, viewMode === 'card' && styles.viewToggleTextActive]}>▭ 카드형</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.viewToggleBtn, viewMode === 'list' && styles.viewToggleBtnActive]}
+          onPress={() => setViewMode('list')}>
+          <Text style={[styles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>☰ 리스트형</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.demoFilterBar}>
+        <TouchableOpacity
+          style={[styles.demoFilterBtn, filter === 'all' && styles.demoFilterBtnActive]}
+          onPress={() => setFilter('all')}>
+          <Text style={[styles.demoFilterText, filter === 'all' && styles.demoFilterTextActive]}>전체</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.demoFilterBtn, filter === 'running' && styles.demoFilterBtnActive]}
+          onPress={() => setFilter('running')}>
+          <Text style={[styles.demoFilterText, filter === 'running' && styles.demoFilterTextActive]}>운행중</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.demoFilterBtn, filter === 'completed' && styles.demoFilterBtnActive]}
+          onPress={() => setFilter('completed')}>
+          <Text style={[styles.demoFilterText, filter === 'completed' && styles.demoFilterTextActive]}>완료</Text>
+        </TouchableOpacity>
+      </View>
+
+      {false && (
         <View style={styles.viewToggleBar}>
           <TouchableOpacity
             style={[styles.viewToggleBtn, viewMode === 'card' && styles.viewToggleBtnActive]}
@@ -588,7 +632,7 @@ export default function TripHistoryScreen() {
             <Text style={[styles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>리스트형</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      )}
 
       <View style={styles.toolbar}>
         <Text style={styles.countText}>
@@ -602,7 +646,7 @@ export default function TripHistoryScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.filterBar}>
+      {false && <View style={styles.filterBar}>
         <TouchableOpacity
           style={[styles.filterBtn, filter === 'all' && styles.activeFilterBtn]}
           onPress={() => setFilter('all')}>
@@ -631,7 +675,7 @@ export default function TripHistoryScreen() {
             무효 {canceledCount}
           </Text>
         </TouchableOpacity>
-      </View>
+      </View>}
 
       <TextInput
         style={styles.searchInput}
@@ -694,15 +738,8 @@ export default function TripHistoryScreen() {
 
       <View style={styles.exportRow}>
         <TouchableOpacity
-          accessibilityLabel="운행 기록 CSV 내보내기"
-          style={[styles.exportBtn, { flex: 1 }, filteredTrips.length === 0 && styles.disabledBtn]}
-          onPress={handleExportCsv}
-          disabled={filteredTrips.length === 0}>
-          <Text style={styles.exportText}>CSV 내보내기</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
           accessibilityLabel="장비운행증 출력"
-          style={[styles.pvBtn, { flex: 1 }]}
+          style={styles.pvBtn}
           onPress={() => setPvModalVisible(true)}>
           <Text style={styles.pvBtnText}>장비운행증 출력</Text>
         </TouchableOpacity>
@@ -793,7 +830,9 @@ export default function TripHistoryScreen() {
                 (trip.vehicle_id && vehicleMap.get(trip.vehicle_id)) || '차량 정보 없음';
               const isRunning = trip.status === 'in_progress';
               const isStale = isRunning && isStaleActiveTrip(trip.start_time);
-              const gpsSummary = gpsSummaryByTripId.get(trip.id);
+              const distanceLabel = trip.daily_km != null ? `${trip.daily_km}km` : '-';
+              const odometerLabel = trip.total_km != null ? `${trip.total_km.toLocaleString()}km` : '-';
+              const fuelLabel = trip.fuel_added_liters != null ? `${trip.fuel_added_liters}L` : '-';
 
               if (viewMode === 'list') {
                 return (
@@ -831,6 +870,20 @@ export default function TripHistoryScreen() {
                     <Text style={styles.routeText}>{trip.start_place ?? '출발지'}</Text>
                     <Text style={styles.routeArrow}>→</Text>
                     <Text style={styles.routeText}>{trip.end_place ?? '목적지'}</Text>
+                  </View>
+                  <View style={styles.metricTileRow}>
+                    <View style={styles.metricTile}>
+                      <Text style={styles.metricLabel}>주행거리</Text>
+                      <Text style={styles.metricValue}>{distanceLabel}</Text>
+                    </View>
+                    <View style={styles.metricTile}>
+                      <Text style={styles.metricLabel}>누적거리</Text>
+                      <Text style={styles.metricValue}>{odometerLabel}</Text>
+                    </View>
+                    <View style={styles.metricTile}>
+                      <Text style={styles.metricLabel}>유류사용</Text>
+                      <Text style={styles.metricValue}>{fuelLabel}</Text>
+                    </View>
                   </View>
                   <View style={styles.metaRow}>
                     <Text style={styles.metaLabel}>출발</Text>
@@ -984,8 +1037,30 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#0F172A',
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '900',
+    letterSpacing: -0.4,
+  },
+  headerMeta: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  headerCsvBtn: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 14,
+  },
+  headerCsvText: {
+    color: '#334155',
+    fontSize: 14,
+    fontWeight: '800',
   },
   toolbar: {
     alignItems: 'center',
@@ -1174,8 +1249,8 @@ const styles = StyleSheet.create({
   },
   tripCard: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
+    borderColor: '#ECEAE4',
+    borderRadius: 18,
     borderWidth: 1,
     padding: 16,
     shadowColor: '#0F172A',
@@ -1221,7 +1296,7 @@ const styles = StyleSheet.create({
   routeRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    marginBottom: 10,
+    marginBottom: 14,
   },
   routeText: {
     color: '#0F172A',
@@ -1233,6 +1308,29 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 14,
     marginHorizontal: 8,
+  },
+  metricTileRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  metricTile: {
+    backgroundColor: '#F5F5F3',
+    borderRadius: 12,
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  metricLabel: {
+    color: '#8C8F98',
+    fontSize: 10,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+  metricValue: {
+    color: '#1C2434',
+    fontSize: 15,
+    fontWeight: '900',
   },
   staleBox: {
     backgroundColor: '#FEF2F2',
@@ -1365,19 +1463,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   viewToggleBar: {
-    backgroundColor: '#F1F5F9',
-    borderRadius: 10,
+    backgroundColor: '#E9EFED',
+    borderRadius: 13,
     flexDirection: 'row',
-    gap: 2,
-    padding: 3,
+    gap: 3,
+    marginBottom: 16,
+    padding: 4,
   },
   viewToggleBtn: {
-    borderRadius: 8,
+    alignItems: 'center',
+    borderRadius: 10,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 38,
     paddingHorizontal: 12,
-    paddingVertical: 6,
   },
   viewToggleBtnActive: {
     backgroundColor: '#FFFFFF',
@@ -1389,12 +1491,39 @@ const styles = StyleSheet.create({
   },
   viewToggleText: {
     color: '#64748B',
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '800',
   },
   viewToggleTextActive: {
-    color: '#2563EB',
-    fontWeight: '700',
+    color: '#1C2434',
+    fontWeight: '900',
+  },
+  demoFilterBar: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  demoFilterBtn: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    borderRadius: 11,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 36,
+    paddingHorizontal: 15,
+  },
+  demoFilterBtnActive: {
+    backgroundColor: '#1C2434',
+    borderColor: '#1C2434',
+  },
+  demoFilterText: {
+    color: '#5A6273',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  demoFilterTextActive: {
+    color: '#FFFFFF',
   },
   dateHeader: {
     color: '#94A3B8',
