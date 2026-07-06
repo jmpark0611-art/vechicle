@@ -1137,7 +1137,7 @@ export default function DriverScreen() {
         </>
       )}
 
-      {!isRunning ? (
+      {!isRunning && (
         <TouchableOpacity
           accessibilityLabel="운행 출발"
           style={[

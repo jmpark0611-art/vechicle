@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
   RefreshControl,
   ScrollView,
@@ -29,6 +30,8 @@ import { withTimeout } from '../../lib/request';
 type Vehicle = {
   id: string;
   vehicle_number: string;
+  equipment_name: string | null;
+  equipment_number: string | null;
 };
 
 type Trip = {
@@ -124,6 +127,100 @@ function formatMinutes(minutes: number | null) {
   return `${restMinutes}분`;
 }
 
+function generatePvHtml(
+  selectedVehicle: Vehicle | null,
+  pvTrips: Trip[],
+  vehicleMap: Map<string, string>,
+  startDate: string,
+  endDate: string
+): string {
+  const vehicleLabel = selectedVehicle
+    ? `${selectedVehicle.vehicle_number}${selectedVehicle.equipment_name ? ` (${selectedVehicle.equipment_name}${selectedVehicle.equipment_number ? ' ' + selectedVehicle.equipment_number : ''})` : ''}`
+    : '전 차량';
+
+  const rows = pvTrips
+    .map((trip, idx) => {
+      const vNum = (trip.vehicle_id && vehicleMap.get(trip.vehicle_id)) || '-';
+      const startDt = trip.start_time ? new Date(trip.start_time) : null;
+      const endDt = trip.end_time ? new Date(trip.end_time) : null;
+      const dateStr = startDt
+        ? startDt.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
+        : '-';
+      const startTimeStr = startDt
+        ? startDt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+        : '-';
+      const endTimeStr = endDt
+        ? endDt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+        : '-';
+      const fuelStr = [trip.fuel_station, trip.fuel_added_liters != null ? `${trip.fuel_added_liters}L` : null]
+        .filter(Boolean)
+        .join(' ');
+      return `<tr>
+        <td>${idx + 1}</td><td>${dateStr}</td><td>${vNum}</td>
+        <td>${trip.operator_name ?? '-'}</td><td>${trip.user_name ?? '-'}</td>
+        <td>${trip.purpose ?? '-'}</td><td>${trip.start_place ?? '-'}</td><td>${trip.end_place ?? '-'}</td>
+        <td>${startTimeStr}</td><td>${endTimeStr}</td>
+        <td>${trip.daily_km != null ? trip.daily_km : '-'}</td><td>${fuelStr || '-'}</td><td></td>
+      </tr>`;
+    })
+    .join('\n');
+
+  const emptyRow =
+    pvTrips.length === 0
+      ? '<tr><td colspan="13" style="height:48px;color:#888;text-align:center">해당 기간 운행 기록 없음</td></tr>'
+      : '';
+
+  return `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>장비운행증</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:10pt;color:#000;background:#fff}
+.wrap{padding:24px 20px}
+h1{text-align:center;font-size:17pt;font-weight:900;letter-spacing:10px;margin-bottom:12px}
+.meta{display:flex;justify-content:space-between;font-size:9.5pt;margin-bottom:14px;border-bottom:1px solid #000;padding-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:8.5pt}
+th,td{border:1px solid #000;padding:4px 3px;text-align:center;vertical-align:middle;word-break:keep-all}
+th{background:#e0e0e0;font-weight:700}
+.sig-row{display:flex;gap:32px;justify-content:flex-end;margin-top:20px}
+.sig-box{border:1px solid #000;width:100px;text-align:center;padding:6px 0}
+.sig-label{font-size:9pt;margin-bottom:32px}
+.sig-line{font-size:9pt}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>장 비 운 행 증</h1>
+<div class="meta">
+  <span>장비: ${vehicleLabel}</span>
+  <span>기간: ${startDate} ~ ${endDate}</span>
+  <span>계: ${pvTrips.length}건</span>
+</div>
+<table>
+<thead>
+<tr>
+  <th>일련</th><th>일자</th><th>차량번호</th><th>운용자</th><th>사용자</th>
+  <th>운행목적</th><th>출발지</th><th>목적지</th><th>출발</th><th>도착</th>
+  <th>일일km</th><th>유류</th><th>비고</th>
+</tr>
+</thead>
+<tbody>
+${rows}${emptyRow}
+</tbody>
+</table>
+<div class="sig-row">
+  <div class="sig-box"><p class="sig-label">운전자</p><p class="sig-line">서 명</p></div>
+  <div class="sig-box"><p class="sig-label">확인자</p><p class="sig-line">서 명</p></div>
+</div>
+</div>
+<script>window.onload=function(){window.print()}</script>
+</body>
+</html>`;
+}
+
 export default function TripHistoryScreen() {
   const insets = useSafeAreaInsets();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -140,10 +237,34 @@ export default function TripHistoryScreen() {
   const [historyLimit, setHistoryLimit] = useState(HISTORY_TRIP_LIMIT);
   const [hasMoreTrips, setHasMoreTrips] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pvModalVisible, setPvModalVisible] = useState(false);
+  const [pvStartDate, setPvStartDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  });
+  const [pvEndDate, setPvEndDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   const vehicleMap = useMemo(() => {
     return new Map(vehicles.map((vehicle) => [vehicle.id, vehicle.vehicle_number]));
   }, [vehicles]);
+
+  const selectedVehicle = useMemo(
+    () => vehicles.find((v) => v.id === selectedVehicleId) ?? null,
+    [vehicles, selectedVehicleId]
+  );
+
+  const pvTrips = useMemo(() => {
+    const start = pvStartDate ? new Date(pvStartDate + 'T00:00:00') : null;
+    const end = pvEndDate ? new Date(pvEndDate + 'T23:59:59') : null;
+    return trips.filter((trip) => {
+      if (selectedVehicleId && trip.vehicle_id !== selectedVehicleId) return false;
+      const t = trip.start_time ? new Date(trip.start_time) : null;
+      if (!t) return false;
+      if (start && t < start) return false;
+      if (end && t > end) return false;
+      return true;
+    });
+  }, [trips, selectedVehicleId, pvStartDate, pvEndDate]);
 
   const runningCount = useMemo(() => {
     return trips.filter((trip) => trip.status === 'in_progress').length;
@@ -257,6 +378,24 @@ export default function TripHistoryScreen() {
     URL.revokeObjectURL(url);
   }, [filteredTrips, gpsSummaryByTripId, vehicleMap]);
 
+  const handlePrintPv = useCallback(() => {
+    if (Platform.OS !== 'web') {
+      Alert.alert('출력 안내', '장비운행증 출력은 웹 브라우저에서만 지원됩니다.');
+      setPvModalVisible(false);
+      return;
+    }
+    const html = generatePvHtml(selectedVehicle, pvTrips, vehicleMap, pvStartDate, pvEndDate);
+    const webGlobal = globalThis as typeof globalThis & { open: (url: string, target: string) => Window | null };
+    const win = webGlobal.open('', '_blank');
+    if (!win) {
+      Alert.alert('팝업 차단됨', '브라우저 팝업을 허용한 뒤 다시 시도해 주세요.');
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+    setPvModalVisible(false);
+  }, [selectedVehicle, pvTrips, vehicleMap, pvStartDate, pvEndDate]);
+
   const filteredSummary = useMemo(() => {
     const completedTrips = filteredTrips.filter((trip) => trip.status === 'completed');
     const completedWithoutGps = completedTrips.filter((trip) => {
@@ -333,7 +472,7 @@ export default function TripHistoryScreen() {
             .range(0, nextLimit),
           '운행 기록'
         ),
-        withTimeout(supabase.from('vehicles').select('id, vehicle_number'), '차량 목록'),
+        withTimeout(supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number'), '차량 목록'),
       ]);
 
       const loadedTrips = tripsResult.error ? [] : ((tripsResult.data ?? []) as Trip[]);
@@ -553,13 +692,21 @@ export default function TripHistoryScreen() {
         </View>
       </View>
 
-      <TouchableOpacity
-        accessibilityLabel="운행 기록 CSV 내보내기"
-        style={[styles.exportBtn, filteredTrips.length === 0 && styles.disabledBtn]}
-        onPress={handleExportCsv}
-        disabled={filteredTrips.length === 0}>
-        <Text style={styles.exportText}>CSV 내보내기</Text>
-      </TouchableOpacity>
+      <View style={styles.exportRow}>
+        <TouchableOpacity
+          accessibilityLabel="운행 기록 CSV 내보내기"
+          style={[styles.exportBtn, { flex: 1 }, filteredTrips.length === 0 && styles.disabledBtn]}
+          onPress={handleExportCsv}
+          disabled={filteredTrips.length === 0}>
+          <Text style={styles.exportText}>CSV 내보내기</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityLabel="장비운행증 출력"
+          style={[styles.pvBtn, { flex: 1 }]}
+          onPress={() => setPvModalVisible(true)}>
+          <Text style={styles.pvBtnText}>장비운행증 출력</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.summaryGrid}>
         <View style={styles.summaryCard}>
@@ -771,6 +918,60 @@ export default function TripHistoryScreen() {
           )}
         </TouchableOpacity>
       )}
+
+      {/* 장비운행증 출력 모달 */}
+      <Modal
+        visible={pvModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPvModalVisible(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setPvModalVisible(false)}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>장비운행증 출력</Text>
+            <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
+              <Text style={styles.pvSubtitle}>
+                {selectedVehicle
+                  ? `${selectedVehicle.vehicle_number}${selectedVehicle.equipment_name ? ` · ${selectedVehicle.equipment_name}` : ''}`
+                  : '전 차량'}
+              </Text>
+              <View style={styles.pvDateRow}>
+                <View style={styles.pvDateField}>
+                  <Text style={styles.pvDateLabel}>시작일</Text>
+                  <TextInput
+                    style={styles.pvDateInput}
+                    value={pvStartDate}
+                    onChangeText={setPvStartDate}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor="#94A3B8"
+                  />
+                </View>
+                <Text style={styles.pvDateSep}>~</Text>
+                <View style={styles.pvDateField}>
+                  <Text style={styles.pvDateLabel}>종료일</Text>
+                  <TextInput
+                    style={styles.pvDateInput}
+                    value={pvEndDate}
+                    onChangeText={setPvEndDate}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor="#94A3B8"
+                  />
+                </View>
+              </View>
+              <Text style={styles.pvCountText}>
+                해당 기간 <Text style={styles.pvCountNum}>{pvTrips.length}건</Text>의 운행 기록이 출력됩니다.
+              </Text>
+              <TouchableOpacity
+                style={styles.pvPrintBtn}
+                onPress={handlePrintPv}>
+                <Text style={styles.pvPrintBtnText}>출력하기</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 }
@@ -1235,5 +1436,119 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 11,
     fontWeight: '400',
+  },
+  // Export row
+  exportRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  pvBtn: {
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 46,
+  },
+  pvBtnText: {
+    color: '#1D4ED8',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  // Modal overlay + sheet
+  modalOverlay: {
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    paddingBottom: 32,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  modalTitle: {
+    color: '#0F172A',
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalScroll: {
+    flexGrow: 0,
+  },
+  // PV modal content
+  pvSubtitle: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  pvDateRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  pvDateField: {
+    flex: 1,
+  },
+  pvDateLabel: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  pvDateInput: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    borderWidth: 1,
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '500',
+    minHeight: 48,
+    paddingHorizontal: 12,
+  },
+  pvDateSep: {
+    color: '#94A3B8',
+    fontSize: 18,
+    fontWeight: '500',
+    marginTop: 22,
+  },
+  pvCountText: {
+    color: '#64748B',
+    fontSize: 14,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  pvCountNum: {
+    color: '#1D4ED8',
+    fontWeight: '700',
+  },
+  pvPrintBtn: {
+    alignItems: 'center',
+    backgroundColor: '#1D4ED8',
+    borderRadius: 14,
+    justifyContent: 'center',
+    minHeight: 54,
+    shadowColor: '#1D4ED8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  pvPrintBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
