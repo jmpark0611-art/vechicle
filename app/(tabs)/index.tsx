@@ -180,9 +180,12 @@ export default function DriverScreen() {
   const [purpose, setPurpose] = useState('');
   const [operatorName, setOperatorName] = useState('');
   const [userName, setUserName] = useState('');
+  const [operatorRank, setOperatorRank] = useState('');
+  const [userRank, setUserRank] = useState('');
+  const [startOdometerInput, setStartOdometerInput] = useState('');
   const [fuelStation, setFuelStation] = useState('');
   const [fuelAddedLiters, setFuelAddedLiters] = useState('');
-  const [showRankModal, setShowRankModal] = useState(false);
+  const [rankModalTarget, setRankModalTarget] = useState<'operator' | 'user' | null>(null);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [showEndTripModal, setShowEndTripModal] = useState(false);
   const [endOdometerInput, setEndOdometerInput] = useState('');
@@ -208,6 +211,12 @@ export default function DriverScreen() {
   useEffect(() => {
     getDriverInfo().then(setDriverInfoState);
   }, []);
+
+  useEffect(() => {
+    if (!isRunning) {
+      setStartOdometerInput(selectedVehicle?.current_odometer?.toString() ?? '');
+    }
+  }, [selectedVehicle, isRunning]);
 
   useEffect(() => {
     obdBle.setCallbacks({
@@ -656,7 +665,8 @@ export default function DriverScreen() {
       setLastGpsSavedAt(null);
       setRecoveryNotice(null);
 
-      startOdometerRef.current = selectedVehicle.current_odometer ?? null;
+      const startOdoNum = startOdometerInput.trim() ? parseFloat(startOdometerInput) : (selectedVehicle.current_odometer ?? null);
+      startOdometerRef.current = !isNaN(startOdoNum as number) ? startOdoNum : null;
 
       const { data, error } = await withTimeout(
         supabase
@@ -671,8 +681,10 @@ export default function DriverScreen() {
             status: 'in_progress',
             purpose: purpose.trim() || null,
             operator_name: operatorName.trim() || null,
+            operator_rank: operatorRank || null,
             user_name: userName.trim() || null,
-            start_odometer: selectedVehicle.current_odometer ?? null,
+            user_rank: userRank || null,
+            start_odometer: startOdometerRef.current,
           })
           .select('id')
           .single(),
@@ -833,7 +845,7 @@ export default function DriverScreen() {
         <Text style={styles.title}>운행</Text>
         {!isRunning && (
           <TouchableOpacity style={styles.modeSwitchBtn} onPress={() => router.replace('/role-select')}>
-            <Text style={styles.modeSwitchText}>🔄 수송부 모드로 전환</Text>
+            <Text style={styles.modeSwitchText}>⇄ 수송부 모드</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -902,14 +914,17 @@ export default function DriverScreen() {
             )}
             {(operatorName || userName) && (
               <Text style={styles.heroDriverText}>
-                {[operatorName && `운용: ${operatorName}`, userName && `사용: ${userName}`].filter(Boolean).join(' · ')}
+                {[
+                  operatorName && `운용: ${[operatorRank, operatorName].filter(Boolean).join(' ')}`,
+                  userName && `사용: ${[userRank, userName].filter(Boolean).join(' ')}`,
+                ].filter(Boolean).join(' · ')}
               </Text>
             )}
             {obdLiveData && obdState === 'connected' && (
               <View style={styles.heroObdRow}>
-                <Text style={styles.heroObdItem}>⚡ {obdLiveData.batteryVoltage ?? '-'}V</Text>
-                <Text style={styles.heroObdItem}>⛽ {obdLiveData.fuelLevelPercent ?? '-'}%</Text>
-                <Text style={styles.heroObdItem}>🌡 {obdLiveData.coolantTempC ?? '-'}°C</Text>
+                <Text style={styles.heroObdItem}>배터리 {obdLiveData.batteryVoltage ?? '-'}V</Text>
+                <Text style={styles.heroObdItem}>연료 {obdLiveData.fuelLevelPercent ?? '-'}%</Text>
+                <Text style={styles.heroObdItem}>냉각수 {obdLiveData.coolantTempC ?? '-'}°C</Text>
               </View>
             )}
           </LinearGradient>
@@ -1005,24 +1020,44 @@ export default function DriverScreen() {
           <View style={styles.driverCard}>
             <Text style={styles.sectionTitle}>운행 정보</Text>
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>운용자 성명 *</Text>
-              <TextInput
-                style={styles.routeInput}
-                value={operatorName}
-                onChangeText={setOperatorName}
-                placeholder="운용자 성명"
-                placeholderTextColor="#94A3B8"
-              />
+              <Text style={styles.fieldLabel}>운용자 *</Text>
+              <View style={styles.rankNameRow}>
+                <TouchableOpacity
+                  style={styles.rankChip}
+                  onPress={() => setRankModalTarget('operator')}>
+                  <Text style={operatorRank ? styles.rankChipTextFilled : styles.rankChipText}>
+                    {operatorRank || '계급'}
+                  </Text>
+                  <Text style={styles.rankChipArrow}>▾</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={[styles.routeInput, styles.rankNameInput]}
+                  value={operatorName}
+                  onChangeText={setOperatorName}
+                  placeholder="성명"
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
             </View>
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>사용자 성명 *</Text>
-              <TextInput
-                style={styles.routeInput}
-                value={userName}
-                onChangeText={setUserName}
-                placeholder="사용자 성명"
-                placeholderTextColor="#94A3B8"
-              />
+              <Text style={styles.fieldLabel}>사용자 *</Text>
+              <View style={styles.rankNameRow}>
+                <TouchableOpacity
+                  style={styles.rankChip}
+                  onPress={() => setRankModalTarget('user')}>
+                  <Text style={userRank ? styles.rankChipTextFilled : styles.rankChipText}>
+                    {userRank || '계급'}
+                  </Text>
+                  <Text style={styles.rankChipArrow}>▾</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={[styles.routeInput, styles.rankNameInput]}
+                  value={userName}
+                  onChangeText={setUserName}
+                  placeholder="성명"
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
             </View>
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>운행 목적</Text>
@@ -1034,19 +1069,10 @@ export default function DriverScreen() {
                 placeholderTextColor="#94A3B8"
               />
             </View>
-            <View style={styles.obdInfoRow}>
-              <Text style={styles.fieldLabel}>현재 오도미터 (OBD)</Text>
-              <Text style={styles.obdInfoValue}>
-                {selectedVehicle?.current_odometer != null
-                  ? `${selectedVehicle.current_odometer.toLocaleString()} km`
-                  : '정보 없음'}
-              </Text>
-            </View>
-            <Text style={styles.obdHint}>일일 주행·누적·유류 정보는 종료 시 입력합니다.</Text>
           </View>
 
           <View style={styles.routeCard}>
-            <Text style={styles.sectionTitle}>경로</Text>
+            <Text style={styles.sectionTitle}>경로 및 오도미터</Text>
             <View style={styles.routeFieldBlock}>
               <Text style={styles.fieldLabel}>출발지</Text>
               <TextInput
@@ -1065,6 +1091,17 @@ export default function DriverScreen() {
                 onChangeText={setEndPlace}
                 placeholder="예: 1연대"
                 placeholderTextColor="#94A3B8"
+              />
+            </View>
+            <View style={styles.routeFieldBlock}>
+              <Text style={styles.fieldLabel}>출발 오도미터 (km)</Text>
+              <TextInput
+                style={styles.routeInput}
+                value={startOdometerInput}
+                onChangeText={setStartOdometerInput}
+                placeholder="현재 계기판 오도미터"
+                placeholderTextColor="#94A3B8"
+                keyboardType="decimal-pad"
               />
             </View>
             {voiceNotice && (
@@ -1170,19 +1207,26 @@ export default function DriverScreen() {
       </Modal>
 
       {/* Rank picker modal */}
-      <Modal visible={showRankModal} transparent animationType="slide" onRequestClose={() => setShowRankModal(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowRankModal(false)}>
+      <Modal visible={rankModalTarget !== null} transparent animationType="slide" onRequestClose={() => setRankModalTarget(null)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setRankModalTarget(null)}>
           <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>계급 선택</Text>
+            <Text style={styles.modalTitle}>
+              {rankModalTarget === 'operator' ? '운용자 계급 선택' : '사용자 계급 선택'}
+            </Text>
             <ScrollView style={styles.modalScroll}>
               <View style={styles.rankGrid}>
                 {RANKS.map((rank) => {
-                  const isActive = driverInfo.rank === rank;
+                  const currentRank = rankModalTarget === 'operator' ? operatorRank : userRank;
+                  const isActive = currentRank === rank;
                   return (
                     <TouchableOpacity
                       key={rank}
                       style={[styles.rankGridBtn, isActive && styles.rankGridBtnActive]}
-                      onPress={() => { updateDriverInfo({ rank }); setShowRankModal(false); }}>
+                      onPress={() => {
+                        if (rankModalTarget === 'operator') setOperatorRank(rank);
+                        else if (rankModalTarget === 'user') setUserRank(rank);
+                        setRankModalTarget(null);
+                      }}>
                       <Text style={[styles.rankGridText, isActive && styles.rankGridTextActive]}>{rank}</Text>
                     </TouchableOpacity>
                   );
@@ -1784,30 +1828,45 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 6,
   },
-  // OBD display
-  obdInfoRow: {
+  // Rank + name row
+  rankNameRow: {
+    flexDirection: 'row',
+    gap: 8,
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    borderColor: '#86EFAC',
+  },
+  rankChip: {
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
     borderRadius: 10,
     borderWidth: 1,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    gap: 4,
+    minHeight: 46,
+    paddingHorizontal: 12,
+  },
+  rankChipText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  rankChipTextFilled: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  rankChipArrow: {
+    color: '#94A3B8',
+    fontSize: 11,
+  },
+  rankNameInput: {
+    flex: 1,
+    minWidth: 0,
   },
   obdInfoValue: {
     color: '#059669',
     fontSize: 14,
     fontWeight: '700',
-  },
-  obdHint: {
-    color: '#94A3B8',
-    fontSize: 12,
-    fontWeight: '400',
-    marginBottom: 4,
-    marginTop: -8,
   },
   // Dropdown button
   dropdownBtn: {

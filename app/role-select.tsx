@@ -1,3 +1,5 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import {
   StyleSheet,
@@ -24,14 +26,14 @@ export default function RoleSelectScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 32 }]}>
       <View style={styles.logoBox}>
-        <Text style={styles.logoIcon}>▰</Text>
+        <MaterialCommunityIcons name="truck-fast" size={32} color="#FFFFFF" />
       </View>
       <Text style={styles.title}>차량관리시스템</Text>
       <Text style={styles.subtitle}>모드를 선택하세요</Text>
 
       <TouchableOpacity style={styles.card} onPress={handleDriver} activeOpacity={0.85}>
         <View style={[styles.accent, { backgroundColor: '#EFF6FF' }]}>
-          <Text style={styles.accentIcon}>🏠</Text>
+          <MaterialCommunityIcons name="steering" size={26} color="#2563EB" />
         </View>
         <Text style={styles.cardTitle}>운행 모드</Text>
         <Text style={styles.cardDesc}>운전자 · 운용자용{'\n'}운행 시작/종료</Text>
@@ -39,19 +41,12 @@ export default function RoleSelectScreen() {
 
       <TouchableOpacity style={[styles.card, styles.commanderCard]} onPress={handleCommander} activeOpacity={0.85}>
         <View style={[styles.accent, { backgroundColor: '#F1F5F9' }]}>
-          <Text style={styles.accentIcon}>📋</Text>
+          <MaterialIcons name="admin-panel-settings" size={26} color="#334155" />
         </View>
         <Text style={styles.cardTitle}>수송부 모드</Text>
         <Text style={styles.cardDesc}>관리자용{'\n'}기록·차량 진단·위치 관리</Text>
         <Text style={styles.pinHint}>비밀번호 입력 후 입장</Text>
       </TouchableOpacity>
-
-      <View style={styles.themeRow}>
-        <Text style={styles.themeLabel}>테마</Text>
-        <View style={[styles.themeDot, styles.themeDotActive]} />
-        <View style={[styles.themeDot, styles.themeDotGreen]} />
-        <View style={[styles.themeDot, styles.themeDotSlate]} />
-      </View>
     </View>
   );
 }
@@ -72,11 +67,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 20,
     alignSelf: 'center',
-  },
-  logoIcon: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '900',
   },
   title: {
     color: '#0F172A',
@@ -116,9 +106,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 18,
   },
-  accentIcon: {
-    fontSize: 21,
-  },
   cardTitle: {
     color: '#0F172A',
     fontSize: 20,
@@ -135,33 +122,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginTop: 8,
-  },
-  themeRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'center',
-    marginTop: 26,
-  },
-  themeLabel: {
-    color: '#94A3B8',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  themeDot: {
-    borderRadius: 20,
-    height: 34,
-    width: 34,
-  },
-  themeDotActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#111827',
-    borderWidth: 4,
-  },
-  themeDotGreen: {
-    backgroundColor: '#16A34A',
-  },
-  themeDotSlate: {
-    backgroundColor: '#475569',
   },
 });

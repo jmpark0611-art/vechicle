@@ -44,7 +44,9 @@ type Trip = {
   status: string | null;
   purpose: string | null;
   operator_name: string | null;
+  operator_rank: string | null;
   user_name: string | null;
+  user_rank: string | null;
   daily_km: number | null;
   total_km: number | null;
   fuel_station: string | null;
@@ -157,7 +159,7 @@ function generatePvHtml(
         .join(' ');
       return `<tr>
         <td>${idx + 1}</td><td>${dateStr}</td><td>${vNum}</td>
-        <td>${trip.operator_name ?? '-'}</td><td>${trip.user_name ?? '-'}</td>
+        <td>${[trip.operator_rank, trip.operator_name].filter(Boolean).join(' ') || '-'}</td><td>${[trip.user_rank, trip.user_name].filter(Boolean).join(' ') || '-'}</td>
         <td>${trip.purpose ?? '-'}</td><td>${trip.start_place ?? '-'}</td><td>${trip.end_place ?? '-'}</td>
         <td>${startTimeStr}</td><td>${endTimeStr}</td>
         <td>${trip.daily_km != null ? trip.daily_km : '-'}</td><td>${fuelStr || '-'}</td><td></td>
@@ -354,8 +356,8 @@ export default function TripHistoryScreen() {
         trip.total_km ?? '',
         trip.fuel_station ?? '',
         trip.fuel_added_liters ?? '',
-        trip.operator_name ?? '',
-        trip.user_name ?? '',
+        [trip.operator_rank, trip.operator_name].filter(Boolean).join(' '),
+        [trip.user_rank, trip.user_name].filter(Boolean).join(' '),
         gpsSummary?.count ?? 0,
       ];
     });
@@ -467,7 +469,7 @@ export default function TripHistoryScreen() {
         withTimeout(
           supabase
             .from('trips')
-            .select('id, vehicle_id, start_place, end_place, start_time, end_time, status, purpose, operator_name, user_name, daily_km, total_km, fuel_station, fuel_added_liters, start_odometer, end_odometer')
+            .select('id, vehicle_id, start_place, end_place, start_time, end_time, status, purpose, operator_name, operator_rank, user_name, user_rank, daily_km, total_km, fuel_station, fuel_added_liters, start_odometer, end_odometer')
             .order('start_time', { ascending: false })
             .range(0, nextLimit),
           '운행 기록'
@@ -903,11 +905,15 @@ export default function TripHistoryScreen() {
                   </View>
                   <View style={styles.metaRow}>
                     <Text style={styles.metaLabel}>운용자</Text>
-                    <Text style={styles.metaValue}>{trip.operator_name ?? '-'}</Text>
+                    <Text style={styles.metaValue}>
+                      {[trip.operator_rank, trip.operator_name].filter(Boolean).join(' ') || '-'}
+                    </Text>
                   </View>
                   <View style={styles.metaRow}>
                     <Text style={styles.metaLabel}>사용자</Text>
-                    <Text style={styles.metaValue}>{trip.user_name ?? '-'}</Text>
+                    <Text style={styles.metaValue}>
+                      {[trip.user_rank, trip.user_name].filter(Boolean).join(' ') || '-'}
+                    </Text>
                   </View>
                   {(trip.daily_km !== null || trip.total_km !== null) && (
                     <View style={styles.metaRow}>

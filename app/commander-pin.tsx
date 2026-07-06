@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -32,7 +33,7 @@ export default function CommanderPinScreen() {
         const ok = await verifyPin(pin);
         if (ok) {
           await setStoredRole('commander');
-          router.replace('/(tabs)');
+          router.replace('/(tabs)/explore');
         } else {
           setError('비밀번호가 올바르지 않습니다.');
           shake();
@@ -69,7 +70,7 @@ export default function CommanderPinScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + 56, paddingBottom: insets.bottom + 32 }]}>
       <View style={styles.lockIcon}>
-        <Text style={styles.lockEmoji}>🔒</Text>
+        <MaterialIcons name="lock" size={28} color="#FFFFFF" />
       </View>
       <Text style={styles.title}>수송부 모드</Text>
       <Text style={styles.subtitle}>비밀번호를 입력하세요</Text>
@@ -130,9 +131,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-  },
-  lockEmoji: {
-    fontSize: 26,
   },
   title: {
     color: '#0F172A',
