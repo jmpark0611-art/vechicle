@@ -830,10 +830,10 @@ export default function DriverScreen() {
         },
       ]}>
       <View style={styles.topRow}>
-        <Text style={styles.title}>차량운행시스템</Text>
+        <Text style={styles.title}>운행</Text>
         {!isRunning && (
           <TouchableOpacity style={styles.modeSwitchBtn} onPress={() => router.replace('/role-select')}>
-            <Text style={styles.modeSwitchText}>⇄ 수송부 모드</Text>
+            <Text style={styles.modeSwitchText}>🔄 수송부 모드로 전환</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -964,39 +964,6 @@ export default function DriverScreen() {
         </>
       ) : (
         <>
-          <View style={styles.driverCard}>
-            <Text style={styles.sectionTitle}>운전자 정보</Text>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>소속</Text>
-              <TextInput
-                style={styles.routeInput}
-                value={driverInfo.unit}
-                onChangeText={(text) => updateDriverInfo({ unit: text })}
-                placeholder="부대/소속"
-                placeholderTextColor="#94A3B8"
-              />
-            </View>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>계급</Text>
-              <TouchableOpacity style={styles.dropdownBtn} onPress={() => setShowRankModal(true)}>
-                <Text style={driverInfo.rank ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
-                  {driverInfo.rank || '계급 선택'}
-                </Text>
-                <Text style={styles.dropdownArrow}>▾</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>성명</Text>
-              <TextInput
-                style={styles.routeInput}
-                value={driverInfo.name}
-                onChangeText={(text) => updateDriverInfo({ name: text })}
-                placeholder="이름"
-                placeholderTextColor="#94A3B8"
-              />
-            </View>
-          </View>
-
           <View style={styles.vehicleSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>차량 선택</Text>
@@ -1032,56 +999,6 @@ export default function DriverScreen() {
                 </View>
                 <Text style={styles.dropdownArrow}>▾</Text>
               </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={styles.routeCard}>
-            <Text style={styles.sectionTitle}>경로</Text>
-            <View style={styles.dotRouteRow}>
-              <View style={styles.dotCol}>
-                <View style={styles.dotFilled} />
-                <View style={styles.dotLine} />
-                <View style={styles.dotHollow} />
-              </View>
-              <View style={styles.routeFieldCol}>
-                <View style={styles.routeFieldBlock}>
-                  <TextInput
-                    style={styles.routeInput}
-                    value={startPlace}
-                    onChangeText={setStartPlace}
-                    placeholder="출발지"
-                    placeholderTextColor="#94A3B8"
-                  />
-                  <View style={styles.presetRow}>
-                    {PLACE_PRESETS.map((place) => (
-                      <TouchableOpacity key={`start-${place}`} style={styles.presetBtn} onPress={() => setStartPlace(place)}>
-                        <Text style={styles.presetText}>{place}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                <View style={styles.routeFieldBlock}>
-                  <TextInput
-                    style={styles.routeInput}
-                    value={endPlace}
-                    onChangeText={setEndPlace}
-                    placeholder="목적지"
-                    placeholderTextColor="#94A3B8"
-                  />
-                  <View style={styles.presetRow}>
-                    {PLACE_PRESETS.map((place) => (
-                      <TouchableOpacity key={`end-${place}`} style={styles.presetBtn} onPress={() => setEndPlace(place)}>
-                        <Text style={styles.presetText}>{place}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              </View>
-            </View>
-            {voiceNotice && (
-              <View style={styles.voiceNoticeBox}>
-                <Text style={styles.voiceNoticeText}>{voiceNotice}</Text>
-              </View>
             )}
           </View>
 
@@ -1128,55 +1045,31 @@ export default function DriverScreen() {
             <Text style={styles.obdHint}>일일 주행·누적·유류 정보는 종료 시 입력합니다.</Text>
           </View>
 
-          {/* OBD 출발 전 점검 */}
-          <View style={styles.obdCard}>
-            <View style={styles.obdCardHeader}>
-              <Text style={styles.sectionTitle}>OBD 진단</Text>
-              {(obdState === 'idle' || obdState === 'disconnected' || obdState === 'error') && (
-                <TouchableOpacity style={styles.obdScanBtn} onPress={() => { setObdDevices([]); obdBle.startScan(); }}>
-                  <Text style={styles.obdScanBtnText}>스캔</Text>
-                </TouchableOpacity>
-              )}
-              {obdState === 'scanning' && (
-                <TouchableOpacity style={styles.obdStopBtn} onPress={() => obdBle.stopScan()}>
-                  <Text style={styles.obdStopBtnText}>중지</Text>
-                </TouchableOpacity>
-              )}
-              {obdState === 'connected' && (
-                <TouchableOpacity style={styles.obdStopBtn} onPress={() => { void obdBle.disconnect(); setObdLiveData(null); }}>
-                  <Text style={styles.obdStopBtnText}>연결 해제</Text>
-                </TouchableOpacity>
-              )}
+          <View style={styles.routeCard}>
+            <Text style={styles.sectionTitle}>경로</Text>
+            <View style={styles.routeFieldBlock}>
+              <Text style={styles.fieldLabel}>출발지</Text>
+              <TextInput
+                style={styles.routeInput}
+                value={startPlace}
+                onChangeText={setStartPlace}
+                placeholder="예: 사단 본부"
+                placeholderTextColor="#94A3B8"
+              />
             </View>
-            {obdMessage ? <Text style={styles.obdStatusMsg}>{obdMessage}</Text> : null}
-            {obdDevices.length > 0 && obdState !== 'connected' && (
-              <View style={styles.obdDeviceList}>
-                {obdDevices.map((device) => (
-                  <TouchableOpacity
-                    key={device.id}
-                    style={styles.obdDeviceItem}
-                    onPress={() => void obdBle.connect(device.id)}
-                    disabled={obdState === 'connecting' || obdState === 'initializing'}>
-                    <Text style={styles.obdDeviceName}>{device.name}</Text>
-                    {device.rssi != null && <Text style={styles.obdDeviceRssi}>{device.rssi} dBm</Text>}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-            {obdLiveData && obdState === 'connected' && (
-              <View style={styles.obdDataGrid}>
-                <View style={styles.obdDataItem}>
-                  <Text style={styles.obdDataLabel}>배터리</Text>
-                  <Text style={styles.obdDataValue}>{obdLiveData.batteryVoltage ?? '-'} V</Text>
-                </View>
-                <View style={styles.obdDataItem}>
-                  <Text style={styles.obdDataLabel}>유류</Text>
-                  <Text style={styles.obdDataValue}>{obdLiveData.fuelLevelPercent ?? '-'}%</Text>
-                </View>
-                <View style={styles.obdDataItem}>
-                  <Text style={styles.obdDataLabel}>냉각수</Text>
-                  <Text style={styles.obdDataValue}>{obdLiveData.coolantTempC ?? '-'}°C</Text>
-                </View>
+            <View style={styles.routeFieldBlock}>
+              <Text style={styles.fieldLabel}>목적지</Text>
+              <TextInput
+                style={styles.routeInput}
+                value={endPlace}
+                onChangeText={setEndPlace}
+                placeholder="예: 1연대"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+            {voiceNotice && (
+              <View style={styles.voiceNoticeBox}>
+                <Text style={styles.voiceNoticeText}>{voiceNotice}</Text>
               </View>
             )}
           </View>
@@ -1337,29 +1230,31 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: '#F8FAFC',
-    padding: 20,
+    padding: 24,
   },
   topRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    alignItems: 'flex-start',
+    gap: 18,
+    marginBottom: 22,
   },
   title: {
     color: '#0F172A',
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: -0.4,
   },
   modeSwitchBtn: {
     backgroundColor: '#EFF6FF',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    borderColor: '#DBEAFE',
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   modeSwitchText: {
     color: '#2563EB',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '800',
   },
   // Running hero card — LinearGradient provides the colour
   runningHeroCard: {
@@ -1543,7 +1438,17 @@ const styles = StyleSheet.create({
   },
   // Input form
   vehicleSection: {
-    marginBottom: 24,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    borderRadius: 22,
+    borderWidth: 1,
+    marginBottom: 16,
+    padding: 22,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
   },
   inputCard: {
     backgroundColor: '#FFFFFF',
@@ -1624,12 +1529,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   sectionTitle: {
     color: '#0F172A',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '900',
   },
   reloadText: {
     color: '#2563EB',
@@ -1707,6 +1612,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
     borderRadius: 16,
     justifyContent: 'center',
+    marginTop: 8,
     minHeight: 60,
     width: '100%',
     shadowColor: '#2563EB',
@@ -1763,11 +1669,11 @@ const styles = StyleSheet.create({
   // Driver info card
   driverCard: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
+    borderColor: '#E5E7EB',
+    borderRadius: 22,
     borderWidth: 1,
-    marginBottom: 14,
-    padding: 20,
+    marginBottom: 16,
+    padding: 22,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -1775,15 +1681,13 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   fieldGroup: {
-    marginBottom: 14,
+    marginBottom: 16,
   },
   fieldLabel: {
     color: '#64748B',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '800',
     marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   rankScroll: {
     marginTop: 2,
@@ -1813,11 +1717,11 @@ const styles = StyleSheet.create({
   // Route card with dot layout
   routeCard: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
+    borderColor: '#E5E7EB',
+    borderRadius: 22,
     borderWidth: 1,
-    marginBottom: 14,
-    padding: 20,
+    marginBottom: 16,
+    padding: 22,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -1860,17 +1764,18 @@ const styles = StyleSheet.create({
   },
   routeFieldBlock: {
     gap: 8,
+    marginTop: 18,
   },
   routeInput: {
     backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
     borderWidth: 1,
     color: '#0F172A',
-    fontSize: 16,
-    fontWeight: '500',
-    minHeight: 48,
-    paddingHorizontal: 14,
+    fontSize: 17,
+    fontWeight: '700',
+    minHeight: 56,
+    paddingHorizontal: 18,
   },
   // Hero driver info
   heroDriverText: {
@@ -1908,25 +1813,25 @@ const styles = StyleSheet.create({
   dropdownBtn: {
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
-    minHeight: 48,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    minHeight: 82,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
   },
   dropdownBtnText: {
     color: '#0F172A',
     flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '900',
   },
   dropdownPlaceholder: {
     color: '#94A3B8',
     flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '900',
   },
   dropdownArrow: {
     color: '#94A3B8',
@@ -1935,9 +1840,9 @@ const styles = StyleSheet.create({
   },
   dropdownSubText: {
     color: '#94A3B8',
-    fontSize: 12,
-    fontWeight: '400',
-    marginTop: 2,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 4,
   },
   // Field row (two columns side by side)
   fieldRow: {

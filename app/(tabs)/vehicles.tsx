@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { Link, router } from 'expo-router';
+import { Href, Link, router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -761,7 +761,9 @@ export default function VehiclesScreen() {
                     <View style={styles.obdSectionHeader}>
                       <Text style={styles.subSectionTitle}>최근 OBD 진단 데이터</Text>
                       <TouchableOpacity
-                        onPress={() => router.push({ pathname: '/obd', params: { vehicleId: vehicle.id, ...(activeTrip ? { tripId: activeTrip.id } : {}) } })}>
+                        onPress={() =>
+                          router.push((`/obd?vehicleId=${vehicle.id}${activeTrip ? `&tripId=${activeTrip.id}` : ''}` as unknown) as Href)
+                        }>
                         <Text style={styles.obdConnectLink}>단말기 연결 →</Text>
                       </TouchableOpacity>
                     </View>
@@ -878,10 +880,7 @@ export default function VehiclesScreen() {
                       accessibilityLabel="OBD 단말기 연결"
                       style={[styles.actionBtn, styles.obdBtn]}
                       onPress={() =>
-                        router.push({
-                          pathname: '/obd',
-                          params: { vehicleId: vehicle.id, ...(activeTrip ? { tripId: activeTrip.id } : {}) },
-                        })
+                        router.push((`/obd?vehicleId=${vehicle.id}${activeTrip ? `&tripId=${activeTrip.id}` : ''}` as unknown) as Href)
                       }>
                       <Text style={[styles.actionText, styles.obdText]}>OBD 단말기 연결</Text>
                     </TouchableOpacity>

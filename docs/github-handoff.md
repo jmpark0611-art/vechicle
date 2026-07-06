@@ -2,7 +2,7 @@
 
 ## 현재 상태
 
-현재 프로젝트 폴더 `my-sdk54-app`는 로컬 작업 폴더이며, 폴더 안에 `.git` 디렉터리가 없다. 따라서 이 파일들이 GitHub 레포지토리에 자동으로 올라가 있지는 않다.
+현재 프로젝트는 GitHub 원격과 연결되어 있다.
 
 로컬 프로젝트 경로:
 
@@ -10,59 +10,37 @@
 C:\Users\a\Documents\Codex\2026-06-23\codex-codex-2\work\my-sdk54-app
 ```
 
-사용자가 언급한 원격 정보:
+현재 원격 정보:
 
 ```text
-GitHub 레포: jmpark0611-art/mindsetup
-작업 브랜치: claude/zealous-dirac-8wmt63
-원격 컨테이너 경로: /home/user/mindsetup
+GitHub 레포: jmpark0611-art/vechicle
+현재 작업 브랜치: claude/env-permissions-session-restart-154onb
+기준 커밋: 25ef841 이후 작업
 ```
 
-## 다른 AI에게 바로 넘기는 방법
+## 현재 작업 방향
 
-GitHub를 거치지 않아도 된다면 `my-sdk54-app` 폴더를 zip으로 압축해서 전달한다.
-
-포함할 항목:
-
-```text
-app/
-assets/
-components/
-constants/
-docs/
-hooks/
-lib/
-scripts/
-app.json
-package.json
-package-lock.json
-tsconfig.json
-eslint.config.js
-.env.example
-README.md
-AGENTS.md
-CLAUDE.md
-```
-
-제외해도 되는 항목:
-
-```text
-node_modules/
-.expo/
-expo-start.out.log
-expo-start.err.log
-```
+- 과거 다크+라임 UI는 기준에서 제외한다.
+- 현재 기준은 `Vehicle system UI improvement.zip`의 라이트/딥네이비 하이파이 디자인이다.
+- 첨부 화면 기준:
+  - 역할 선택: 중앙 로고, `운행 모드`/`수송부 모드` 카드, 테마 점 UI.
+  - 운행: `차량 선택` → `운행 정보` → `경로` 카드 순서.
+  - 기록: 카드형/리스트형 토글.
+  - 차량: `차량 진단`, OBD 상태, ECU 데이터, DTC, 소모품 교환주기.
+  - 위치: 라이트 지도 패널, 운행 중 차량 리스트.
+- `25ef841`에서 `expo-linear-gradient`가 추가되었으므로 새 APK/EAS 빌드가 필요하다.
 
 ## GitHub에서 이어서 작업시키는 방법
 
-다른 AI가 `jmpark0611-art/mindsetup` 레포지토리와 `claude/zealous-dirac-8wmt63` 브랜치에서 작업해야 한다면, 먼저 `my-sdk54-app`의 현재 파일들을 해당 레포/브랜치에 커밋하고 푸시해야 한다.
+다른 AI는 아래 브랜치에서 이어서 작업해야 한다.
 
-주의:
-
-- 기존 GitHub 레포에 다른 코드가 있다면 덮어쓰기 전에 반드시 차이를 확인한다.
-- `node_modules`, `.expo`, 로그 파일은 커밋하지 않는다.
-- Supabase 운영 값은 `.env.local`로 관리하고 커밋하지 않는다.
-- 커밋 후 다른 AI에게 `README.md`, `docs/handoff.md`, `docs/operations.md`, `docs/database.md`, `docs/schema.sql`을 먼저 읽으라고 전달한다.
+```bash
+git clone https://github.com/jmpark0611-art/vechicle.git
+cd vechicle
+git checkout claude/env-permissions-session-restart-154onb
+npm.cmd install
+npm.cmd run verify
+```
 
 ## 다른 AI에게 보낼 메시지
 
@@ -70,13 +48,10 @@ expo-start.err.log
 이 프로젝트는 Expo SDK 54 기반의 차량운행시스템입니다.
 
 GitHub 레포:
-jmpark0611-art/mindsetup
+jmpark0611-art/vechicle
 
 작업 브랜치:
-claude/zealous-dirac-8wmt63
-
-원격 컨테이너 경로:
-/home/user/mindsetup
+claude/env-permissions-session-restart-154onb
 
 먼저 아래 문서를 읽고 이어서 작업해 주세요.
 - README.md
@@ -89,7 +64,6 @@ claude/zealous-dirac-8wmt63
 
 검증:
 npm.cmd run verify
-npm.cmd run health
 
 실행:
 npm.cmd run start:offline
@@ -98,15 +72,13 @@ Android Expo Go 실기기 확인:
 npm.cmd run start:lan
 
 주의:
-- 앱 이름은 차량운행시스템입니다.
-- 점검 화면은 /check 입니다.
-- /status 라우트는 만들면 안 됩니다.
+- 현재 UI 기준은 Vehicle system UI improvement.zip의 라이트/딥네이비 디자인입니다.
+- 과거 다크+라임 UI로 되돌리지 마세요.
+- 현재 브랜치의 최신 작업은 역할 선택/운행 시작 화면을 첨부 이미지 기준으로 정리하는 작업입니다.
+- 운행 시작 전 OBD 진단 카드는 제거했고, OBD는 /obd 및 차량 진단 화면에서 다룹니다.
+- /status 라우트는 만들면 안 됩니다. 점검 화면은 /check 입니다.
 - 한글 깨짐 방지를 위해 npm.cmd run verify를 통과시켜 주세요.
 - Supabase 기준 SQL은 docs/schema.sql 입니다.
-- 운영 환경에서는 /check에서 Supabase 설정 출처가 환경변수로 표시되어야 합니다.
-- 기록 화면은 기간/차량 필터와 GPS 누락 경고를 포함합니다.
-- 운행 상세 화면은 GPS 수집 구간, 평균/최고 속도, GPS 품질 안내를 포함합니다.
-- Expo 템플릿 reset-project 스크립트는 제거되어야 하며 source-check가 재생성을 막습니다.
 ```
 
 ## 다시 Codex에서 이어서 작업하는 방법
