@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDateTime, formatTripDuration, isStaleActiveTrip } from '../../lib/format';
 import { formatDbError } from '../../lib/errors';
 import { dequeueAllGpsPoints, enqueueGpsPoint, getGpsQueueSize, QueuedGpsPoint } from '../../lib/gps-queue';
+import { obdBle, ObdDevice, ObdLiveData, ObdConnectionState } from '../../lib/obd-ble';
 import { supabase } from '../../lib/supabase';
 import { withTimeout } from '../../lib/request';
 import { DriverInfo, getDriverInfo, RANKS, saveDriverInfo } from '../../lib/driver-info';
@@ -185,6 +186,10 @@ export default function DriverScreen() {
   const locationSub = useRef<LocationSubscription | null>(null);
   const latestLocationRef = useRef<TripLocation | null>(null);
   const startOdometerRef = useRef<number | null>(null);
+  const [obdState, setObdState] = useState<ObdConnectionState>('idle');
+  const [obdLiveData, setObdLiveData] = useState<ObdLiveData | null>(null);
+  const [obdDevices, setObdDevices] = useState<ObdDevice[]>([]);
+  const [obdMessage, setObdMessage] = useState<string | null>(null);
 
   const selectedVehicleText = selectedVehicle?.vehicle_number ?? '선택 안 됨';
   const speedKmh = useMemo(() => (isRunning ? getSpeedKmh(location) : 0), [isRunning, location]);
@@ -198,6 +203,27 @@ export default function DriverScreen() {
 
   useEffect(() => {
     getDriverInfo().then(setDriverInfoState);
+  }, []);
+
+  useEffect(() => {
+    obdBle.setCallbacks({
+      onStateChange: (state, message) => {
+        setObdState(state);
+        setObdMessage(message ?? null);
+        if (state === 'idle' || state === 'error' || state === 'disconnected') {
+          setObdDevices([]);
+        }
+      },
+      onDeviceFound: (device) => {
+        setObdDevices((prev) => (prev.find((d) => d.id === device.id) ? prev : [...prev, device]));
+      },
+      onData: (data) => {
+        setObdLiveData(data);
+      },
+    });
+    return () => {
+      void obdBle.disconnect();
+    };
   }, []);
 
   const updateDriverInfo = useCallback((partial: Partial<DriverInfo>) => {
@@ -835,6 +861,18 @@ export default function DriverScreen() {
                 {driverInfo.unit ? ` · ${driverInfo.unit}` : ''}
               </Text>
             )}
+            {(operatorName || userName) && (
+              <Text style={styles.heroDriverText}>
+                {[operatorName && `운용: ${operatorName}`, userName && `사용: ${userName}`].filter(Boolean).join(' · ')}
+              </Text>
+            )}
+            {obdLiveData && obdState === 'connected' && (
+              <View style={styles.heroObdRow}>
+                <Text style={styles.heroObdItem}>⚡ {obdLiveData.batteryVoltage ?? '-'}V</Text>
+                <Text style={styles.heroObdItem}>⛽ {obdLiveData.fuelLevelPercent ?? '-'}%</Text>
+                <Text style={styles.heroObdItem}>🌡 {obdLiveData.coolantTempC ?? '-'}°C</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.gpsCard}>
@@ -1043,6 +1081,59 @@ export default function DriverScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* OBD 출발 전 점검 */}
+          <View style={styles.obdCard}>
+            <View style={styles.obdCardHeader}>
+              <Text style={styles.sectionTitle}>OBD 진단</Text>
+              {(obdState === 'idle' || obdState === 'disconnected' || obdState === 'error') && (
+                <TouchableOpacity style={styles.obdScanBtn} onPress={() => { setObdDevices([]); obdBle.startScan(); }}>
+                  <Text style={styles.obdScanBtnText}>스캔</Text>
+                </TouchableOpacity>
+              )}
+              {obdState === 'scanning' && (
+                <TouchableOpacity style={styles.obdStopBtn} onPress={() => obdBle.stopScan()}>
+                  <Text style={styles.obdStopBtnText}>중지</Text>
+                </TouchableOpacity>
+              )}
+              {obdState === 'connected' && (
+                <TouchableOpacity style={styles.obdStopBtn} onPress={() => { void obdBle.disconnect(); setObdLiveData(null); }}>
+                  <Text style={styles.obdStopBtnText}>연결 해제</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {obdMessage ? <Text style={styles.obdStatusMsg}>{obdMessage}</Text> : null}
+            {obdDevices.length > 0 && obdState !== 'connected' && (
+              <View style={styles.obdDeviceList}>
+                {obdDevices.map((device) => (
+                  <TouchableOpacity
+                    key={device.id}
+                    style={styles.obdDeviceItem}
+                    onPress={() => void obdBle.connect(device.id)}
+                    disabled={obdState === 'connecting' || obdState === 'initializing'}>
+                    <Text style={styles.obdDeviceName}>{device.name}</Text>
+                    {device.rssi != null && <Text style={styles.obdDeviceRssi}>{device.rssi} dBm</Text>}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {obdLiveData && obdState === 'connected' && (
+              <View style={styles.obdDataGrid}>
+                <View style={styles.obdDataItem}>
+                  <Text style={styles.obdDataLabel}>배터리</Text>
+                  <Text style={styles.obdDataValue}>{obdLiveData.batteryVoltage ?? '-'} V</Text>
+                </View>
+                <View style={styles.obdDataItem}>
+                  <Text style={styles.obdDataLabel}>유류</Text>
+                  <Text style={styles.obdDataValue}>{obdLiveData.fuelLevelPercent ?? '-'}%</Text>
+                </View>
+                <View style={styles.obdDataItem}>
+                  <Text style={styles.obdDataLabel}>냉각수</Text>
+                  <Text style={styles.obdDataValue}>{obdLiveData.coolantTempC ?? '-'}°C</Text>
+                </View>
+              </View>
+            )}
+          </View>
         </>
       )}
 
@@ -1051,13 +1142,17 @@ export default function DriverScreen() {
           accessibilityLabel="운행 출발"
           style={[
             styles.startBtn,
-            (!selectedVehicle || isSubmitting || isLoadingDashboard) && styles.disabledBtn,
+            (!selectedVehicle || !operatorName.trim() || !userName.trim() || isSubmitting || isLoadingDashboard) && styles.disabledBtn,
           ]}
           onPress={handleStart}
-          disabled={!selectedVehicle || isSubmitting || isLoadingDashboard}>
+          disabled={!selectedVehicle || !operatorName.trim() || !userName.trim() || isSubmitting || isLoadingDashboard}>
           <Text style={styles.btnText}>{isSubmitting ? '처리 중...' : '출발'}</Text>
         </TouchableOpacity>
-      ) : (
+      )}
+      {!isRunning && (!operatorName.trim() || !userName.trim()) && (
+        <Text style={styles.startHint}>운용자·사용자 성명을 입력하면 출발 가능합니다.</Text>
+      )}
+      {!isRunning ? null : (
         <View style={styles.runningActionRow}>
           {tripId && (
             <Link
@@ -1176,9 +1271,9 @@ export default function DriverScreen() {
                       <Text style={[styles.modalItemText, isActive && styles.modalItemTextActive]}>
                         {vehicle.vehicle_number}
                       </Text>
-                      {vehicle.equipment_name ? (
-                        <Text style={styles.modalItemSub}>{vehicle.equipment_name}{vehicle.fuel_type ? ` · ${vehicle.fuel_type}` : ''}</Text>
-                      ) : null}
+                      <Text style={styles.modalItemSub}>
+                        {[vehicle.equipment_name, vehicle.equipment_number, vehicle.fuel_type, vehicle.current_odometer != null ? `${vehicle.current_odometer.toLocaleString()} km` : null].filter(Boolean).join(' · ')}
+                      </Text>
                     </View>
                     {isActive && <Text style={styles.modalCheckmark}>✓</Text>}
                   </TouchableOpacity>
@@ -1854,5 +1949,119 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginLeft: 10,
+  },
+  // OBD panel
+  obdCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 14,
+    padding: 20,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  obdCardHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  obdScanBtn: {
+    backgroundColor: '#2563EB',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+  },
+  obdScanBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  obdStopBtn: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+  },
+  obdStopBtnText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  obdStatusMsg: {
+    color: '#64748B',
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  obdDeviceList: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  obdDeviceItem: {
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  obdDeviceName: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  obdDeviceRssi: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  obdDataGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  obdDataItem: {
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderColor: '#86EFAC',
+    borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    paddingVertical: 12,
+  },
+  obdDataLabel: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  obdDataValue: {
+    color: '#059669',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  heroObdRow: {
+    flexDirection: 'row',
+    gap: 16,
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  heroObdItem: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  startHint: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontWeight: '400',
+    marginTop: 10,
+    textAlign: 'center',
   },
 });

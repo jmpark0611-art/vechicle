@@ -98,12 +98,12 @@ export default function TabLayout() {
         }}
       />
 
-      {/* ── 점검 탭 — 테스트 기간 동안 비노출 ── */}
+      {/* ── 점검 탭 — 수송부 모드 전용 ── */}
       <Tabs.Screen
         name="check"
         options={{
           title: '점검',
-          href: null,
+          href: isCommander ? undefined : null,
           tabBarIcon: ({ color }) => <TabIcon name="inspect" size={26} color={color} />,
         }}
       />
