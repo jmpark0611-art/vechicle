@@ -39,6 +39,13 @@ type Trip = {
   start_time: string | null;
   end_time: string | null;
   status: string | null;
+  purpose: string | null;
+  operator_name: string | null;
+  user_name: string | null;
+  daily_km: number | null;
+  total_km: number | null;
+  fuel_station: string | null;
+  fuel_added_liters: number | null;
 };
 
 type GpsPoint = {
@@ -195,13 +202,18 @@ export default function TripHistoryScreen() {
     const header = [
       '차량번호',
       '상태',
-      '출발지',
-      '목적지',
+      '행선지',
+      '운행 목적',
       '출발',
-      '종료',
+      '도착',
       '소요',
+      '일일 주행km',
+      '누적km',
+      '주입 부대',
+      '보충량(L)',
+      '운용자',
+      '사용자',
       'GPS수',
-      '최근GPS',
     ];
     const rows = filteredTrips.map((trip) => {
       const gpsSummary = gpsSummaryByTripId.get(trip.id);
@@ -210,13 +222,18 @@ export default function TripHistoryScreen() {
       return [
         vehicleNumber,
         getTripStatusText(trip.status),
-        trip.start_place ?? '',
-        trip.end_place ?? '',
+        `${trip.start_place ?? ''} → ${trip.end_place ?? ''}`,
+        trip.purpose ?? '',
         formatDateTime(trip.start_time),
         formatDateTime(trip.end_time),
         formatTripDuration(trip.start_time, trip.end_time),
+        trip.daily_km ?? '',
+        trip.total_km ?? '',
+        trip.fuel_station ?? '',
+        trip.fuel_added_liters ?? '',
+        trip.operator_name ?? '',
+        trip.user_name ?? '',
         gpsSummary?.count ?? 0,
-        formatDateTime(gpsSummary?.latestRecordedAt ?? null),
       ];
     });
     const csv = [header, ...rows]
@@ -309,7 +326,7 @@ export default function TripHistoryScreen() {
         withTimeout(
           supabase
             .from('trips')
-            .select('id, vehicle_id, start_place, end_place, start_time, end_time, status')
+            .select('id, vehicle_id, start_place, end_place, start_time, end_time, status, purpose, operator_name, user_name, daily_km, total_km, fuel_station, fuel_added_liters')
             .order('start_time', { ascending: false })
             .range(0, nextLimit),
           '운행 기록'
@@ -671,30 +688,46 @@ export default function TripHistoryScreen() {
                     <Text style={styles.metaValue}>{formatDateTime(trip.start_time)}</Text>
                   </View>
                   <View style={styles.metaRow}>
-                    <Text style={styles.metaLabel}>종료</Text>
+                    <Text style={styles.metaLabel}>도착</Text>
                     <Text style={styles.metaValue}>{formatDateTime(trip.end_time)}</Text>
                   </View>
                   <View style={styles.metaRow}>
                     <Text style={styles.metaLabel}>소요</Text>
-                    <Text style={styles.metaValue}>
-                      {formatTripDuration(trip.start_time, trip.end_time)}
-                    </Text>
+                    <Text style={styles.metaValue}>{formatTripDuration(trip.start_time, trip.end_time)}</Text>
                   </View>
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>운행 목적</Text>
+                    <Text style={styles.metaValue}>{trip.purpose ?? '-'}</Text>
+                  </View>
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>운용자</Text>
+                    <Text style={styles.metaValue}>{trip.operator_name ?? '-'}</Text>
+                  </View>
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>사용자</Text>
+                    <Text style={styles.metaValue}>{trip.user_name ?? '-'}</Text>
+                  </View>
+                  {(trip.daily_km !== null || trip.total_km !== null) && (
+                    <View style={styles.metaRow}>
+                      <Text style={styles.metaLabel}>주행거리</Text>
+                      <Text style={styles.metaValue}>
+                        일일 {trip.daily_km ?? '-'}km · 누적 {trip.total_km ?? '-'}km
+                      </Text>
+                    </View>
+                  )}
+                  {(trip.fuel_station || trip.fuel_added_liters !== null) && (
+                    <View style={styles.metaRow}>
+                      <Text style={styles.metaLabel}>유류</Text>
+                      <Text style={styles.metaValue}>
+                        {trip.fuel_station ?? '-'} {trip.fuel_added_liters !== null ? `${trip.fuel_added_liters}L` : ''}
+                      </Text>
+                    </View>
+                  )}
                   {isStale && (
                     <View style={styles.staleBox}>
                       <Text style={styles.staleText}>8시간 이상 진행 중인 운행입니다. 실제 운행이 끝났다면 종료 화면에서 마감해 주세요.</Text>
                     </View>
                   )}
-                  <View style={styles.metaRow}>
-                    <Text style={styles.metaLabel}>GPS</Text>
-                    <Text
-                      style={[
-                        styles.metaValue,
-                        trip.status === 'completed' && !gpsSummary?.count && styles.warningMetaValue,
-                      ]}>
-                      {gpsSummary?.count ?? 0}개 수집
-                    </Text>
-                  </View>
                   <View style={styles.cardActions}>
                     <Link
                       href={{

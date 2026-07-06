@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   AppState,
   Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -25,6 +26,9 @@ import { DriverInfo, getDriverInfo, RANKS, saveDriverInfo } from '../../lib/driv
 type Vehicle = {
   id: string;
   vehicle_number: string;
+  equipment_name: string | null;
+  equipment_number: string | null;
+  fuel_type: string | null;
 };
 
 type ActiveTrip = {
@@ -167,6 +171,15 @@ export default function DriverScreen() {
   const [listeningTarget, setListeningTarget] = useState<VoiceTarget | null>(null);
   const [, setMinuteTick] = useState(0);
   const [driverInfo, setDriverInfoState] = useState<DriverInfo>({ unit: '', rank: '', name: '' });
+  const [purpose, setPurpose] = useState('');
+  const [operatorName, setOperatorName] = useState('');
+  const [userName, setUserName] = useState('');
+  const [dailyKm, setDailyKm] = useState('');
+  const [totalKm, setTotalKm] = useState('');
+  const [fuelStation, setFuelStation] = useState('');
+  const [fuelAddedLiters, setFuelAddedLiters] = useState('');
+  const [showRankModal, setShowRankModal] = useState(false);
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
   const locationSub = useRef<LocationSubscription | null>(null);
   const latestLocationRef = useRef<TripLocation | null>(null);
 
@@ -343,7 +356,7 @@ export default function DriverScreen() {
         withTimeout(
           supabase
             .from('vehicles')
-            .select('id, vehicle_number')
+            .select('id, vehicle_number, equipment_name, equipment_number, fuel_type')
             .order('vehicle_number', { ascending: true }),
           '차량 목록'
         ),
@@ -602,6 +615,13 @@ export default function DriverScreen() {
             start_lat: loc.coords.latitude,
             start_lng: loc.coords.longitude,
             status: 'in_progress',
+            purpose: purpose.trim() || null,
+            operator_name: operatorName.trim() || null,
+            user_name: userName.trim() || null,
+            daily_km: dailyKm.trim() ? parseFloat(dailyKm) : null,
+            total_km: totalKm.trim() ? parseFloat(totalKm) : null,
+            fuel_station: fuelStation.trim() || null,
+            fuel_added_liters: fuelAddedLiters.trim() ? parseFloat(fuelAddedLiters) : null,
           })
           .select('id')
           .single(),
@@ -824,20 +844,12 @@ export default function DriverScreen() {
             </View>
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>계급</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rankScroll}>
-                <View style={styles.rankRow}>
-                  {RANKS.map((rank) => (
-                    <TouchableOpacity
-                      key={rank}
-                      style={[styles.rankBtn, driverInfo.rank === rank && styles.rankBtnActive]}
-                      onPress={() => updateDriverInfo({ rank })}>
-                      <Text style={[styles.rankText, driverInfo.rank === rank && styles.rankTextActive]}>
-                        {rank}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
+              <TouchableOpacity style={styles.dropdownBtn} onPress={() => setShowRankModal(true)}>
+                <Text style={driverInfo.rank ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
+                  {driverInfo.rank || '계급 선택'}
+                </Text>
+                <Text style={styles.dropdownArrow}>▾</Text>
+              </TouchableOpacity>
             </View>
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>성명</Text>
@@ -901,6 +913,87 @@ export default function DriverScreen() {
             )}
           </View>
 
+          <View style={styles.driverCard}>
+            <Text style={styles.sectionTitle}>운행 정보</Text>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>운행 목적</Text>
+              <TextInput
+                style={styles.routeInput}
+                value={purpose}
+                onChangeText={setPurpose}
+                placeholder="운행 목적 입력"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>운용자</Text>
+              <TextInput
+                style={styles.routeInput}
+                value={operatorName}
+                onChangeText={setOperatorName}
+                placeholder="운용자 성명"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>사용자</Text>
+              <TextInput
+                style={styles.routeInput}
+                value={userName}
+                onChangeText={setUserName}
+                placeholder="사용자 성명"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+            <View style={styles.fieldRow}>
+              <View style={[styles.fieldGroup, { flex: 1, marginRight: 8 }]}>
+                <Text style={styles.fieldLabel}>일일 주행 km</Text>
+                <TextInput
+                  style={styles.routeInput}
+                  value={dailyKm}
+                  onChangeText={setDailyKm}
+                  placeholder="0"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.fieldLabel}>누적 km</Text>
+                <TextInput
+                  style={styles.routeInput}
+                  value={totalKm}
+                  onChangeText={setTotalKm}
+                  placeholder="0"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+            </View>
+            <View style={styles.fieldRow}>
+              <View style={[styles.fieldGroup, { flex: 1, marginRight: 8 }]}>
+                <Text style={styles.fieldLabel}>주입 부대</Text>
+                <TextInput
+                  style={styles.routeInput}
+                  value={fuelStation}
+                  onChangeText={setFuelStation}
+                  placeholder="유류 보급 부대"
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.fieldLabel}>보충량 (L)</Text>
+                <TextInput
+                  style={styles.routeInput}
+                  value={fuelAddedLiters}
+                  onChangeText={setFuelAddedLiters}
+                  placeholder="0"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+            </View>
+          </View>
+
           <View style={styles.vehicleSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>차량 선택</Text>
@@ -925,21 +1018,17 @@ export default function DriverScreen() {
             )}
 
             {vehicles.length > 0 && (
-              <View style={styles.selectBox}>
-                {vehicles.map((vehicle) => {
-                  const isSelected = selectedVehicle?.id === vehicle.id;
-                  return (
-                    <TouchableOpacity
-                      key={vehicle.id}
-                      style={[styles.vehicleBtn, isSelected && styles.selectedBtn]}
-                      onPress={() => setSelectedVehicle(vehicle)}>
-                      <Text style={[styles.vehicleTxt, isSelected && styles.selectedVehicleTxt]}>
-                        {vehicle.vehicle_number}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <TouchableOpacity style={styles.dropdownBtn} onPress={() => setShowVehicleModal(true)}>
+                <View style={{ flex: 1 }}>
+                  <Text style={selectedVehicle ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
+                    {selectedVehicle ? selectedVehicle.vehicle_number : '차량 선택'}
+                  </Text>
+                  {selectedVehicle?.equipment_name ? (
+                    <Text style={styles.dropdownSubText}>{selectedVehicle.equipment_name}</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.dropdownArrow}>▾</Text>
+              </TouchableOpacity>
             )}
           </View>
         </>
@@ -979,6 +1068,60 @@ export default function DriverScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Rank picker modal */}
+      <Modal visible={showRankModal} transparent animationType="slide" onRequestClose={() => setShowRankModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowRankModal(false)}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>계급 선택</Text>
+            <ScrollView style={styles.modalScroll}>
+              <View style={styles.rankGrid}>
+                {RANKS.map((rank) => {
+                  const isActive = driverInfo.rank === rank;
+                  return (
+                    <TouchableOpacity
+                      key={rank}
+                      style={[styles.rankGridBtn, isActive && styles.rankGridBtnActive]}
+                      onPress={() => { updateDriverInfo({ rank }); setShowRankModal(false); }}>
+                      <Text style={[styles.rankGridText, isActive && styles.rankGridTextActive]}>{rank}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Vehicle picker modal */}
+      <Modal visible={showVehicleModal} transparent animationType="slide" onRequestClose={() => setShowVehicleModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowVehicleModal(false)}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>차량 선택</Text>
+            <ScrollView style={styles.modalScroll}>
+              {vehicles.map((vehicle) => {
+                const isActive = selectedVehicle?.id === vehicle.id;
+                return (
+                  <TouchableOpacity
+                    key={vehicle.id}
+                    style={[styles.modalItem, isActive && styles.modalItemActive]}
+                    onPress={() => { setSelectedVehicle(vehicle); setShowVehicleModal(false); }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.modalItemText, isActive && styles.modalItemTextActive]}>
+                        {vehicle.vehicle_number}
+                      </Text>
+                      {vehicle.equipment_name ? (
+                        <Text style={styles.modalItemSub}>{vehicle.equipment_name}{vehicle.fuel_type ? ` · ${vehicle.fuel_type}` : ''}</Text>
+                      ) : null}
+                    </View>
+                    {isActive && <Text style={styles.modalCheckmark}>✓</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 }
@@ -1497,5 +1640,128 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     marginTop: 6,
+  },
+  // Dropdown button
+  dropdownBtn: {
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 48,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  dropdownBtnText: {
+    color: '#0F172A',
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  dropdownPlaceholder: {
+    color: '#94A3B8',
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  dropdownArrow: {
+    color: '#94A3B8',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  dropdownSubText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '400',
+    marginTop: 2,
+  },
+  // Field row (two columns side by side)
+  fieldRow: {
+    flexDirection: 'row',
+    marginBottom: 0,
+  },
+  // Modal overlay + sheet
+  modalOverlay: {
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    paddingBottom: 32,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+  },
+  modalTitle: {
+    color: '#0F172A',
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalScroll: {
+    flexGrow: 0,
+  },
+  // Rank grid inside modal
+  rankGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingBottom: 8,
+  },
+  rankGridBtn: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  rankGridBtnActive: {
+    backgroundColor: '#2563EB',
+  },
+  rankGridText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  rankGridTextActive: {
+    color: '#FFFFFF',
+  },
+  // Vehicle list items inside modal
+  modalItem: {
+    alignItems: 'center',
+    borderBottomColor: '#F1F5F9',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    paddingVertical: 14,
+  },
+  modalItemActive: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 10,
+    marginHorizontal: -8,
+    paddingHorizontal: 8,
+  },
+  modalItemText: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalItemTextActive: {
+    color: '#2563EB',
+  },
+  modalItemSub: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontWeight: '400',
+    marginTop: 2,
+  },
+  modalCheckmark: {
+    color: '#2563EB',
+    fontSize: 18,
+    fontWeight: '700',
+    marginLeft: 10,
   },
 });

@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   RefreshControl,
   ScrollView,
   TextInput,
@@ -22,6 +23,9 @@ import { withTimeout } from '../../lib/request';
 type Vehicle = {
   id: string;
   vehicle_number: string;
+  equipment_name: string | null;
+  equipment_number: string | null;
+  fuel_type: string | null;
 };
 
 type Trip = {
@@ -59,6 +63,11 @@ export default function VehiclesScreen() {
   const [statusFilter, setStatusFilter] = useState<VehicleStatusFilter>('all');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedTabVehicleId, setSelectedTabVehicleId] = useState<string | null>(null);
+  const [newEquipmentName, setNewEquipmentName] = useState('');
+  const [newEquipmentNumber, setNewEquipmentNumber] = useState('');
+  const [newFuelType, setNewFuelType] = useState('');
+  const [showFuelTypeModal, setShowFuelTypeModal] = useState(false);
+  const [showVehicleSelectorModal, setShowVehicleSelectorModal] = useState(false);
 
   const activeTripsByVehicleId = useMemo(() => {
     const map = new Map<string, Trip>();
@@ -157,7 +166,7 @@ export default function VehiclesScreen() {
     try {
       const [vehiclesResult, tripsResult] = await Promise.all([
         withTimeout(
-          supabase.from('vehicles').select('id, vehicle_number').order('vehicle_number'),
+          supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number, fuel_type').order('vehicle_number'),
           '차량 목록'
         ),
         withTimeout(
@@ -264,7 +273,12 @@ export default function VehiclesScreen() {
 
     try {
       const { error } = await withTimeout(
-        supabase.from('vehicles').insert({ vehicle_number: vehicleNumber }),
+        supabase.from('vehicles').insert({
+          vehicle_number: vehicleNumber,
+          equipment_name: newEquipmentName.trim() || null,
+          equipment_number: newEquipmentNumber.trim() || null,
+          fuel_type: newFuelType.trim() || null,
+        }),
         '차량 등록'
       );
 
@@ -274,13 +288,16 @@ export default function VehiclesScreen() {
       }
 
       setNewVehicleNumber('');
+      setNewEquipmentName('');
+      setNewEquipmentNumber('');
+      setNewFuelType('');
       await loadVehicles(true);
     } catch (error) {
       setErrorMessage(formatDbError(error, '차량 등록 중 오류가 발생했습니다.'));
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, loadVehicles, newVehicleNumber, vehicles]);
+  }, [isSaving, loadVehicles, newVehicleNumber, newEquipmentName, newEquipmentNumber, newFuelType, vehicles]);
 
   const startEditVehicle = useCallback((vehicle: Vehicle) => {
     setEditingVehicleId(vehicle.id);
@@ -466,22 +483,42 @@ export default function VehiclesScreen() {
 
       <View style={styles.managePanel}>
         <Text style={styles.sectionTitle}>차량 등록</Text>
-        <View style={styles.formRow}>
+        <TextInput
+          style={[styles.textInput, { marginBottom: 10 }]}
+          value={newVehicleNumber}
+          onChangeText={setNewVehicleNumber}
+          placeholder="차량번호 입력 (필수)"
+          placeholderTextColor="#94A3B8"
+        />
+        <View style={styles.formRowTwo}>
           <TextInput
-            style={styles.textInput}
-            value={newVehicleNumber}
-            onChangeText={setNewVehicleNumber}
-            placeholder="차량번호 입력"
+            style={[styles.textInput, { flex: 1, marginRight: 8 }]}
+            value={newEquipmentName}
+            onChangeText={setNewEquipmentName}
+            placeholder="장비명"
             placeholderTextColor="#94A3B8"
           />
-          <TouchableOpacity
-            accessibilityLabel="차량 등록"
-            style={[styles.compactBtn, (!newVehicleNumber.trim() || isSaving) && styles.disabledBtn]}
-            onPress={handleCreateVehicle}
-            disabled={!newVehicleNumber.trim() || isSaving}>
-            <Text style={styles.compactBtnText}>{isSaving ? '저장 중' : '등록'}</Text>
-          </TouchableOpacity>
+          <TextInput
+            style={[styles.textInput, { flex: 1 }]}
+            value={newEquipmentNumber}
+            onChangeText={setNewEquipmentNumber}
+            placeholder="장비 호수"
+            placeholderTextColor="#94A3B8"
+          />
         </View>
+        <TouchableOpacity style={[styles.dropdownBtn, { marginBottom: 10 }]} onPress={() => setShowFuelTypeModal(true)}>
+          <Text style={newFuelType ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
+            {newFuelType || '사용 유류 선택'}
+          </Text>
+          <Text style={styles.dropdownArrow}>▾</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityLabel="차량 등록"
+          style={[styles.compactBtn, styles.fullWidthBtn, (!newVehicleNumber.trim() || isSaving) && styles.disabledBtn]}
+          onPress={handleCreateVehicle}
+          disabled={!newVehicleNumber.trim() || isSaving}>
+          <Text style={styles.compactBtnText}>{isSaving ? '저장 중' : '등록'}</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.searchPanel}>
@@ -548,32 +585,24 @@ export default function VehiclesScreen() {
       )}
 
       {filteredVehicles.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.tabsScroll}
-          contentContainerStyle={styles.tabsContent}>
-          {filteredVehicles.map((vehicle) => {
-            const isSelected = selectedTabVehicle?.id === vehicle.id;
-            const tabActiveTrip = activeTripsByVehicleId.get(vehicle.id) ?? null;
-            const isTabStale = isStaleActiveTrip(tabActiveTrip?.start_time ?? null);
-            return (
-              <TouchableOpacity
-                key={vehicle.id}
-                style={[styles.vehicleTab, isSelected && styles.vehicleTabActive, isTabStale && styles.vehicleTabStale]}
-                onPress={() => setSelectedTabVehicleId(vehicle.id)}>
-                <Text
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.8}
-                  numberOfLines={1}
-                  style={[styles.vehicleTabText, isSelected && styles.vehicleTabTextActive]}>
-                  {vehicle.vehicle_number}
-                </Text>
-                {tabActiveTrip && <View style={[styles.tabDot, isTabStale && styles.tabDotStale]} />}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        <TouchableOpacity style={styles.vehicleDropdownBtn} onPress={() => setShowVehicleSelectorModal(true)}>
+          <View style={{ flex: 1 }}>
+            {selectedTabVehicle ? (
+              <>
+                <Text style={styles.vehicleDropdownText}>{selectedTabVehicle.vehicle_number}</Text>
+                {selectedTabVehicle.equipment_name ? (
+                  <Text style={styles.vehicleDropdownSub}>{selectedTabVehicle.equipment_name}</Text>
+                ) : null}
+              </>
+            ) : (
+              <Text style={styles.vehicleDropdownPlaceholder}>차량 선택</Text>
+            )}
+          </View>
+          {selectedTabVehicle && activeTripsByVehicleId.has(selectedTabVehicle.id) && (
+            <View style={[styles.tabDotInline, isStaleActiveTrip(activeTripsByVehicleId.get(selectedTabVehicle.id)?.start_time ?? null) && styles.tabDotStaleInline]} />
+          )}
+          <Text style={styles.dropdownArrow}>▾</Text>
+        </TouchableOpacity>
       )}
 
       {selectedTabVehicle && selectedVehicleDetail && (
@@ -601,6 +630,9 @@ export default function VehiclesScreen() {
                 </Text>
               </View>
 
+              {vehicle.equipment_name ? <InfoRow label="장비명" value={vehicle.equipment_name} /> : null}
+              {vehicle.equipment_number ? <InfoRow label="장비 호수" value={vehicle.equipment_number} /> : null}
+              {vehicle.fuel_type ? <InfoRow label="사용 유류" value={vehicle.fuel_type} /> : null}
               <InfoRow label="전체 운행" value={`${counts.total}건`} />
               <InfoRow label="최근 출발" value={formatDateTime(latestTrip?.start_time ?? null)} />
               <InfoRow label="최근 종료" value={formatDateTime(latestTrip?.end_time ?? null)} />
@@ -729,6 +761,56 @@ export default function VehiclesScreen() {
           );
         })({ vehicle: selectedTabVehicle, ...selectedVehicleDetail })
       )}
+      {/* Fuel type modal */}
+      <Modal visible={showFuelTypeModal} transparent animationType="slide" onRequestClose={() => setShowFuelTypeModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowFuelTypeModal(false)}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>사용 유류 선택</Text>
+            {['경유', '휘발유', '등유', '혼합유', 'JP-8'].map((fuel) => (
+              <TouchableOpacity
+                key={fuel}
+                style={[styles.modalItem, newFuelType === fuel && styles.modalItemActive]}
+                onPress={() => { setNewFuelType(fuel); setShowFuelTypeModal(false); }}>
+                <Text style={[styles.modalItemText, newFuelType === fuel && styles.modalItemTextActive]}>{fuel}</Text>
+                {newFuelType === fuel && <Text style={styles.modalCheckmark}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Vehicle selector modal */}
+      <Modal visible={showVehicleSelectorModal} transparent animationType="slide" onRequestClose={() => setShowVehicleSelectorModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowVehicleSelectorModal(false)}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>차량 선택</Text>
+            <ScrollView style={styles.modalScroll}>
+              {filteredVehicles.map((vehicle) => {
+                const isSelected = selectedTabVehicle?.id === vehicle.id;
+                const tabActiveTrip = activeTripsByVehicleId.get(vehicle.id) ?? null;
+                const tabIsStale = isStaleActiveTrip(tabActiveTrip?.start_time ?? null);
+                return (
+                  <TouchableOpacity
+                    key={vehicle.id}
+                    style={[styles.modalItem, isSelected && styles.modalItemActive]}
+                    onPress={() => { setSelectedTabVehicleId(vehicle.id); setShowVehicleSelectorModal(false); }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.modalItemText, isSelected && styles.modalItemTextActive]}>
+                        {vehicle.vehicle_number}
+                        {tabActiveTrip ? (tabIsStale ? ' ⚠️ 운행 중' : ' 🟢 운행 중') : ''}
+                      </Text>
+                      {vehicle.equipment_name ? (
+                        <Text style={styles.modalItemSub}>{vehicle.equipment_name}{vehicle.fuel_type ? ` · ${vehicle.fuel_type}` : ''}</Text>
+                      ) : null}
+                    </View>
+                    {isSelected && <Text style={styles.modalCheckmark}>✓</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 }
@@ -1279,5 +1361,146 @@ const styles = StyleSheet.create({
     color: '#B45309',
     fontSize: 14,
     fontWeight: '500',
+  },
+  // Dropdown button for vehicle selector
+  vehicleDropdownBtn: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: 14,
+    minHeight: 56,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  vehicleDropdownText: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  vehicleDropdownSub: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontWeight: '400',
+    marginTop: 2,
+  },
+  vehicleDropdownPlaceholder: {
+    color: '#94A3B8',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  tabDotInline: {
+    backgroundColor: '#22C55E',
+    borderRadius: 5,
+    height: 10,
+    marginRight: 8,
+    width: 10,
+  },
+  tabDotStaleInline: {
+    backgroundColor: '#F59E0B',
+  },
+  dropdownArrow: {
+    color: '#94A3B8',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  // Registration form extras
+  formRowTwo: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  dropdownBtn: {
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 48,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  dropdownBtnText: {
+    color: '#0F172A',
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  dropdownPlaceholder: {
+    color: '#94A3B8',
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  fullWidthBtn: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  // Modal styles
+  modalOverlay: {
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    paddingBottom: 32,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+  },
+  modalTitle: {
+    color: '#0F172A',
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalScroll: {
+    flexGrow: 0,
+  },
+  modalItem: {
+    alignItems: 'center',
+    borderBottomColor: '#F1F5F9',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    paddingVertical: 14,
+  },
+  modalItemActive: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 10,
+    marginHorizontal: -8,
+    paddingHorizontal: 8,
+  },
+  modalItemText: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalItemTextActive: {
+    color: '#2563EB',
+  },
+  modalItemSub: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontWeight: '400',
+    marginTop: 2,
+  },
+  modalCheckmark: {
+    color: '#2563EB',
+    fontSize: 18,
+    fontWeight: '700',
+    marginLeft: 10,
   },
 });
