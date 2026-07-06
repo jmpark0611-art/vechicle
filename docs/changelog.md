@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-07 APK 다운로드 상태 갱신
+
+- 최신 release APK GitHub Actions run `28795041514`가 성공 완료됐다.
+- 생성된 artifact는 `vehicle-system-release-apk`이며 artifact ID는 `8110995186`이다.
+- 사용자가 기존 debug APK를 설치했을 때 스플래시 화면에 멈췄으므로, 이후 테스트는 반드시 release APK로 진행해야 한다.
+- 다운로드 기준 페이지는 `https://github.com/jmpark0611-art/vechicle/actions/runs/28795041514`이다.
+- 모바일에서 Artifacts가 보이지 않으면 데스크톱 사이트 모드 또는 artifact 직접 경로 `https://github.com/jmpark0611-art/vechicle/actions/runs/28795041514/artifacts/8110995186`를 사용한다.
+
 ## 2026-07-06 APK 배포 정리
 
 - EAS Android 빌드는 Expo 무료 플랜 월간 Android 빌드 한도 초과로 실패했다.

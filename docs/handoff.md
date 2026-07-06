@@ -1,5 +1,21 @@
 # 인수인계 메모
 
+## 2026-07-07 최신 APK 다운로드 상태
+
+- 최신 release APK 빌드는 성공 완료됐다.
+- GitHub Actions run: `28795041514`
+  - URL: `https://github.com/jmpark0611-art/vechicle/actions/runs/28795041514`
+  - head SHA: `bb411cc3913d506b647a47a7fe9fc0e1d06572b3`
+  - artifact ID: `8110995186`
+  - artifact name: `vehicle-system-release-apk`
+  - artifact size: 약 40.7MB
+  - artifact expires: `2026-10-04T13:26:58Z`
+- 설치 테스트 시 반드시 기존 debug APK 앱을 삭제한 뒤 `vehicle-system-release-apk` 안의 `.apk`를 설치한다.
+- 사용자가 모바일 GitHub에서 Artifacts가 안 보인다고 했다. 이 경우 Actions run 페이지를 Chrome/브라우저에서 데스크톱 사이트로 열거나, GitHub 로그인 상태에서 artifact URL을 직접 열게 안내한다.
+- GitHub artifact 직접 경로: `https://github.com/jmpark0611-art/vechicle/actions/runs/28795041514/artifacts/8110995186`
+- 주의: Codex/GitHub MCP가 생성하는 `sdmnt...` 직접 다운로드 URL은 임시 링크라 만료될 수 있다. 만료되면 artifact ID `8110995186`로 다시 다운로드 링크를 생성해야 한다.
+- `25ef841` LinearGradient 커밋은 현재 최신 브랜치 히스토리에 포함되어 있다. 따라서 `bb411cc` 기반 release APK에는 LinearGradient 히어로 카드 변경이 포함된다.
+
 ## 2026-07-06 APK / 스플래시 이슈 인수인계
 
 - 현재 작업 브랜치: `claude/env-permissions-session-restart-154onb`
