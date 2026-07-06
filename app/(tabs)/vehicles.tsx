@@ -70,6 +70,7 @@ export default function VehiclesScreen() {
   const [newEquipmentName, setNewEquipmentName] = useState('');
   const [newEquipmentNumber, setNewEquipmentNumber] = useState('');
   const [newFuelType, setNewFuelType] = useState('');
+  const [newInitialOdometer, setNewInitialOdometer] = useState('');
   const [showFuelTypeModal, setShowFuelTypeModal] = useState(false);
   const [showVehicleSelectorModal, setShowVehicleSelectorModal] = useState(false);
 
@@ -303,12 +304,14 @@ export default function VehiclesScreen() {
     setErrorMessage(null);
 
     try {
+      const parsedOdometer = newInitialOdometer.trim() ? parseFloat(newInitialOdometer.replace(/,/g, '')) : null;
       const { error } = await withTimeout(
         supabase.from('vehicles').insert({
           vehicle_number: vehicleNumber,
           equipment_name: newEquipmentName.trim() || null,
           equipment_number: newEquipmentNumber.trim() || null,
           fuel_type: newFuelType.trim() || null,
+          current_odometer: !isNaN(parsedOdometer as number) ? parsedOdometer : null,
         }),
         '차량 등록'
       );
@@ -322,6 +325,7 @@ export default function VehiclesScreen() {
       setNewEquipmentName('');
       setNewEquipmentNumber('');
       setNewFuelType('');
+      setNewInitialOdometer('');
       await loadVehicles(true);
     } catch (error) {
       setErrorMessage(formatDbError(error, '차량 등록 중 오류가 발생했습니다.'));
@@ -445,6 +449,45 @@ export default function VehiclesScreen() {
     [cancelEditVehicle, editingVehicleNumber, isSaving, loadVehicles, vehicles]
   );
 
+  const handleMaintenanceComplete = useCallback(
+    async (vehicleId: string, field: 'oil_changed_km' | 'oil_filter_changed_km' | 'air_filter_changed_km', currentKm: number | null) => {
+      if (currentKm == null) {
+        Alert.alert('오도미터 없음', '현재 오도미터가 설정되지 않았습니다. 운행 후 자동으로 설정됩니다.');
+        return;
+      }
+      Alert.alert(
+        '교환 완료 기록',
+        `현재 오도미터 ${currentKm.toLocaleString()} km 기준으로\n교환 완료를 기록합니다.`,
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '저장',
+            onPress: async () => {
+              setIsSaving(true);
+              setErrorMessage(null);
+              try {
+                const { error } = await withTimeout(
+                  supabase.from('vehicles').update({ [field]: currentKm }).eq('id', vehicleId),
+                  '정비 기록 저장'
+                );
+                if (error) {
+                  setErrorMessage(formatDbError(error, '정비 기록 저장 중 오류가 발생했습니다.'));
+                } else {
+                  await loadVehicles(true);
+                }
+              } catch (err) {
+                setErrorMessage(formatDbError(err, '정비 기록 저장 중 오류가 발생했습니다.'));
+              } finally {
+                setIsSaving(false);
+              }
+            },
+          },
+        ]
+      );
+    },
+    [loadVehicles]
+  );
+
   useFocusEffect(
     useCallback(() => {
       loadVehicles();
@@ -555,6 +598,14 @@ export default function VehiclesScreen() {
             placeholderTextColor="#94A3B8"
           />
         </View>
+        <TextInput
+          style={[styles.textInput, { marginBottom: 10 }]}
+          value={newInitialOdometer}
+          onChangeText={setNewInitialOdometer}
+          placeholder="초기 오도미터 km (선택)"
+          placeholderTextColor="#94A3B8"
+          keyboardType="numeric"
+        />
         <TouchableOpacity style={[styles.dropdownBtn, { marginBottom: 10 }]} onPress={() => setShowFuelTypeModal(true)}>
           <Text style={newFuelType ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
             {newFuelType || '사용 유류 선택'}
@@ -725,10 +776,10 @@ export default function VehiclesScreen() {
               <View style={styles.maintenanceSection}>
                 <Text style={styles.subSectionTitle}>소모품 교환주기</Text>
                 {[
-                  { label: '엔진오일', changedKm: vehicle.oil_changed_km, interval: 5000 },
-                  { label: '오일필터', changedKm: vehicle.oil_filter_changed_km, interval: 10000 },
-                  { label: '에어필터', changedKm: vehicle.air_filter_changed_km, interval: 15000 },
-                ].map(({ label, changedKm, interval }) => {
+                  { label: '엔진오일', changedKm: vehicle.oil_changed_km, interval: 5000, field: 'oil_changed_km' as const },
+                  { label: '오일필터', changedKm: vehicle.oil_filter_changed_km, interval: 10000, field: 'oil_filter_changed_km' as const },
+                  { label: '에어필터', changedKm: vehicle.air_filter_changed_km, interval: 15000, field: 'air_filter_changed_km' as const },
+                ].map(({ label, changedKm, interval, field }) => {
                   const odometer = vehicle.current_odometer ?? 0;
                   const usedKm = odometer - (changedKm ?? 0);
                   const pct = Math.min(Math.max(usedKm / interval, 0), 1);
@@ -754,6 +805,20 @@ export default function VehiclesScreen() {
                       ]}>
                         {noData ? '정보 없음' : remainingKm <= 0 ? '교환 필요' : `${Math.round(remainingKm)}km`}
                       </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.maintenanceDoneBtn,
+                          isCritical && styles.maintenanceDoneBtnCritical,
+                          isWarning && styles.maintenanceDoneBtnWarning,
+                        ]}
+                        onPress={() => handleMaintenanceComplete(vehicle.id, field, vehicle.current_odometer)}
+                        disabled={isSaving}>
+                        <Text style={[
+                          styles.maintenanceDoneBtnText,
+                          isCritical && styles.maintenanceDoneBtnTextCritical,
+                          isWarning && styles.maintenanceDoneBtnTextWarning,
+                        ]}>교환 완료</Text>
+                      </TouchableOpacity>
                     </View>
                   );
                 })}
@@ -1446,6 +1511,30 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     width: 54,
     textAlign: 'right',
+  },
+  maintenanceDoneBtn: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 6,
+  },
+  maintenanceDoneBtnCritical: {
+    backgroundColor: '#FEF2F2',
+  },
+  maintenanceDoneBtnWarning: {
+    backgroundColor: '#FFFBEB',
+  },
+  maintenanceDoneBtnText: {
+    color: '#059669',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  maintenanceDoneBtnTextCritical: {
+    color: '#DC2626',
+  },
+  maintenanceDoneBtnTextWarning: {
+    color: '#D97706',
   },
   noticeBox: {
     alignItems: 'center',
