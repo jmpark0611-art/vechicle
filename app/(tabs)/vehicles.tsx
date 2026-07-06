@@ -26,6 +26,10 @@ type Vehicle = {
   equipment_name: string | null;
   equipment_number: string | null;
   fuel_type: string | null;
+  current_odometer: number | null;
+  oil_changed_km: number | null;
+  oil_filter_changed_km: number | null;
+  air_filter_changed_km: number | null;
 };
 
 type Trip = {
@@ -116,6 +120,33 @@ export default function VehiclesScreen() {
     );
   }, [activeTripsByVehicleId, exactTripCountsByVehicleId, vehicles]);
 
+  const fleetAlerts = useMemo(() => {
+    const INTERVALS = { oil: 5000, oilFilter: 10000, airFilter: 15000 };
+    const alerts: { vehicleId: string; vehicleNumber: string; item: string; remainingKm: number; level: 'critical' | 'warning' }[] = [];
+
+    vehicles.forEach((vehicle) => {
+      const odometer = vehicle.current_odometer ?? 0;
+      [
+        { item: '엔진오일', changedAt: vehicle.oil_changed_km ?? 0, interval: INTERVALS.oil },
+        { item: '오일필터', changedAt: vehicle.oil_filter_changed_km ?? 0, interval: INTERVALS.oilFilter },
+        { item: '에어필터', changedAt: vehicle.air_filter_changed_km ?? 0, interval: INTERVALS.airFilter },
+      ].forEach(({ item, changedAt, interval }) => {
+        const remainingKm = interval - (odometer - changedAt);
+        if (remainingKm <= 2000) {
+          alerts.push({
+            vehicleId: vehicle.id,
+            vehicleNumber: vehicle.vehicle_number,
+            item,
+            remainingKm,
+            level: remainingKm <= 500 ? 'critical' : 'warning',
+          });
+        }
+      });
+    });
+
+    return alerts.sort((a, b) => a.remainingKm - b.remainingKm);
+  }, [vehicles]);
+
   const filteredVehicles = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase();
 
@@ -166,7 +197,7 @@ export default function VehiclesScreen() {
     try {
       const [vehiclesResult, tripsResult] = await Promise.all([
         withTimeout(
-          supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number, fuel_type').order('vehicle_number'),
+          supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number, fuel_type, current_odometer, oil_changed_km, oil_filter_changed_km, air_filter_changed_km').order('vehicle_number'),
           '차량 목록'
         ),
         withTimeout(
@@ -481,6 +512,24 @@ export default function VehiclesScreen() {
         </View>
       )}
 
+      {fleetAlerts.length > 0 && (
+        <View style={styles.alertsCard}>
+          <Text style={styles.alertsTitle}>정비 알림</Text>
+          {fleetAlerts.map((alert) => (
+            <TouchableOpacity
+              key={`${alert.vehicleId}-${alert.item}`}
+              style={[styles.alertRow, alert.level === 'critical' && styles.alertRowCritical]}
+              onPress={() => setSelectedTabVehicleId(alert.vehicleId)}>
+              <View style={[styles.alertDot, alert.level === 'critical' ? styles.alertDotCritical : styles.alertDotWarning]} />
+              <Text style={styles.alertText}>{alert.vehicleNumber} · {alert.item}</Text>
+              <Text style={[styles.alertKm, alert.level === 'critical' && styles.alertKmCritical]}>
+                {alert.remainingKm <= 0 ? '교환 필요' : `${Math.round(alert.remainingKm)}km 후`}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       <View style={styles.managePanel}>
         <Text style={styles.sectionTitle}>차량 등록</Text>
         <TextInput
@@ -633,6 +682,7 @@ export default function VehiclesScreen() {
               {vehicle.equipment_name ? <InfoRow label="장비명" value={vehicle.equipment_name} /> : null}
               {vehicle.equipment_number ? <InfoRow label="장비 호수" value={vehicle.equipment_number} /> : null}
               {vehicle.fuel_type ? <InfoRow label="사용 유류" value={vehicle.fuel_type} /> : null}
+              <InfoRow label="현재 오도미터" value={vehicle.current_odometer != null ? `${vehicle.current_odometer.toLocaleString()} km` : '미설정'} />
               <InfoRow label="전체 운행" value={`${counts.total}건`} />
               <InfoRow label="최근 출발" value={formatDateTime(latestTrip?.start_time ?? null)} />
               <InfoRow label="최근 종료" value={formatDateTime(latestTrip?.end_time ?? null)} />
@@ -675,18 +725,38 @@ export default function VehiclesScreen() {
               <View style={styles.maintenanceSection}>
                 <Text style={styles.subSectionTitle}>소모품 교환주기</Text>
                 {[
-                  { label: '엔진오일' },
-                  { label: '오일필터' },
-                  { label: '에어필터' },
-                ].map(({ label }) => (
-                  <View key={label} style={styles.maintenanceRow}>
-                    <Text style={styles.maintenanceLabel}>{label}</Text>
-                    <View style={styles.maintenanceBarTrack}>
-                      <View style={[styles.maintenanceBarFill, { width: '0%' }]} />
+                  { label: '엔진오일', changedKm: vehicle.oil_changed_km, interval: 5000 },
+                  { label: '오일필터', changedKm: vehicle.oil_filter_changed_km, interval: 10000 },
+                  { label: '에어필터', changedKm: vehicle.air_filter_changed_km, interval: 15000 },
+                ].map(({ label, changedKm, interval }) => {
+                  const odometer = vehicle.current_odometer ?? 0;
+                  const usedKm = odometer - (changedKm ?? 0);
+                  const pct = Math.min(Math.max(usedKm / interval, 0), 1);
+                  const remainingKm = interval - usedKm;
+                  const isWarning = remainingKm <= 2000 && remainingKm > 500;
+                  const isCritical = remainingKm <= 500;
+                  const noData = changedKm == null && vehicle.current_odometer == null;
+                  return (
+                    <View key={label} style={styles.maintenanceRow}>
+                      <Text style={styles.maintenanceLabel}>{label}</Text>
+                      <View style={styles.maintenanceBarTrack}>
+                        <View style={[
+                          styles.maintenanceBarFill,
+                          { width: noData ? '0%' : `${pct * 100}%` },
+                          isWarning && { backgroundColor: '#F59E0B' },
+                          isCritical && { backgroundColor: '#DC2626' },
+                        ]} />
+                      </View>
+                      <Text style={[
+                        styles.maintenanceInfo,
+                        isWarning && { color: '#D97706' },
+                        isCritical && { color: '#DC2626' },
+                      ]}>
+                        {noData ? '정보 없음' : remainingKm <= 0 ? '교환 필요' : `${Math.round(remainingKm)}km`}
+                      </Text>
                     </View>
-                    <Text style={styles.maintenanceInfo}>정보 없음</Text>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
 
               {editingVehicleId === vehicle.id && (
@@ -1217,6 +1287,58 @@ const styles = StyleSheet.create({
   },
   tabDotStale: {
     backgroundColor: '#DC2626',
+  },
+  // Fleet alert card
+  alertsCard: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 14,
+    padding: 14,
+  },
+  alertsTitle: {
+    color: '#92400E',
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  alertRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    paddingVertical: 7,
+  },
+  alertRowCritical: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 8,
+    marginHorizontal: -6,
+    paddingHorizontal: 6,
+  },
+  alertDot: {
+    borderRadius: 5,
+    height: 10,
+    width: 10,
+  },
+  alertDotWarning: {
+    backgroundColor: '#F59E0B',
+  },
+  alertDotCritical: {
+    backgroundColor: '#DC2626',
+  },
+  alertText: {
+    color: '#0F172A',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  alertKm: {
+    color: '#D97706',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  alertKmCritical: {
+    color: '#DC2626',
   },
   // OBD section
   obdSection: {

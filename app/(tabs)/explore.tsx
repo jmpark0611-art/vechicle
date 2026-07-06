@@ -46,6 +46,8 @@ type Trip = {
   total_km: number | null;
   fuel_station: string | null;
   fuel_added_liters: number | null;
+  start_odometer: number | null;
+  end_odometer: number | null;
 };
 
 type GpsPoint = {
@@ -326,7 +328,7 @@ export default function TripHistoryScreen() {
         withTimeout(
           supabase
             .from('trips')
-            .select('id, vehicle_id, start_place, end_place, start_time, end_time, status, purpose, operator_name, user_name, daily_km, total_km, fuel_station, fuel_added_liters')
+            .select('id, vehicle_id, start_place, end_place, start_time, end_time, status, purpose, operator_name, user_name, daily_km, total_km, fuel_station, fuel_added_liters, start_odometer, end_odometer')
             .order('start_time', { ascending: false })
             .range(0, nextLimit),
           '운행 기록'
