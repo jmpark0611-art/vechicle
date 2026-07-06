@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   AppState,
   Alert,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -709,12 +710,21 @@ export default function DriverScreen() {
     setIsSubmitting(true);
 
     try {
-      const loc = await getBestLocation(latestLocationRef.current);
       const now = new Date().toISOString();
 
-      if (!isValidCoords(loc.coords)) {
-        Alert.alert('오류', '현재 GPS 좌표가 올바르지 않아 운행을 종료할 수 없습니다.');
-        return;
+      // Try to get GPS coordinates — if unavailable (permission denied etc.) end without them
+      let endLat: number | null = null;
+      let endLng: number | null = null;
+      try {
+        const loc = await getBestLocation(latestLocationRef.current);
+        if (isValidCoords(loc.coords)) {
+          endLat = loc.coords.latitude;
+          endLng = loc.coords.longitude;
+          setLocation(loc.coords);
+          await saveGpsPoint(tripId, loc.coords);
+        }
+      } catch {
+        // GPS unavailable — proceed without end coordinates
       }
 
       const { error } = await withTimeout(
@@ -722,8 +732,8 @@ export default function DriverScreen() {
           .from('trips')
           .update({
             end_time: now,
-            end_lat: loc.coords.latitude,
-            end_lng: loc.coords.longitude,
+            end_lat: endLat,
+            end_lng: endLng,
             status: 'completed',
             end_odometer: endOdometer,
             daily_km: dailyKmVal,
@@ -750,13 +760,11 @@ export default function DriverScreen() {
         ).catch(() => {});
       }
 
-      await saveGpsPoint(tripId, loc.coords);
       stopLocationWatch();
 
       setIsRunning(false);
       setTripId(null);
       setStartTime(null);
-      setLocation(loc.coords);
       setGpsSaveFailureCount(0);
       setRecoveryNotice(null);
       setEndOdometerInput('');
@@ -890,13 +898,20 @@ export default function DriverScreen() {
             )}
             <View style={styles.gpsRow}>
               <Text style={styles.gpsLabel}>위치 권한</Text>
-              <Text style={[
-                styles.gpsValue,
-                gpsPermissionStatus === 'granted' ? styles.successText : styles.waitingText,
-                gpsPermissionStatus === 'denied' && styles.errorText,
-              ]}>
-                {getGpsPermissionText(gpsPermissionStatus)}
-              </Text>
+              <View style={styles.gpsValueRow}>
+                <Text style={[
+                  styles.gpsValue,
+                  gpsPermissionStatus === 'granted' ? styles.successText : styles.waitingText,
+                  gpsPermissionStatus === 'denied' && styles.errorText,
+                ]}>
+                  {getGpsPermissionText(gpsPermissionStatus)}
+                </Text>
+                {gpsPermissionStatus === 'denied' && (
+                  <TouchableOpacity onPress={() => void Linking.openSettings()} style={styles.settingsBtn}>
+                    <Text style={styles.settingsBtnText}>설정 열기</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
             <View style={styles.gpsRow}>
               <Text style={styles.gpsLabel}>최근 저장</Text>
@@ -1419,6 +1434,22 @@ const styles = StyleSheet.create({
   gpsValue: {
     color: '#0F172A',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  gpsValueRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  settingsBtn: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  settingsBtnText: {
+    color: '#2563EB',
+    fontSize: 12,
     fontWeight: '600',
   },
   successText: {
