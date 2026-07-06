@@ -55,6 +55,17 @@ type VehicleTripCounts = {
 
 type VehicleStatusFilter = 'all' | 'active' | 'waiting' | 'stale';
 
+type ObdLogEntry = {
+  coolant_temp_c: number | null;
+  battery_voltage: number | null;
+  rpm: number | null;
+  fuel_level_percent: number | null;
+  intake_air_temp_c: number | null;
+  engine_load_percent: number | null;
+  dtc_codes: string[] | null;
+  recorded_at: string | null;
+};
+
 function normalizeVehicleNumber(value: string) {
   return value.trim().replace(/\s+/g, ' ').toUpperCase();
 }
@@ -82,6 +93,7 @@ export default function VehiclesScreen() {
   const [showFuelTypeModal, setShowFuelTypeModal] = useState(false);
   const [showVehicleSelectorModal, setShowVehicleSelectorModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [latestObdByVehicleId, setLatestObdByVehicleId] = useState<Map<string, ObdLogEntry | null>>(new Map());
 
   const activeTripsByVehicleId = useMemo(() => {
     const map = new Map<string, Trip>();
@@ -283,6 +295,19 @@ export default function VehiclesScreen() {
         );
 
         setExactTripCountsByVehicleId(new Map(countEntries));
+
+        const obdEntries = await Promise.all(
+          nextVehicles.map(async (vehicle) => {
+            const { data } = await supabase
+              .from('obd_logs')
+              .select('coolant_temp_c, battery_voltage, rpm, fuel_level_percent, intake_air_temp_c, engine_load_percent, dtc_codes, recorded_at')
+              .eq('vehicle_id', vehicle.id)
+              .order('recorded_at', { ascending: false })
+              .limit(1);
+            return [vehicle.id, data?.[0] ?? null] as const;
+          })
+        );
+        setLatestObdByVehicleId(new Map(obdEntries));
       }
     } catch (error) {
       setVehicles([]);
@@ -729,29 +754,57 @@ export default function VehiclesScreen() {
                 </View>
               )}
 
-              <View style={styles.obdSection}>
-                <Text style={styles.subSectionTitle}>OBD ECU 실시간 데이터</Text>
-                <View style={styles.obdGrid}>
-                  {[
-                    ['냉각수온도', '--', '°C'],
-                    ['배터리전압', '--', 'V'],
-                    ['엔진RPM', '--', 'rpm'],
-                    ['연료잔량', '--', '%'],
-                    ['흡기온도', '--', '°C'],
-                    ['주행가능', '--', 'km'],
-                  ].map(([label, value, unit]) => (
-                    <View key={label} style={styles.obdCell}>
-                      <Text style={styles.obdCellLabel}>{label}</Text>
-                      <Text style={styles.obdCellValue}>{value}</Text>
-                      <Text style={styles.obdCellUnit}>{unit}</Text>
+              {(() => {
+                const latestObd = latestObdByVehicleId.get(vehicle.id) ?? null;
+                return (
+                  <View style={styles.obdSection}>
+                    <View style={styles.obdSectionHeader}>
+                      <Text style={styles.subSectionTitle}>최근 OBD 진단 데이터</Text>
+                      <TouchableOpacity
+                        onPress={() => router.push({ pathname: '/obd', params: { vehicleId: vehicle.id, ...(activeTrip ? { tripId: activeTrip.id } : {}) } })}>
+                        <Text style={styles.obdConnectLink}>단말기 연결 →</Text>
+                      </TouchableOpacity>
                     </View>
-                  ))}
-                </View>
-                <View style={styles.dtcRow}>
-                  <Text style={styles.dtcLabel}>고장코드 (DTC)</Text>
-                  <Text style={styles.dtcOk}>이상없음</Text>
-                </View>
-              </View>
+                    {latestObd ? (
+                      <>
+                        <View style={styles.obdGrid}>
+                          {([
+                            ['냉각수온도', latestObd.coolant_temp_c != null ? `${latestObd.coolant_temp_c}` : '--', '°C'],
+                            ['배터리전압', latestObd.battery_voltage != null ? latestObd.battery_voltage.toFixed(1) : '--', 'V'],
+                            ['엔진RPM', latestObd.rpm != null ? latestObd.rpm.toLocaleString() : '--', 'rpm'],
+                            ['연료잔량', latestObd.fuel_level_percent != null ? `${latestObd.fuel_level_percent}` : '--', '%'],
+                            ['흡기온도', latestObd.intake_air_temp_c != null ? `${latestObd.intake_air_temp_c}` : '--', '°C'],
+                            ['엔진부하', latestObd.engine_load_percent != null ? `${latestObd.engine_load_percent}` : '--', '%'],
+                          ] as [string, string, string][]).map(([label, value, unit]) => (
+                            <View key={label} style={styles.obdCell}>
+                              <Text style={styles.obdCellLabel}>{label}</Text>
+                              <Text style={styles.obdCellValue}>{value}</Text>
+                              <Text style={styles.obdCellUnit}>{unit}</Text>
+                            </View>
+                          ))}
+                        </View>
+                        <View style={styles.dtcRow}>
+                          <Text style={styles.dtcLabel}>고장코드 (DTC)</Text>
+                          {latestObd.dtc_codes && latestObd.dtc_codes.length > 0 ? (
+                            <Text style={styles.dtcError}>{latestObd.dtc_codes.join(', ')}</Text>
+                          ) : (
+                            <Text style={styles.dtcOk}>이상없음</Text>
+                          )}
+                        </View>
+                        {latestObd.recorded_at && (
+                          <Text style={styles.obdRecordedAt}>
+                            기록: {new Date(latestObd.recorded_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </Text>
+                        )}
+                      </>
+                    ) : (
+                      <View style={styles.obdNoData}>
+                        <Text style={styles.obdNoDataText}>OBD 데이터 없음 — 단말기 연결 후 데이터가 저장됩니다.</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
 
               <View style={styles.maintenanceSection}>
                 <Text style={styles.subSectionTitle}>소모품 교환주기</Text>
@@ -1452,6 +1505,37 @@ const styles = StyleSheet.create({
   },
   alertKmCritical: {
     color: '#DC2626',
+  },
+  // OBD section header with connect link
+  obdSectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  obdConnectLink: {
+    color: '#2563EB',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  obdNoData: {
+    paddingVertical: 10,
+  },
+  obdNoDataText: {
+    color: '#94A3B8',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  obdRecordedAt: {
+    color: '#94A3B8',
+    fontSize: 11,
+    marginTop: 8,
+    textAlign: 'right',
+  },
+  dtcError: {
+    color: '#DC2626',
+    fontSize: 13,
+    fontWeight: '700',
   },
   // OBD section
   obdSection: {
