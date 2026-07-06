@@ -7,6 +7,7 @@
 - 주요 경로: `app/(tabs)/index.tsx`, `app/(tabs)/explore.tsx`, `app/(tabs)/vehicles.tsx`, `app/(tabs)/check.tsx`, `app/trips/[id].tsx`
 - 현재 작업 브랜치: `claude/env-permissions-session-restart-154onb`
 - 현재 UI 기준: `Vehicle system UI improvement.zip`의 라이트/딥네이비 하이파이 디자인. 과거 다크+라임 UI는 기준에서 제외한다.
+- 데모와 APK의 화면/기능 동등성 기준은 `docs/demo-parity.md`를 따른다.
 
 ## 현재 화면
 

@@ -56,6 +56,7 @@ claude/env-permissions-session-restart-154onb
 먼저 아래 문서를 읽고 이어서 작업해 주세요.
 - README.md
 - docs/handoff.md
+- docs/demo-parity.md
 - docs/operations.md
 - docs/database.md
 - docs/schema.sql
