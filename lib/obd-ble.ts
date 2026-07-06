@@ -7,6 +7,9 @@ export type ObdLiveData = {
   coolantTempC: number | null;
   batteryVoltage: number | null;
   fuelLevelPercent: number | null;
+  engineLoadPercent: number | null;
+  throttlePercent: number | null;
+  intakeAirTempC: number | null;
   dtcCodes: string[];
   ignitionOn: boolean;
   recordedAt: string;
@@ -42,6 +45,9 @@ function makeLiveData(): ObdLiveData {
     coolantTempC: Math.round(85 + 6 * Math.sin(t / 22)),
     batteryVoltage: parseFloat((13.8 + 0.5 * Math.sin(t / 14)).toFixed(1)),
     fuelLevelPercent: Math.round(fuelLevel),
+    engineLoadPercent: Math.round(30 + 20 * Math.abs(Math.sin(t / 8))),
+    throttlePercent: Math.round(15 + 25 * Math.abs(Math.sin(t / 7))),
+    intakeAirTempC: Math.round(28 + 3 * Math.sin(t / 30)),
     dtcCodes: [],
     ignitionOn: true,
     recordedAt: new Date().toISOString(),
@@ -92,6 +98,7 @@ export const obdBle = {
 
   async readDtcCodes() {
     await new Promise((r) => setTimeout(r, 600));
-    cbs?.onData({ ...makeLiveData(), dtcCodes: [] });
+    const base = makeLiveData();
+    cbs?.onData({ ...base, dtcCodes: [] });
   },
 };

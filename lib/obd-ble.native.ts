@@ -32,6 +32,9 @@ export type ObdLiveData = {
   coolantTempC: number | null;
   batteryVoltage: number | null;
   fuelLevelPercent: number | null;
+  engineLoadPercent: number | null;
+  throttlePercent: number | null;
+  intakeAirTempC: number | null;
   dtcCodes: string[];
   ignitionOn: boolean;
   recordedAt: string;
@@ -90,6 +93,7 @@ class ObdBleService {
   private liveData: ObdLiveData = {
     speedKmh: null, rpm: null, coolantTempC: null,
     batteryVoltage: null, fuelLevelPercent: null,
+    engineLoadPercent: null, throttlePercent: null, intakeAirTempC: null,
     dtcCodes: [], ignitionOn: false, recordedAt: new Date().toISOString(),
   };
 
@@ -222,6 +226,21 @@ class ObdBleService {
         const voltR = await this.sendCommand('ATRV');
         const voltMatch = voltR.match(/(\d+\.?\d*)\s*[Vv]/);
         if (voltMatch) this.liveData.batteryVoltage = parseFloat(parseFloat(voltMatch[1]).toFixed(1));
+
+        // 엔진 부하 (0104)
+        const loadR = await this.sendCommand('0104');
+        const loadB = parseObdBytes('04', loadR);
+        if (loadB) this.liveData.engineLoadPercent = Math.round((loadB[0] ?? 0) * 100 / 255);
+
+        // 스로틀 개도 (0111)
+        const tpsR = await this.sendCommand('0111');
+        const tpsB = parseObdBytes('11', tpsR);
+        if (tpsB) this.liveData.throttlePercent = Math.round((tpsB[0] ?? 0) * 100 / 255);
+
+        // 흡기 온도 (010F)
+        const iatR = await this.sendCommand('010F');
+        const iatB = parseObdBytes('0F', iatR);
+        if (iatB) this.liveData.intakeAirTempC = (iatB[0] ?? 40) - 40;
 
         this.liveData.ignitionOn = true;
         this.liveData.recordedAt = new Date().toISOString();

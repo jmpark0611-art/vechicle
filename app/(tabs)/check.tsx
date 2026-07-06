@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { Link, router } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -18,6 +18,7 @@ import { supabase, supabaseConfig } from '../../lib/supabase';
 import { formatDateTime, formatTripDuration, isStaleActiveTrip } from '../../lib/format';
 import { formatDbError } from '../../lib/errors';
 import { withTimeout } from '../../lib/request';
+import { obdBle, ObdDevice, ObdLiveData, ObdConnectionState } from '../../lib/obd-ble';
 
 type HealthStatus = 'checking' | 'ok' | 'error';
 const ACTIVE_TRIP_DETAIL_LIMIT = 10;
@@ -74,6 +75,11 @@ export default function CheckScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [obdState, setObdState] = useState<ObdConnectionState>('idle');
+  const [obdLiveData, setObdLiveData] = useState<ObdLiveData | null>(null);
+  const [obdDevices, setObdDevices] = useState<ObdDevice[]>([]);
+  const [obdMessage, setObdMessage] = useState<string | null>(null);
+  const [isDtcLoading, setIsDtcLoading] = useState(false);
 
   const loadStatus = useCallback(async (refreshing = false) => {
     setStatus('checking');
@@ -208,6 +214,27 @@ export default function CheckScreen() {
     [vehicles]
   );
 
+  useEffect(() => {
+    obdBle.setCallbacks({
+      onStateChange: (state, message) => {
+        setObdState(state);
+        setObdMessage(message ?? null);
+        if (state === 'idle' || state === 'error' || state === 'disconnected') {
+          setObdDevices([]);
+        }
+      },
+      onDeviceFound: (device) => {
+        setObdDevices((prev) => (prev.find((d) => d.id === device.id) ? prev : [...prev, device]));
+      },
+      onData: (data) => {
+        setObdLiveData(data);
+      },
+    });
+    return () => {
+      void obdBle.disconnect();
+    };
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       loadStatus();
@@ -228,6 +255,124 @@ export default function CheckScreen() {
         <RefreshControl refreshing={isRefreshing} onRefresh={() => loadStatus(true)} />
       }>
       <Text style={styles.title}>시스템 점검</Text>
+
+      {/* OBD 차량 진단 패널 */}
+      <View style={styles.obdPanel}>
+        <View style={styles.obdPanelHeader}>
+          <Text style={styles.sectionTitle}>OBD 차량 진단</Text>
+          <View style={styles.obdBtnRow}>
+            {(obdState === 'idle' || obdState === 'disconnected' || obdState === 'error') && (
+              <TouchableOpacity style={styles.obdScanBtn} onPress={() => { setObdDevices([]); obdBle.startScan(); }}>
+                <Text style={styles.obdScanBtnText}>스캔</Text>
+              </TouchableOpacity>
+            )}
+            {obdState === 'scanning' && (
+              <TouchableOpacity style={styles.obdStopBtn} onPress={() => obdBle.stopScan()}>
+                <Text style={styles.obdStopBtnText}>중지</Text>
+              </TouchableOpacity>
+            )}
+            {obdState === 'connected' && (
+              <TouchableOpacity style={styles.obdStopBtn} onPress={() => { void obdBle.disconnect(); setObdLiveData(null); }}>
+                <Text style={styles.obdStopBtnText}>연결 해제</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* 상태 메시지 */}
+        {obdMessage ? <Text style={styles.obdStatusMsg}>{obdMessage}</Text> : null}
+
+        {/* 장치 목록 */}
+        {obdDevices.length > 0 && obdState !== 'connected' && (
+          <View style={styles.obdDeviceList}>
+            {obdDevices.map((device) => (
+              <TouchableOpacity
+                key={device.id}
+                style={styles.obdDeviceItem}
+                onPress={() => void obdBle.connect(device.id)}
+                disabled={obdState === 'connecting' || obdState === 'initializing'}>
+                <Text style={styles.obdDeviceName}>{device.name}</Text>
+                {device.rssi != null && <Text style={styles.obdDeviceRssi}>{device.rssi} dBm</Text>}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* 연결 중 표시 */}
+        {(obdState === 'connecting' || obdState === 'initializing') && (
+          <View style={styles.obdConnectingRow}>
+            <ActivityIndicator color="#2563EB" size="small" />
+            <Text style={styles.obdConnectingText}>
+              {obdState === 'initializing' ? 'ELM327 초기화 중...' : '연결 중...'}
+            </Text>
+          </View>
+        )}
+
+        {/* 실시간 진단 데이터 */}
+        {obdLiveData && obdState === 'connected' && (
+          <>
+            <View style={styles.obdDataGrid}>
+              <View style={styles.obdDataItem}>
+                <Text style={styles.obdDataLabel}>배터리</Text>
+                <Text style={styles.obdDataValue}>{obdLiveData.batteryVoltage ?? '-'} V</Text>
+              </View>
+              <View style={styles.obdDataItem}>
+                <Text style={styles.obdDataLabel}>연료</Text>
+                <Text style={styles.obdDataValue}>{obdLiveData.fuelLevelPercent ?? '-'} %</Text>
+              </View>
+              <View style={styles.obdDataItem}>
+                <Text style={styles.obdDataLabel}>냉각수</Text>
+                <Text style={styles.obdDataValue}>{obdLiveData.coolantTempC ?? '-'} °C</Text>
+              </View>
+              <View style={styles.obdDataItem}>
+                <Text style={styles.obdDataLabel}>엔진 부하</Text>
+                <Text style={styles.obdDataValue}>{obdLiveData.engineLoadPercent ?? '-'} %</Text>
+              </View>
+              <View style={styles.obdDataItem}>
+                <Text style={styles.obdDataLabel}>스로틀</Text>
+                <Text style={styles.obdDataValue}>{obdLiveData.throttlePercent ?? '-'} %</Text>
+              </View>
+              <View style={styles.obdDataItem}>
+                <Text style={styles.obdDataLabel}>흡기 온도</Text>
+                <Text style={styles.obdDataValue}>{obdLiveData.intakeAirTempC ?? '-'} °C</Text>
+              </View>
+              <View style={styles.obdDataItem}>
+                <Text style={styles.obdDataLabel}>RPM</Text>
+                <Text style={styles.obdDataValue}>{obdLiveData.rpm?.toLocaleString() ?? '-'}</Text>
+              </View>
+              <View style={styles.obdDataItem}>
+                <Text style={styles.obdDataLabel}>차속</Text>
+                <Text style={styles.obdDataValue}>{obdLiveData.speedKmh ?? '-'} km/h</Text>
+              </View>
+            </View>
+
+            {/* DTC 결함코드 */}
+            <View style={styles.obdDtcRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.obdDtcLabel}>결함코드 (DTC)</Text>
+                {obdLiveData.dtcCodes.length === 0 ? (
+                  <Text style={styles.obdDtcNone}>이상 없음</Text>
+                ) : (
+                  <Text style={styles.obdDtcCodes}>{obdLiveData.dtcCodes.join(', ')}</Text>
+                )}
+              </View>
+              <TouchableOpacity
+                style={[styles.obdDtcBtn, isDtcLoading && styles.obdDtcBtnDisabled]}
+                onPress={async () => { setIsDtcLoading(true); await obdBle.readDtcCodes(); setIsDtcLoading(false); }}
+                disabled={isDtcLoading}>
+                {isDtcLoading ? <ActivityIndicator color="#2563EB" size="small" /> : <Text style={styles.obdDtcBtnText}>읽기</Text>}
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        {/* 타이어 압력 안내 */}
+        <View style={styles.obdNotSupportedRow}>
+          <Text style={styles.obdNotSupportedLabel}>타이어 압력 (TPMS)</Text>
+          <Text style={styles.obdNotSupportedValue}>표준 OBD-II 미지원</Text>
+        </View>
+        <Text style={styles.obdTpmsHint}>TPMS는 제조사 독점 CAN 채널로 ELM327 어댑터로는 읽을 수 없습니다.</Text>
+      </View>
 
       <View style={[styles.statusPanel, status === 'error' && styles.errorPanel]}>
         <View>
@@ -671,5 +816,190 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  // OBD 진단 패널
+  obdPanel: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 14,
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  obdPanelHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  obdBtnRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  obdScanBtn: {
+    backgroundColor: '#2563EB',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+  },
+  obdScanBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  obdStopBtn: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+  },
+  obdStopBtnText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  obdStatusMsg: {
+    color: '#64748B',
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  obdDeviceList: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  obdDeviceItem: {
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  obdDeviceName: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  obdDeviceRssi: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  obdConnectingRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  obdConnectingText: {
+    color: '#2563EB',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  obdDataGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  obdDataItem: {
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderColor: '#86EFAC',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexBasis: '23%',
+    flexGrow: 1,
+    paddingVertical: 10,
+  },
+  obdDataLabel: {
+    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  obdDataValue: {
+    color: '#059669',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  obdDtcRow: {
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  obdDtcLabel: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  obdDtcNone: {
+    color: '#059669',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  obdDtcCodes: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  obdDtcBtn: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minWidth: 52,
+    alignItems: 'center',
+  },
+  obdDtcBtnDisabled: {
+    opacity: 0.5,
+  },
+  obdDtcBtnText: {
+    color: '#2563EB',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  obdNotSupportedRow: {
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderColor: '#FED7AA',
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  obdNotSupportedLabel: {
+    color: '#92400E',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  obdNotSupportedValue: {
+    color: '#B45309',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  obdTpmsHint: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '400',
+    lineHeight: 16,
   },
 });
