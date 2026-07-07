@@ -230,6 +230,77 @@ export default function DriverScreen() {
     };
   }, []);
 
+  const obdSaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const obdLiveDataRef = useRef<ObdLiveData | null>(null);
+
+  useEffect(() => {
+    obdLiveDataRef.current = obdLiveData;
+  }, [obdLiveData]);
+
+  useEffect(() => {
+    if (obdState !== 'connected' || !isRunning || !selectedVehicle) {
+      if (obdSaveTimerRef.current) {
+        clearInterval(obdSaveTimerRef.current);
+        obdSaveTimerRef.current = null;
+      }
+      return;
+    }
+    const vehicleId = selectedVehicle.id;
+    const currentTripId = tripId;
+    obdSaveTimerRef.current = setInterval(async () => {
+      const data = obdLiveDataRef.current;
+      if (!data) return;
+      await supabase.from('obd_logs').insert({
+        vehicle_id: vehicleId,
+        trip_id: currentTripId ?? null,
+        speed_kmh: data.speedKmh,
+        rpm: data.rpm,
+        coolant_temp_c: data.coolantTempC,
+        battery_voltage: data.batteryVoltage,
+        fuel_level_percent: data.fuelLevelPercent,
+        engine_load_percent: data.engineLoadPercent,
+        throttle_percent: data.throttlePercent,
+        intake_air_temp_c: data.intakeAirTempC,
+        ignition_status: data.ignitionOn ? 'on' : 'off',
+        dtc_codes: data.dtcCodes,
+        recorded_at: data.recordedAt,
+      });
+    }, 30_000);
+    return () => {
+      if (obdSaveTimerRef.current) {
+        clearInterval(obdSaveTimerRef.current);
+        obdSaveTimerRef.current = null;
+      }
+    };
+  }, [obdState, isRunning, selectedVehicle, tripId]);
+
+  const handleObdScan = useCallback(async () => {
+    setObdDevices([]);
+    setObdMessage(null);
+    const on = await obdBle.checkBluetoothState();
+    if (!on) {
+      setObdMessage('블루투스가 꺼져 있습니다. 설정에서 켜주세요.');
+      return;
+    }
+    obdBle.startScan();
+    setTimeout(() => obdBle.stopScan(), 10_000);
+  }, []);
+
+  const handleObdConnect = useCallback(async (deviceId: string) => {
+    setObdMessage(null);
+    try {
+      await obdBle.connect(deviceId);
+    } catch (e) {
+      setObdMessage(e instanceof Error ? e.message : '연결 실패');
+    }
+  }, []);
+
+  const handleObdDisconnect = useCallback(async () => {
+    await obdBle.disconnect();
+    setObdLiveData(null);
+    setObdDevices([]);
+  }, []);
+
   const updateDriverInfo = useCallback((partial: Partial<DriverInfo>) => {
     setDriverInfoState((prev) => {
       const next = { ...prev, ...partial };
@@ -1095,14 +1166,58 @@ export default function DriverScreen() {
             </View>
             <View style={styles.obdStatusRow}>
               <View style={[styles.obdStatusDot, { backgroundColor: obdState === 'connected' ? '#16A34A' : '#94A3B8' }]} />
-              <Text style={styles.obdStatusText}>
+              <Text style={[styles.obdStatusText, { flex: 1 }]}>
                 {obdState === 'connected'
-                  ? `OBD 연결됨 · 오도미터·연료 자동 수집`
+                  ? 'OBD 연결됨 · 오도미터·연료 자동 수집'
                   : obdState === 'scanning' || obdState === 'connecting' || obdState === 'initializing'
                     ? 'OBD 연결 중...'
-                    : 'OBD 미연결 (연결 시 오도미터·연료 자동 수집)'}
+                    : 'OBD 미연결'}
               </Text>
+              {obdState === 'connected' ? (
+                <TouchableOpacity style={styles.obdInlineBtn} onPress={() => { void handleObdDisconnect(); }}>
+                  <Text style={styles.obdInlineBtnText}>해제</Text>
+                </TouchableOpacity>
+              ) : obdState === 'scanning' || obdState === 'connecting' || obdState === 'initializing' ? (
+                <ActivityIndicator size="small" color="#2563EB" />
+              ) : (
+                <TouchableOpacity style={styles.obdInlineBtn} onPress={() => { void handleObdScan(); }}>
+                  <Text style={styles.obdInlineBtnText}>검색</Text>
+                </TouchableOpacity>
+              )}
             </View>
+            {obdMessage ? (
+              <Text style={styles.obdStatusMsg}>{obdMessage}</Text>
+            ) : null}
+            {obdDevices.length > 0 && obdState !== 'connected' && (
+              <View style={styles.obdDeviceList}>
+                {obdDevices.map((device) => (
+                  <TouchableOpacity
+                    key={device.id}
+                    style={styles.obdDeviceItem}
+                    onPress={() => { void handleObdConnect(device.id); }}
+                    disabled={obdState === 'connecting' || obdState === 'initializing'}>
+                    <Text style={styles.obdDeviceName}>{device.name}</Text>
+                    {device.rssi != null && <Text style={styles.obdDeviceRssi}>{device.rssi} dBm</Text>}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {obdState === 'connected' && obdLiveData && (
+              <View style={styles.obdDataGrid}>
+                <View style={styles.obdDataItem}>
+                  <Text style={styles.obdDataLabel}>배터리</Text>
+                  <Text style={styles.obdDataValue}>{obdLiveData.batteryVoltage != null ? `${obdLiveData.batteryVoltage.toFixed(1)}V` : '-'}</Text>
+                </View>
+                <View style={styles.obdDataItem}>
+                  <Text style={styles.obdDataLabel}>연료</Text>
+                  <Text style={styles.obdDataValue}>{obdLiveData.fuelLevelPercent != null ? `${obdLiveData.fuelLevelPercent}%` : '-'}</Text>
+                </View>
+                <View style={styles.obdDataItem}>
+                  <Text style={styles.obdDataLabel}>냉각수</Text>
+                  <Text style={styles.obdDataValue}>{obdLiveData.coolantTempC != null ? `${obdLiveData.coolantTempC}°C` : '-'}</Text>
+                </View>
+              </View>
+            )}
             {voiceNotice && (
               <View style={styles.voiceNoticeBox}>
                 <Text style={styles.voiceNoticeText}>{voiceNotice}</Text>
@@ -1821,6 +1936,19 @@ const styles = StyleSheet.create({
   obdInfoValue: {
     color: '#059669',
     fontSize: 14,
+    fontWeight: '700',
+  },
+  obdInlineBtn: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#DBEAFE',
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  obdInlineBtnText: {
+    color: '#2563EB',
+    fontSize: 12,
     fontWeight: '700',
   },
   obdStatusRow: {

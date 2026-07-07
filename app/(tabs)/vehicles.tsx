@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { Href, Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -817,14 +817,6 @@ export default function VehiclesScreen() {
               {editingVehicleId !== vehicle.id && (
                 <>
                   <View style={styles.actions}>
-                    <TouchableOpacity
-                      accessibilityLabel="OBD 단말기 연결"
-                      style={[styles.actionBtn, styles.obdBtn]}
-                      onPress={() =>
-                        router.push((`/obd?vehicleId=${vehicle.id}${activeTrip ? `&tripId=${activeTrip.id}` : ''}` as unknown) as Href)
-                      }>
-                      <Text style={[styles.actionText, styles.obdText]}>OBD 단말기 연결</Text>
-                    </TouchableOpacity>
                     <TouchableOpacity
                       accessibilityLabel="차량번호 수정"
                       style={[styles.actionBtn, styles.secondaryBtn]}
