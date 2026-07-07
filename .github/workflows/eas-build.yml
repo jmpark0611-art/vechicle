@@ -55,3 +55,17 @@ jobs:
         with:
           name: vehicle-system-release-apk
           path: android/app/build/outputs/apk/release/*.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "차량운행시스템 APK #${{ github.run_number }}"
+          body: |
+            자동 빌드된 APK 파일입니다.
+            커밋: ${{ github.sha }}
+            브랜치: ${{ github.ref_name }}
+          files: android/app/build/outputs/apk/release/*.apk
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
