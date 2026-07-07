@@ -1,5 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { Tabs } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -12,12 +13,23 @@ export default function TabLayout() {
   const [role, setRole] = useState<AppRole | null>(null);
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
+  const refreshRole = useCallback(() => {
+    let mounted = true;
     getStoredRole().then((r) => {
+      if (!mounted) {
+        return;
+      }
       setRole(r);
       setReady(true);
     });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  useEffect(() => refreshRole(), [refreshRole]);
+  useFocusEffect(refreshRole);
 
   // 탭 가시성 — role 확정 전까지 모든 탭 숨겨서 깜빡임 방지
   const isDriver = ready && role === 'driver';
