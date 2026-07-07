@@ -33,7 +33,7 @@ export default function CommanderPinScreen() {
         const ok = await verifyPin(pin);
         if (ok) {
           await setStoredRole('commander');
-          router.replace('/(tabs)/explore');
+          router.replace('/explore');
         } else {
           setError('비밀번호가 올바르지 않습니다.');
           shake();
