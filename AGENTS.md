@@ -9,14 +9,16 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 ## Stack
 - Expo SDK 54 (React Native + Web, cross-platform)
 - Expo Router (file-based routing, tabs layout)
-- Supabase backend: tables `vehicles`, `trips`, `gps_points`
+- Supabase backend: tables `vehicles`, `trips`, `gps_points`, `obd_logs`
 - expo-location ~19.0.8 (GPS tracking, already installed)
 - react-native-webview ^14.0.1 (installed — for embedded map)
+- react-native-ble-plx (BLE OBD communication, ELM327 protocol)
 
 ## Database Schema (Supabase)
 - `vehicles`: id, vehicle_number, status, ...
 - `trips`: id, vehicle_id (FK→vehicles), start_place, end_place, start_time, end_time, start_lat, start_lng, end_lat, end_lng, status ('in_progress'|'completed'|'canceled')
 - `gps_points`: id, trip_id (FK→trips), latitude, longitude, speed_kmh, recorded_at
+- `obd_logs`: id, vehicle_id (FK→vehicles), trip_id (FK→trips, nullable), speed_kmh, rpm, coolant_temp_c, battery_voltage, fuel_level_percent, engine_load_percent, throttle_percent, intake_air_temp_c, ignition_status ('on'|'off'), dtc_codes (text[]), recorded_at
 
 ## Design System
 - Primary: #2563EB (blue), hero card: #1D4ED8
@@ -83,6 +85,42 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
   - 차량 선택 드롭다운 placeholder: '전체 차량' → '차량을 선택하세요'
   - 차량 선택 모달에서 "전체 차량" 옵션 제거 (차량 선택 필수화)
 
+### Session 6 (OBD BLE Integration + 운행탭 통합)
+- **Goal**: ELM327 BLE OBD 어댑터로 실차 테스트 준비 — obd_logs 테이블 생성 + OBD 화면 통합
+- `lib/obd-ble.native.ts` → NEW (이전 세션): 실제 BLE 구현 (react-native-ble-plx). BLE 프로파일: FFE0/FFE1 (Vgate iCar Pro / HM-10), FFF0/FFF1/FFF2, Nordic UART. ELM327 초기화: ATZ, ATE0, ATL0, ATS0, ATH0, ATSP0, ATAT2. 2초 폴링 간격.
+- `lib/obd-ble.ts` → NEW (이전 세션): 웹 시뮬레이션 (Metro가 .native.ts를 iOS/Android에서 우선 로드)
+- **obd_logs Supabase 테이블** → 사용자가 Dashboard에서 수동 생성:
+  ```sql
+  create table public.obd_logs (
+    id uuid primary key default gen_random_uuid(),
+    vehicle_id uuid references public.vehicles(id),
+    trip_id uuid references public.trips(id),
+    speed_kmh numeric, rpm integer, coolant_temp_c numeric,
+    battery_voltage numeric, fuel_level_percent numeric,
+    engine_load_percent numeric, throttle_percent numeric,
+    intake_air_temp_c numeric, ignition_status text,
+    dtc_codes text[], recorded_at timestamptz default now()
+  );
+  alter table public.obd_logs enable row level security;
+  create policy "allow all" on public.obd_logs for all using (true) with check (true);
+  ```
+- `app/obd.tsx` → DELETED: 독립 OBD 모달 화면 제거 (index.tsx와 obdBle.setCallbacks() 충돌 방지)
+- `app/_layout.tsx` → `obd` Stack.Screen 제거
+- `app/(tabs)/vehicles.tsx` → "OBD 단말기 연결" 버튼 제거. `Href`, `router` import 제거 (`Link`만 유지)
+- `app/(tabs)/index.tsx` → OBD 스캔/연결 패널을 routeCard 내부에 인라인으로 통합 (단일화면 레이아웃 유지):
+  - `obdSaveTimerRef`, `obdLiveDataRef` useRef 추가
+  - obdLiveData 변경 시 ref 동기화 useEffect 추가
+  - 30초마다 obd_logs INSERT (OBD 연결 + 운행 중일 때만)
+  - `handleObdScan`, `handleObdConnect`, `handleObdDisconnect` 핸들러 추가
+  - routeCard 내 OBD 상태 행: 연결됨(해제 버튼) / 연결중(스피너) / 미연결(검색 버튼)
+  - 스캔된 장치 목록 표시 → 탭하여 연결
+  - 연결 시 배터리전압·연료·냉각수 mini 데이터 그리드 표시
+  - obdInlineBtn / obdInlineBtnText 스타일 추가
+
+**OBD PIDs**: 010D(속도), 010C(RPM), 0105(냉각수), 012F(연료), ATRV(배터리전압), 0104(엔진부하), 0111(스로틀), 010F(흡기온도), 01A6(오도미터, 비표준—지원 안 할 수 있음)
+
+**주의**: PID 01A6(오도미터)은 비표준 제조사 특화 PID. 지원하지 않는 차량에서는 null 반환(graceful). 실차 테스트 후 미지원 시 제거 고려.
+
 ### Deployment Notes (GitHub Actions)
 - **Node 20 WebSocket 오류**: Expo static export가 SSR 실행 중 Node 20에서 WebSocket 없어 실패 → Node 22로 변경 해결
 - **`actions/deploy-pages` 브랜치 제한**: 기본 브랜치(main)에서만 동작 → `peaceiris/actions-gh-pages@v4`로 교체 해결
@@ -94,6 +132,9 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - **Map refresh**: client-side interval (30s), not real-time subscription (Supabase realtime not used to keep it simple)
 - **No Google Maps API key needed**: OpenStreetMap tiles via Leaflet CDN (unpkg.com/leaflet@1.9.4)
 - **Platform split**: `vehicle-map.native.tsx` / `vehicle-map.web.tsx` — Expo Router resolves automatically
+- **OBD singleton**: `obdBle` from `lib/obd-ble.native.ts` — only one `setCallbacks()` call allowed (in index.tsx). Never add another screen calling setCallbacks().
+- **OBD save interval**: 30s via `obdSaveTimerRef` in index.tsx. Clears when OBD disconnects or trip ends.
+- **Single-screen layout**: index.tsx uses View(flex:1), NO ScrollView. All OBD UI is inline inside routeCard, not a new card.
 
 ## Working Branch
 `claude/env-permissions-session-restart-154onb` on `jmpark0611-art/vechicle`
