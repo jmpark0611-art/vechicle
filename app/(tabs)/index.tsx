@@ -837,12 +837,12 @@ export default function DriverScreen() {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={[
+    <View
+      style={[
         styles.container,
         {
-          paddingBottom: Math.max(insets.bottom + 96, 112),
-          paddingTop: Math.max(insets.top + 24, 56),
+          paddingBottom: Math.max(insets.bottom + 8, 20),
+          paddingTop: Math.max(insets.top + 8, 20),
         },
       ]}>
       <View style={styles.topRow}>
@@ -1022,10 +1022,9 @@ export default function DriverScreen() {
           </View>
 
           <View style={styles.driverCard}>
-            <Text style={styles.sectionTitle}>운행 정보</Text>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>운용자 *</Text>
-              <View style={styles.rankNameRow}>
+            <View style={styles.fieldGroupRow}>
+              <View style={styles.fieldGroupCol}>
+                <Text style={styles.fieldLabel}>운용자 *</Text>
                 <TouchableOpacity
                   style={styles.rankChip}
                   onPress={() => setRankModalTarget('operator')}>
@@ -1035,17 +1034,15 @@ export default function DriverScreen() {
                   <Text style={styles.rankChipArrow}>▾</Text>
                 </TouchableOpacity>
                 <TextInput
-                  style={[styles.routeInput, styles.rankNameInput]}
+                  style={styles.routeInput}
                   value={operatorName}
                   onChangeText={setOperatorName}
                   placeholder="성명"
                   placeholderTextColor="#94A3B8"
                 />
               </View>
-            </View>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>사용자 *</Text>
-              <View style={styles.rankNameRow}>
+              <View style={styles.fieldGroupCol}>
+                <Text style={styles.fieldLabel}>사용자 *</Text>
                 <TouchableOpacity
                   style={styles.rankChip}
                   onPress={() => setRankModalTarget('user')}>
@@ -1055,7 +1052,7 @@ export default function DriverScreen() {
                   <Text style={styles.rankChipArrow}>▾</Text>
                 </TouchableOpacity>
                 <TextInput
-                  style={[styles.routeInput, styles.rankNameInput]}
+                  style={styles.routeInput}
                   value={userName}
                   onChangeText={setUserName}
                   placeholder="성명"
@@ -1076,7 +1073,6 @@ export default function DriverScreen() {
           </View>
 
           <View style={styles.routeCard}>
-            <Text style={styles.sectionTitle}>경로</Text>
             <View style={styles.routeFieldBlock}>
               <Text style={styles.fieldLabel}>출발지</Text>
               <TextInput
@@ -1215,24 +1211,24 @@ export default function DriverScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
+    flex: 1,
     backgroundColor: '#F8FAFC',
-    padding: 24,
+    padding: 16,
   },
   topRow: {
     alignItems: 'flex-start',
     gap: 18,
-    marginBottom: 22,
+    marginBottom: 8,
   },
   title: {
     color: '#0F172A',
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '900',
     letterSpacing: -0.4,
   },
@@ -1251,20 +1247,20 @@ const styles = StyleSheet.create({
   },
   // Running hero card — LinearGradient provides the colour
   runningHeroCard: {
-    borderRadius: 20,
-    marginBottom: 12,
-    padding: 22,
+    borderRadius: 16,
+    marginBottom: 8,
+    padding: 14,
     shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 18,
-    elevation: 9,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
   },
   heroHeader: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 22,
+    marginBottom: 10,
   },
   statusDotActive: {
     backgroundColor: '#4ADE80',
@@ -1289,16 +1285,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 28,
     justifyContent: 'center',
-    marginBottom: 22,
+    marginBottom: 10,
   },
   heroMetric: {
     alignItems: 'center',
   },
   heroMetricValue: {
     color: '#FFFFFF',
-    fontSize: 40,
+    fontSize: 30,
     fontWeight: '800',
-    lineHeight: 46,
+    lineHeight: 36,
   },
   heroStaleValue: {
     color: '#FCA5A5',
@@ -1311,7 +1307,7 @@ const styles = StyleSheet.create({
   },
   heroMetricDivider: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    height: 52,
+    height: 40,
     width: 1,
   },
   heroRoute: {
@@ -1341,8 +1337,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderRadius: 14,
     borderWidth: 1,
-    marginBottom: 14,
-    padding: 16,
+    marginBottom: 8,
+    padding: 10,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -1355,7 +1351,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    minHeight: 40,
+    minHeight: 32,
   },
   gpsRowLast: {
     borderBottomWidth: 0,
@@ -1433,10 +1429,10 @@ const styles = StyleSheet.create({
   vehicleSection: {
     backgroundColor: '#FFFFFF',
     borderColor: '#E5E7EB',
-    borderRadius: 22,
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 16,
-    padding: 22,
+    marginBottom: 4,
+    padding: 12,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -1522,11 +1518,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   sectionTitle: {
     color: '#0F172A',
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '900',
   },
   reloadText: {
@@ -1605,8 +1601,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
     borderRadius: 16,
     justifyContent: 'center',
-    marginTop: 8,
-    minHeight: 60,
+    marginTop: 4,
+    minHeight: 48,
     width: '100%',
     shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 4 },
@@ -1619,7 +1615,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#DC2626',
     borderRadius: 16,
     justifyContent: 'center',
-    minHeight: 60,
+    minHeight: 48,
     shadowColor: '#DC2626',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
@@ -1651,7 +1647,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     borderRadius: 16,
     justifyContent: 'center',
-    minHeight: 60,
+    minHeight: 48,
     width: 80,
   },
   detailBtnText: {
@@ -1663,10 +1659,10 @@ const styles = StyleSheet.create({
   driverCard: {
     backgroundColor: '#FFFFFF',
     borderColor: '#E5E7EB',
-    borderRadius: 22,
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 16,
-    padding: 22,
+    marginBottom: 4,
+    padding: 12,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -1674,13 +1670,22 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   fieldGroup: {
-    marginBottom: 16,
+    marginBottom: 6,
+  },
+  fieldGroupRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 6,
+  },
+  fieldGroupCol: {
+    flex: 1,
+    gap: 4,
   },
   fieldLabel: {
     color: '#64748B',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   rankScroll: {
     marginTop: 2,
@@ -1711,10 +1716,10 @@ const styles = StyleSheet.create({
   routeCard: {
     backgroundColor: '#FFFFFF',
     borderColor: '#E5E7EB',
-    borderRadius: 22,
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 16,
-    padding: 22,
+    marginBottom: 4,
+    padding: 12,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -1756,19 +1761,19 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   routeFieldBlock: {
-    gap: 8,
-    marginTop: 18,
+    gap: 4,
+    marginTop: 6,
   },
   routeInput: {
     backgroundColor: '#F8FAFC',
     borderColor: '#E5E7EB',
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     color: '#0F172A',
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
-    minHeight: 56,
-    paddingHorizontal: 18,
+    minHeight: 42,
+    paddingHorizontal: 14,
   },
   // Hero driver info
   heroDriverText: {
@@ -1791,7 +1796,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
     gap: 4,
-    minHeight: 46,
+    justifyContent: 'space-between',
+    minHeight: 40,
     paddingHorizontal: 12,
   },
   rankChipText: {
@@ -1841,12 +1847,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
     borderColor: '#E5E7EB',
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     flexDirection: 'row',
-    minHeight: 82,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    minHeight: 52,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   dropdownBtnText: {
     color: '#0F172A',
