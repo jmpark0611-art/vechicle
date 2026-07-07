@@ -5,7 +5,7 @@ import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { verifyPin } from '../lib/commander-pin';
-import { setStoredRole } from '../lib/role';
+import { markCommanderPinVerified, setStoredRole } from '../lib/role';
 
 const NUMPAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
@@ -33,6 +33,7 @@ export default function CommanderPinScreen() {
         const ok = await verifyPin(pin);
         if (ok) {
           await setStoredRole('commander');
+          markCommanderPinVerified();
           router.replace('/explore');
         } else {
           setError('비밀번호가 올바르지 않습니다.');
