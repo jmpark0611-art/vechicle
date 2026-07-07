@@ -1,6 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { Tabs } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -35,8 +36,18 @@ export default function TabLayout() {
   const isDriver = ready && role === 'driver';
   const isCommander = ready && role === 'commander';
 
+  if (!ready) {
+    return (
+      <View style={[styles.loadingShell, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
+        <ActivityIndicator color={NAV.accent} />
+        <Text style={styles.loadingText}>모드를 확인하는 중입니다.</Text>
+      </View>
+    );
+  }
+
   return (
     <Tabs
+      initialRouteName={isCommander ? 'explore' : 'index'}
       screenOptions={{
         tabBarActiveTintColor: NAV.accent,
         tabBarInactiveTintColor: NAV.textMuted,
@@ -122,3 +133,19 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingShell: {
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    flex: 1,
+    gap: 12,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  loadingText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+});
