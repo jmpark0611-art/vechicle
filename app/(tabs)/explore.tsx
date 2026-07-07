@@ -254,6 +254,7 @@ export default function TripHistoryScreen() {
   }, [trips]);
 
   const filteredTrips = useMemo(() => {
+    if (!selectedVehicleId) return [];
     return trips.filter((trip) => {
       const matchesStatus =
         filter === 'all' ||
@@ -265,7 +266,7 @@ export default function TripHistoryScreen() {
         return false;
       }
 
-      if (selectedVehicleId && trip.vehicle_id !== selectedVehicleId) {
+      if (trip.vehicle_id !== selectedVehicleId) {
         return false;
       }
 
@@ -527,61 +528,10 @@ export default function TripHistoryScreen() {
 
       <TouchableOpacity style={styles.vehicleDropdownBtn} onPress={() => setShowVehiclePicker(true)}>
         <Text style={selectedVehicleId ? styles.vehicleDropdownText : styles.vehicleDropdownPlaceholder}>
-          {selectedVehicleId ? (selectedVehicle?.vehicle_number ?? '차량 선택') : '전체 차량'}
+          {selectedVehicleId ? (selectedVehicle?.vehicle_number ?? '차량 선택') : '차량을 선택하세요'}
         </Text>
         <Text style={styles.dropdownArrow}>▾</Text>
       </TouchableOpacity>
-
-      <View style={styles.summaryGrid}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>필터 결과</Text>
-          <Text style={styles.summaryValue}>{filteredSummary.total}</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>완료</Text>
-          <Text style={styles.summaryValue}>{filteredSummary.completed}</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>운행 중</Text>
-          <Text style={styles.summaryValue}>{filteredSummary.active}</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>GPS</Text>
-          <Text style={styles.summaryValue}>{filteredSummary.gpsPoints}</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>GPS 누락</Text>
-          <Text style={[styles.summaryValue, filteredSummary.completedWithoutGps > 0 && styles.warningValue]}>
-            {filteredSummary.completedWithoutGps}
-          </Text>
-        </View>
-        <View style={styles.summaryWideCard}>
-          <Text style={styles.summaryLabel}>완료 평균 소요</Text>
-          <Text style={styles.summaryValue}>{formatMinutes(filteredSummary.averageDuration)}</Text>
-        </View>
-      </View>
-
-      {filteredSummary.completedWithoutGps > 0 && (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningText}>
-            완료 운행 중 GPS 포인트가 없는 기록이 {filteredSummary.completedWithoutGps}건 있습니다. 위치 권한과 GPS 저장 상태를 확인해 주세요.
-          </Text>
-        </View>
-      )}
-
-      {runningCount > 1 && (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningText}>
-            진행 중 운행이 {runningCount}건 있습니다. 운행 탭은 가장 최근 운행을 복구합니다.
-          </Text>
-        </View>
-      )}
-
-      {staleRunningCount > 0 && (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>8시간 이상 종료되지 않은 운행이 {staleRunningCount}건 있습니다. 상세 또는 운행 탭에서 종료 여부를 확인해 주세요.</Text>
-        </View>
-      )}
 
       {isLoading && (
         <View style={styles.noticeBox}>
@@ -596,16 +546,78 @@ export default function TripHistoryScreen() {
         </View>
       )}
 
-      {!isLoading && !errorMessage && trips.length === 0 && (
-        <View style={styles.noticeBox}>
-          <Text style={styles.noticeText}>아직 표시할 운행 기록이 없습니다.</Text>
+      {!selectedVehicleId && !isLoading && !errorMessage && (
+        <View style={styles.selectVehicleNotice}>
+          <Text style={styles.selectVehicleNoticeText}>차량을 선택해 주세요</Text>
+          <Text style={styles.selectVehicleNoticeSubText}>위 드롭다운에서 차량을 선택하면 해당 차량의 운행 기록이 표시됩니다.</Text>
         </View>
       )}
 
-      {!isLoading && !errorMessage && trips.length > 0 && filteredTrips.length === 0 && (
-        <View style={styles.noticeBox}>
-          <Text style={styles.noticeText}>선택한 조건에 맞는 운행 기록이 없습니다.</Text>
-        </View>
+      {selectedVehicleId && (
+        <>
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>필터 결과</Text>
+              <Text style={styles.summaryValue}>{filteredSummary.total}</Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>완료</Text>
+              <Text style={styles.summaryValue}>{filteredSummary.completed}</Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>운행 중</Text>
+              <Text style={styles.summaryValue}>{filteredSummary.active}</Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>GPS</Text>
+              <Text style={styles.summaryValue}>{filteredSummary.gpsPoints}</Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>GPS 누락</Text>
+              <Text style={[styles.summaryValue, filteredSummary.completedWithoutGps > 0 && styles.warningValue]}>
+                {filteredSummary.completedWithoutGps}
+              </Text>
+            </View>
+            <View style={styles.summaryWideCard}>
+              <Text style={styles.summaryLabel}>완료 평균 소요</Text>
+              <Text style={styles.summaryValue}>{formatMinutes(filteredSummary.averageDuration)}</Text>
+            </View>
+          </View>
+
+          {filteredSummary.completedWithoutGps > 0 && (
+            <View style={styles.warningBox}>
+              <Text style={styles.warningText}>
+                완료 운행 중 GPS 포인트가 없는 기록이 {filteredSummary.completedWithoutGps}건 있습니다. 위치 권한과 GPS 저장 상태를 확인해 주세요.
+              </Text>
+            </View>
+          )}
+
+          {runningCount > 1 && (
+            <View style={styles.warningBox}>
+              <Text style={styles.warningText}>
+                진행 중 운행이 {runningCount}건 있습니다. 운행 탭은 가장 최근 운행을 복구합니다.
+              </Text>
+            </View>
+          )}
+
+          {staleRunningCount > 0 && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>8시간 이상 종료되지 않은 운행이 {staleRunningCount}건 있습니다. 상세 또는 운행 탭에서 종료 여부를 확인해 주세요.</Text>
+            </View>
+          )}
+
+          {!isLoading && !errorMessage && trips.length === 0 && (
+            <View style={styles.noticeBox}>
+              <Text style={styles.noticeText}>아직 표시할 운행 기록이 없습니다.</Text>
+            </View>
+          )}
+
+          {!isLoading && !errorMessage && trips.length > 0 && filteredTrips.length === 0 && (
+            <View style={styles.noticeBox}>
+              <Text style={styles.noticeText}>선택한 조건에 맞는 운행 기록이 없습니다.</Text>
+            </View>
+          )}
+        </>
       )}
 
       <View style={styles.list}>
@@ -776,12 +788,6 @@ export default function TripHistoryScreen() {
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>차량 선택</Text>
             <ScrollView style={styles.modalScroll}>
-              <TouchableOpacity
-                style={[styles.modalItem, selectedVehicleId === null && styles.modalItemActive]}
-                onPress={() => { setSelectedVehicleId(null); setShowVehiclePicker(false); }}>
-                <Text style={[styles.modalItemText, selectedVehicleId === null && styles.modalItemTextActive]}>전체 차량</Text>
-                {selectedVehicleId === null && <Text style={styles.modalCheckmark}>✓</Text>}
-              </TouchableOpacity>
               {vehicles.map((vehicle) => {
                 const isSelected = selectedVehicleId === vehicle.id;
                 return (
@@ -1369,6 +1375,28 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 11,
     fontWeight: '400',
+  },
+  selectVehicleNotice: {
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 16,
+    marginTop: 8,
+    marginBottom: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 32,
+  },
+  selectVehicleNoticeText: {
+    color: '#334155',
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  selectVehicleNoticeSubText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontWeight: '400',
+    textAlign: 'center',
   },
   // Modal overlay + sheet
   modalOverlay: {

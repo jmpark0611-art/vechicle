@@ -69,6 +69,25 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - `app/(tabs)/index.tsx` → GPS 저장 실패 시 gps-queue에 큐잉, 앱 활성화/초기화 시 큐 플러시, GPS 카드에 미전송 큐 개수 표시
 - `app/(tabs)/check.tsx` → "사용자 역할" 표시 + "역할 변경" 버튼 추가 (clearStoredRole 후 role-select로 이동)
 
+### Session 5 (Single-screen layout + GitHub Pages deploy + 기록탭 버그 수정)
+- `app/(tabs)/index.tsx` → ScrollView → View(flex:1)로 변환해 스크롤 없이 한 화면에 표시. 운용자/사용자 필드를 2컬럼 나란히 배치(fieldGroupRow/fieldGroupCol). 각 카드 padding/margin 축소.
+- `app.json` → `experiments.baseUrl: "/vechicle"` 추가 (GitHub Pages 서브패스 라우팅용)
+- `.github/workflows/web-deploy.yml` → NEW: GitHub Pages 자동 배포 워크플로. Node 22 필수(WebSocket 이슈). `peaceiris/actions-gh-pages@v4` 사용해 gh-pages 브랜치에 배포. 피처 브랜치에서도 동작.
+  - GitHub Pages 설정: Settings → Pages → Source → "Deploy from a branch" → `gh-pages` → `/ (root)`
+  - 배포 URL: `https://jmpark0611-art.github.io/vechicle`
+  - PWA "홈 화면 추가" 지원: Expo static export가 manifest.json 자동 생성
+- `app/(tabs)/explore.tsx` → 기록탭 버그 수정: 차량 미선택 시 운행 기록 카드가 보이던 문제
+  - `filteredTrips` useMemo: `selectedVehicleId === null`이면 빈 배열 반환
+  - 차량 미선택 시 summaryGrid, 경고 박스, 카드 목록 숨김
+  - 차량 미선택 시 "차량을 선택해 주세요" 안내 표시
+  - 차량 선택 드롭다운 placeholder: '전체 차량' → '차량을 선택하세요'
+  - 차량 선택 모달에서 "전체 차량" 옵션 제거 (차량 선택 필수화)
+
+### Deployment Notes (GitHub Actions)
+- **Node 20 WebSocket 오류**: Expo static export가 SSR 실행 중 Node 20에서 WebSocket 없어 실패 → Node 22로 변경 해결
+- **`actions/deploy-pages` 브랜치 제한**: 기본 브랜치(main)에서만 동작 → `peaceiris/actions-gh-pages@v4`로 교체 해결
+- **빌드-39**: APK 다운로드 - https://github.com/jmpark0611-art/vechicle/releases/tag/build-39
+
 ## Architecture Decisions
 - **No route history anywhere**: gps_points table is write-only from driver's perspective; commanders only read latest point per active trip
 - **Map stack**: react-native-webview (native) + iframe (web) both rendering Leaflet HTML from `lib/map-html.ts`
