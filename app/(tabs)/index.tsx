@@ -1050,6 +1050,44 @@ export default function DriverScreen() {
                 <Text style={[styles.gpsValue, styles.waitingText]}>{gpsQueueSize}개</Text>
               </View>
             )}
+            <View style={styles.obdStatusRow}>
+              <View style={[styles.obdStatusDot, { backgroundColor: obdState === 'connected' ? '#16A34A' : '#94A3B8' }]} />
+              <Text style={[styles.obdStatusText, { flex: 1 }]}>
+                {obdState === 'connected'
+                  ? 'OBD 연결됨'
+                  : obdState === 'scanning' || obdState === 'connecting' || obdState === 'initializing'
+                    ? 'OBD 연결 중...'
+                    : 'OBD 미연결'}
+              </Text>
+              {obdState === 'connected' ? (
+                <TouchableOpacity style={styles.obdInlineBtn} onPress={() => { void handleObdDisconnect(); }}>
+                  <Text style={styles.obdInlineBtnText}>해제</Text>
+                </TouchableOpacity>
+              ) : obdState === 'scanning' || obdState === 'connecting' || obdState === 'initializing' ? (
+                <ActivityIndicator size="small" color="#2563EB" />
+              ) : (
+                <TouchableOpacity style={styles.obdInlineBtn} onPress={() => { void handleObdScan(); }}>
+                  <Text style={styles.obdInlineBtnText}>검색</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {obdMessage ? (
+              <Text style={styles.obdStatusMsg}>{obdMessage}</Text>
+            ) : null}
+            {obdDevices.length > 0 && obdState !== 'connected' && (
+              <View style={styles.obdDeviceList}>
+                {obdDevices.map((device) => (
+                  <TouchableOpacity
+                    key={device.id}
+                    style={styles.obdDeviceItem}
+                    onPress={() => { void handleObdConnect(device.id); }}
+                    disabled={obdState === 'connecting' || obdState === 'initializing'}>
+                    <Text style={styles.obdDeviceName}>{device.name}</Text>
+                    {device.rssi != null && <Text style={styles.obdDeviceRssi}>{device.rssi} dBm</Text>}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         </>
       ) : (
