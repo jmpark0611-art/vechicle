@@ -182,16 +182,12 @@ export default function DriverScreen() {
   const [userName, setUserName] = useState('');
   const [operatorRank, setOperatorRank] = useState('');
   const [userRank, setUserRank] = useState('');
-  const [startOdometerInput, setStartOdometerInput] = useState('');
-  const [fuelStation, setFuelStation] = useState('');
-  const [fuelAddedLiters, setFuelAddedLiters] = useState('');
   const [rankModalTarget, setRankModalTarget] = useState<'operator' | 'user' | null>(null);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
-  const [showEndTripModal, setShowEndTripModal] = useState(false);
-  const [endOdometerInput, setEndOdometerInput] = useState('');
   const locationSub = useRef<LocationSubscription | null>(null);
   const latestLocationRef = useRef<TripLocation | null>(null);
   const startOdometerRef = useRef<number | null>(null);
+  const startFuelPctRef = useRef<number | null>(null);
   const [obdState, setObdState] = useState<ObdConnectionState>('idle');
   const [obdLiveData, setObdLiveData] = useState<ObdLiveData | null>(null);
   const [obdDevices, setObdDevices] = useState<ObdDevice[]>([]);
@@ -212,11 +208,6 @@ export default function DriverScreen() {
     getDriverInfo().then(setDriverInfoState);
   }, []);
 
-  useEffect(() => {
-    if (!isRunning) {
-      setStartOdometerInput(selectedVehicle?.current_odometer?.toString() ?? '');
-    }
-  }, [selectedVehicle, isRunning]);
 
   useEffect(() => {
     obdBle.setCallbacks({
@@ -665,8 +656,14 @@ export default function DriverScreen() {
       setLastGpsSavedAt(null);
       setRecoveryNotice(null);
 
-      const startOdoNum = startOdometerInput.trim() ? parseFloat(startOdometerInput) : (selectedVehicle.current_odometer ?? null);
-      startOdometerRef.current = !isNaN(startOdoNum as number) ? startOdoNum : null;
+      let startOdoNum: number | null = selectedVehicle.current_odometer ?? null;
+      startFuelPctRef.current = null;
+      if (obdState === 'connected') {
+        const [obdOdo, obdFuel] = await Promise.all([obdBle.readOdometerKm(), obdBle.readFuelSnapshot()]);
+        if (obdOdo != null) startOdoNum = obdOdo;
+        if (obdFuel != null) startFuelPctRef.current = obdFuel;
+      }
+      startOdometerRef.current = startOdoNum;
 
       const { data, error } = await withTimeout(
         supabase
@@ -725,8 +722,6 @@ export default function DriverScreen() {
     endOdometer: number | null = null,
     dailyKmVal: number | null = null,
     totalKmVal: number | null = null,
-    fuelStationVal: string | null = null,
-    fuelLitersVal: number | null = null,
   ) => {
     if (isSubmitting || !isRunning) {
       return;
@@ -744,7 +739,6 @@ export default function DriverScreen() {
     try {
       const now = new Date().toISOString();
 
-      // Try to get GPS coordinates — if unavailable (permission denied etc.) end without them
       let endLat: number | null = null;
       let endLng: number | null = null;
       try {
@@ -770,8 +764,6 @@ export default function DriverScreen() {
             end_odometer: endOdometer,
             daily_km: dailyKmVal,
             total_km: totalKmVal,
-            fuel_station: fuelStationVal,
-            fuel_added_liters: fuelLitersVal,
           })
           .eq('id', tripId),
         '운행 종료'
@@ -799,10 +791,8 @@ export default function DriverScreen() {
       setStartTime(null);
       setGpsSaveFailureCount(0);
       setRecoveryNotice(null);
-      setEndOdometerInput('');
-      setFuelStation('');
-      setFuelAddedLiters('');
       startOdometerRef.current = null;
+      startFuelPctRef.current = null;
       Alert.alert('도착!', '운행 완료!');
     } catch (error) {
       Alert.alert('오류', formatDbError(error, '운행 종료 중 오류가 발생했습니다.'));
@@ -811,25 +801,39 @@ export default function DriverScreen() {
     }
   };
 
-  const handleEndConfirm = () => {
-    const endOdoNum = endOdometerInput.trim() ? parseFloat(endOdometerInput) : null;
-    if (endOdometerInput.trim() && (isNaN(endOdoNum!) || endOdoNum! < 0)) {
-      Alert.alert('입력 오류', '올바른 오도미터 값을 입력하세요.');
-      return;
+  const handleEndPress = async () => {
+    if (!tripId || isSubmitting) return;
+
+    let endOdo: number | null = null;
+    let fuelInfo = '';
+
+    if (obdState === 'connected') {
+      const [obdOdo, obdFuel] = await Promise.all([obdBle.readOdometerKm(), obdBle.readFuelSnapshot()]);
+      endOdo = obdOdo;
+      if (startFuelPctRef.current != null && obdFuel != null) {
+        const consumed = startFuelPctRef.current - obdFuel;
+        fuelInfo = `\n연료 소모: ${consumed.toFixed(0)}% (${startFuelPctRef.current}%→${obdFuel}%)`;
+      } else if (obdFuel != null) {
+        fuelInfo = `\n현재 연료: ${obdFuel}%`;
+      }
     }
 
-    const startOdo = startOdometerRef.current;
-    const calculatedDailyKm =
-      endOdoNum != null && startOdo != null ? endOdoNum - startOdo : null;
+    const dailyKm =
+      endOdo != null && startOdometerRef.current != null ? endOdo - startOdometerRef.current : null;
 
-    setShowEndTripModal(false);
-    void handleEnd(
-      endOdoNum,
-      calculatedDailyKm,
-      endOdoNum,
-      fuelStation.trim() || null,
-      fuelAddedLiters.trim() ? parseFloat(fuelAddedLiters) : null,
-    );
+    const msg =
+      endOdo != null
+        ? `오도미터: ${endOdo.toLocaleString()} km\n주행: ${dailyKm?.toFixed(1) ?? '-'} km${fuelInfo}`
+        : `OBD 미연결 — 거리 정보 없이 종료합니다.${fuelInfo}`;
+
+    Alert.alert('운행 종료 확인', msg, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '종료',
+        style: 'destructive',
+        onPress: () => void handleEnd(endOdo, dailyKm, endOdo),
+      },
+    ]);
   };
 
   return (
@@ -1072,7 +1076,7 @@ export default function DriverScreen() {
           </View>
 
           <View style={styles.routeCard}>
-            <Text style={styles.sectionTitle}>경로 및 오도미터</Text>
+            <Text style={styles.sectionTitle}>경로</Text>
             <View style={styles.routeFieldBlock}>
               <Text style={styles.fieldLabel}>출발지</Text>
               <TextInput
@@ -1093,16 +1097,15 @@ export default function DriverScreen() {
                 placeholderTextColor="#94A3B8"
               />
             </View>
-            <View style={styles.routeFieldBlock}>
-              <Text style={styles.fieldLabel}>출발 오도미터 (km)</Text>
-              <TextInput
-                style={styles.routeInput}
-                value={startOdometerInput}
-                onChangeText={setStartOdometerInput}
-                placeholder="현재 계기판 오도미터"
-                placeholderTextColor="#94A3B8"
-                keyboardType="decimal-pad"
-              />
+            <View style={styles.obdStatusRow}>
+              <View style={[styles.obdStatusDot, { backgroundColor: obdState === 'connected' ? '#16A34A' : '#94A3B8' }]} />
+              <Text style={styles.obdStatusText}>
+                {obdState === 'connected'
+                  ? `OBD 연결됨 · 오도미터·연료 자동 수집`
+                  : obdState === 'scanning' || obdState === 'connecting' || obdState === 'initializing'
+                    ? 'OBD 연결 중...'
+                    : 'OBD 미연결 (연결 시 오도미터·연료 자동 수집)'}
+              </Text>
             </View>
             {voiceNotice && (
               <View style={styles.voiceNoticeBox}>
@@ -1145,66 +1148,12 @@ export default function DriverScreen() {
           <TouchableOpacity
             accessibilityLabel="운행 종료"
             style={[styles.endBtn, styles.endBtnFlex, isSubmitting && styles.disabledBtn]}
-            onPress={() => setShowEndTripModal(true)}
+            onPress={handleEndPress}
             disabled={isSubmitting}>
             <Text style={styles.btnText}>{isSubmitting ? '처리 중...' : '종료'}</Text>
           </TouchableOpacity>
         </View>
       )}
-
-      {/* End-trip modal */}
-      <Modal visible={showEndTripModal} transparent animationType="slide" onRequestClose={() => setShowEndTripModal(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowEndTripModal(false)}>
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>운행 종료</Text>
-            <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>종료 오도미터 (km)</Text>
-                <TextInput
-                  style={styles.routeInput}
-                  value={endOdometerInput}
-                  onChangeText={setEndOdometerInput}
-                  placeholder={startOdometerRef.current != null ? `출발 시: ${startOdometerRef.current.toLocaleString()} km` : '현재 오도미터 입력'}
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="decimal-pad"
-                />
-                {startOdometerRef.current != null && endOdometerInput.trim() && !isNaN(parseFloat(endOdometerInput)) && (
-                  <Text style={styles.obdInfoValue}>
-                    일일 주행: {(parseFloat(endOdometerInput) - startOdometerRef.current).toFixed(1)} km
-                  </Text>
-                )}
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>주입 부대</Text>
-                <TextInput
-                  style={styles.routeInput}
-                  value={fuelStation}
-                  onChangeText={setFuelStation}
-                  placeholder="유류 보급 부대"
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
-              <View style={[styles.fieldGroup, { marginBottom: 20 }]}>
-                <Text style={styles.fieldLabel}>보충량 (L)</Text>
-                <TextInput
-                  style={styles.routeInput}
-                  value={fuelAddedLiters}
-                  onChangeText={setFuelAddedLiters}
-                  placeholder="0"
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="decimal-pad"
-                />
-              </View>
-              <TouchableOpacity
-                style={[styles.endBtn, isSubmitting && styles.disabledBtn]}
-                onPress={handleEndConfirm}
-                disabled={isSubmitting}>
-                <Text style={styles.btnText}>{isSubmitting ? '처리 중...' : '종료 확인'}</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      </Modal>
 
       {/* Rank picker modal */}
       <Modal visible={rankModalTarget !== null} transparent animationType="slide" onRequestClose={() => setRankModalTarget(null)}>
@@ -1867,6 +1816,25 @@ const styles = StyleSheet.create({
     color: '#059669',
     fontSize: 14,
     fontWeight: '700',
+  },
+  obdStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 10,
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  obdStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  obdStatusText: {
+    fontSize: 12,
+    color: '#64748B',
+    flex: 1,
   },
   // Dropdown button
   dropdownBtn: {

@@ -96,6 +96,18 @@ export const obdBle = {
     cbs?.onStateChange('idle');
   },
 
+  isConnected(): boolean {
+    return dataTimer !== null;
+  },
+
+  async readOdometerKm(): Promise<number | null> {
+    return 45823.5;
+  },
+
+  async readFuelSnapshot(): Promise<number | null> {
+    return Math.round(fuelLevel);
+  },
+
   async readDtcCodes() {
     await new Promise((r) => setTimeout(r, 600));
     const base = makeLiveData();

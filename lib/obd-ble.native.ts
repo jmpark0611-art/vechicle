@@ -254,6 +254,33 @@ class ObdBleService {
     this.pollTimer = setInterval(poll, POLL_INTERVAL_MS);
   }
 
+  isConnected(): boolean {
+    return this.device !== null;
+  }
+
+  async readOdometerKm(): Promise<number | null> {
+    try {
+      const response = await this.sendCommand('01A6');
+      const bytes = parseObdBytes('A6', response);
+      if (!bytes || bytes.length < 4) return null;
+      const km = (bytes[0] * 16777216 + bytes[1] * 65536 + bytes[2] * 256 + bytes[3]) / 10;
+      return km;
+    } catch {
+      return null;
+    }
+  }
+
+  async readFuelSnapshot(): Promise<number | null> {
+    try {
+      const response = await this.sendCommand('012F');
+      const bytes = parseObdBytes('2F', response);
+      if (!bytes || bytes.length < 1) return null;
+      return Math.round((bytes[0] * 100) / 255);
+    } catch {
+      return null;
+    }
+  }
+
   async readDtcCodes(): Promise<void> {
     try {
       const response = await this.sendCommand('03');
