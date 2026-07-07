@@ -84,16 +84,6 @@ function getTripTime(value: string | null) {
 }
 
 
-function escapeCsvValue(value: string | number | null | undefined) {
-  const text = String(value ?? '');
-
-  if (/[",\n\r]/.test(text)) {
-    return `"${text.replaceAll('"', '""')}"`;
-  }
-
-  return text;
-}
-
 function formatMinutes(minutes: number | null) {
   if (minutes === null) {
     return '-';
@@ -211,7 +201,6 @@ export default function TripHistoryScreen() {
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [showVehiclePicker, setShowVehiclePicker] = useState(false);
-  const [searchText, setSearchText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -265,8 +254,6 @@ export default function TripHistoryScreen() {
   }, [trips]);
 
   const filteredTrips = useMemo(() => {
-    const normalizedSearchText = searchText.trim().toLowerCase();
-
     return trips.filter((trip) => {
       const matchesStatus =
         filter === 'all' ||
@@ -282,74 +269,9 @@ export default function TripHistoryScreen() {
         return false;
       }
 
-      const vehicleNumber = (trip.vehicle_id && vehicleMap.get(trip.vehicle_id)) || '차량 정보 없음';
-      const routeText = `${vehicleNumber} ${trip.start_place ?? ''} ${trip.end_place ?? ''}`;
-
-      return !normalizedSearchText || routeText.toLowerCase().includes(normalizedSearchText);
+      return true;
     });
-  }, [filter, searchText, selectedVehicleId, trips, vehicleMap]);
-
-  const handleExportCsv = useCallback(() => {
-    if (filteredTrips.length === 0) {
-      Alert.alert('내보내기 불가', '내보낼 운행 기록이 없습니다.');
-      return;
-    }
-
-    const header = [
-      '차량번호',
-      '상태',
-      '행선지',
-      '운행 목적',
-      '출발',
-      '도착',
-      '소요',
-      '일일 주행km',
-      '누적km',
-      '주입 부대',
-      '보충량(L)',
-      '운용자',
-      '사용자',
-      'GPS수',
-    ];
-    const rows = filteredTrips.map((trip) => {
-      const gpsSummary = gpsSummaryByTripId.get(trip.id);
-      const vehicleNumber = (trip.vehicle_id && vehicleMap.get(trip.vehicle_id)) || '차량 정보 없음';
-
-      return [
-        vehicleNumber,
-        getTripStatusText(trip.status),
-        `${trip.start_place ?? ''} → ${trip.end_place ?? ''}`,
-        trip.purpose ?? '',
-        formatDateTime(trip.start_time),
-        formatDateTime(trip.end_time),
-        formatTripDuration(trip.start_time, trip.end_time),
-        trip.daily_km ?? '',
-        trip.total_km ?? '',
-        trip.fuel_station ?? '',
-        trip.fuel_added_liters ?? '',
-        [trip.operator_rank, trip.operator_name].filter(Boolean).join(' '),
-        [trip.user_rank, trip.user_name].filter(Boolean).join(' '),
-        gpsSummary?.count ?? 0,
-      ];
-    });
-    const csv = [header, ...rows]
-      .map((row) => row.map((value) => escapeCsvValue(value)).join(','))
-      .join('\r\n');
-    const fileName = `vehicle-trips-${new Date().toISOString().slice(0, 10)}.csv`;
-
-    if (Platform.OS !== 'web') {
-      Alert.alert('CSV 내보내기 안내', '현재 CSV 파일 저장은 웹 브라우저에서 사용할 수 있습니다.');
-      return;
-    }
-
-    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.click();
-    URL.revokeObjectURL(url);
-  }, [filteredTrips, gpsSummaryByTripId, vehicleMap]);
+  }, [filter, selectedVehicleId, trips]);
 
   const handlePrintPv = useCallback(() => {
     if (Platform.OS !== 'web') {
@@ -553,11 +475,10 @@ export default function TripHistoryScreen() {
           <Text style={styles.title}>운행 기록</Text>
         </View>
         <TouchableOpacity
-          accessibilityLabel="운행 기록 CSV 내보내기"
-          style={[styles.headerCsvBtn, filteredTrips.length === 0 && styles.disabledBtn]}
-          onPress={handleExportCsv}
-          disabled={filteredTrips.length === 0}>
-          <Text style={styles.headerCsvText}>↓ CSV</Text>
+          accessibilityLabel="장비운행증 출력"
+          style={styles.headerCsvBtn}
+          onPress={() => setPvModalVisible(true)}>
+          <Text style={styles.headerCsvText}>장비운행증</Text>
         </TouchableOpacity>
       </View>
 
@@ -604,29 +525,12 @@ export default function TripHistoryScreen() {
         </TouchableOpacity>
       </View>
 
-      <TextInput
-        style={styles.searchInput}
-        value={searchText}
-        onChangeText={setSearchText}
-        placeholder="차량번호, 출발지, 목적지 검색"
-        placeholderTextColor="#94A3B8"
-      />
-
       <TouchableOpacity style={styles.vehicleDropdownBtn} onPress={() => setShowVehiclePicker(true)}>
         <Text style={selectedVehicleId ? styles.vehicleDropdownText : styles.vehicleDropdownPlaceholder}>
           {selectedVehicleId ? (selectedVehicle?.vehicle_number ?? '차량 선택') : '전체 차량'}
         </Text>
         <Text style={styles.dropdownArrow}>▾</Text>
       </TouchableOpacity>
-
-      <View style={styles.exportRow}>
-        <TouchableOpacity
-          accessibilityLabel="장비운행증 출력"
-          style={styles.pvBtn}
-          onPress={() => setPvModalVisible(true)}>
-          <Text style={styles.pvBtnText}>장비운행증 출력</Text>
-        </TouchableOpacity>
-      </View>
 
       <View style={styles.summaryGrid}>
         <View style={styles.summaryCard}>
@@ -1010,18 +914,6 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     fontSize: 14,
     fontWeight: '600',
-  },
-  searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    borderWidth: 1,
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '500',
-    marginBottom: 14,
-    minHeight: 48,
-    paddingHorizontal: 14,
   },
   vehicleDropdownBtn: {
     alignItems: 'center',
@@ -1477,26 +1369,6 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 11,
     fontWeight: '400',
-  },
-  // Export row
-  exportRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
-  pvBtn: {
-    alignItems: 'center',
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-    borderRadius: 12,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 46,
-  },
-  pvBtnText: {
-    color: '#1D4ED8',
-    fontSize: 14,
-    fontWeight: '700',
   },
   // Modal overlay + sheet
   modalOverlay: {

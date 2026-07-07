@@ -137,7 +137,7 @@ export default function VehiclesScreen() {
 
   const fleetAlerts = useMemo(() => {
     const INTERVALS = { oil: 5000, oilFilter: 10000, airFilter: 15000 };
-    const alerts: { vehicleId: string; vehicleNumber: string; item: string; remainingKm: number; level: 'critical' | 'warning' }[] = [];
+    const alerts: { vehicleId: string; vehicleNumber: string; item: string; remainingKm: number; level: 'critical' | 'warning' | 'ok' }[] = [];
 
     vehicles.forEach((vehicle) => {
       const odometer = vehicle.current_odometer ?? 0;
@@ -147,15 +147,13 @@ export default function VehiclesScreen() {
         { item: '에어필터', changedAt: vehicle.air_filter_changed_km ?? 0, interval: INTERVALS.airFilter },
       ].forEach(({ item, changedAt, interval }) => {
         const remainingKm = interval - (odometer - changedAt);
-        if (remainingKm <= 2000) {
-          alerts.push({
-            vehicleId: vehicle.id,
-            vehicleNumber: vehicle.vehicle_number,
-            item,
-            remainingKm,
-            level: remainingKm <= 500 ? 'critical' : 'warning',
-          });
-        }
+        alerts.push({
+          vehicleId: vehicle.id,
+          vehicleNumber: vehicle.vehicle_number,
+          item,
+          remainingKm,
+          level: remainingKm <= 500 ? 'critical' : remainingKm <= 2000 ? 'warning' : 'ok',
+        });
       });
     });
 
@@ -581,18 +579,25 @@ export default function VehiclesScreen() {
         </View>
       )}
 
-      {fleetAlerts.length > 0 && (
+      {vehicles.length > 0 && (
         <View style={styles.alertsCard}>
-          <Text style={styles.alertsTitle}>정비 알림</Text>
+          <Text style={styles.alertsTitle}>소모품 교환주기 현황</Text>
           {fleetAlerts.map((alert) => (
             <TouchableOpacity
               key={`${alert.vehicleId}-${alert.item}`}
               style={[styles.alertRow, alert.level === 'critical' && styles.alertRowCritical]}
               onPress={() => setSelectedTabVehicleId(alert.vehicleId)}>
-              <View style={[styles.alertDot, alert.level === 'critical' ? styles.alertDotCritical : styles.alertDotWarning]} />
+              <View style={[
+                styles.alertDot,
+                alert.level === 'critical' ? styles.alertDotCritical : alert.level === 'warning' ? styles.alertDotWarning : styles.alertDotOk,
+              ]} />
               <Text style={styles.alertText}>{alert.vehicleNumber} · {alert.item}</Text>
-              <Text style={[styles.alertKm, alert.level === 'critical' && styles.alertKmCritical]}>
-                {alert.remainingKm <= 0 ? '교환 필요' : `${Math.round(alert.remainingKm)}km 후`}
+              <Text style={[
+                styles.alertKm,
+                alert.level === 'critical' && styles.alertKmCritical,
+                alert.level === 'ok' && styles.alertKmOk,
+              ]}>
+                {alert.remainingKm <= 0 ? '교환 필요' : `${Math.round(alert.remainingKm)}km`}
               </Text>
             </TouchableOpacity>
           ))}
@@ -1514,6 +1519,9 @@ const styles = StyleSheet.create({
     height: 10,
     width: 10,
   },
+  alertDotOk: {
+    backgroundColor: '#22C55E',
+  },
   alertDotWarning: {
     backgroundColor: '#F59E0B',
   },
@@ -1530,6 +1538,9 @@ const styles = StyleSheet.create({
     color: '#D97706',
     fontSize: 12,
     fontWeight: '700',
+  },
+  alertKmOk: {
+    color: '#16A34A',
   },
   alertKmCritical: {
     color: '#DC2626',
