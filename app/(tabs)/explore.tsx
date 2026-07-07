@@ -478,7 +478,7 @@ export default function TripHistoryScreen() {
           accessibilityLabel="장비운행증 출력"
           style={styles.headerCsvBtn}
           onPress={() => setPvModalVisible(true)}>
-          <Text style={styles.headerCsvText}>장비운행증</Text>
+          <Text style={styles.headerCsvText}>장비운행증 내보내기</Text>
         </TouchableOpacity>
       </View>
 

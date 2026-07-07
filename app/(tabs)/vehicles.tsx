@@ -528,7 +528,7 @@ export default function VehiclesScreen() {
         <TouchableOpacity
           style={styles.registerBtn}
           onPress={() => setShowRegisterModal(true)}>
-          <Text style={styles.registerBtnText}>+ 등록</Text>
+          <Text style={styles.registerBtnText}>+ 차량등록</Text>
         </TouchableOpacity>
       </View>
 
