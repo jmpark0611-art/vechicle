@@ -1,3 +1,4 @@
+import { PermissionsAndroid, Platform } from 'react-native';
 import { BleManager, Device, State, type Subscription } from 'react-native-ble-plx';
 
 // ELM327 BLE 어댑터 서비스/특성 프로파일
@@ -126,7 +127,18 @@ class ObdBleService {
     this.callbacks?.onStateChange('connecting');
     this.stopScan();
 
-    this.device = await this.manager.connectToDevice(deviceId, { requestMTU: 512, timeout: 10000 });
+    if (Platform.OS === 'android' && Platform.Version >= 31) {
+      const granted = await PermissionsAndroid.requestMultiple([
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+      ]);
+      const allGranted = Object.values(granted).every(
+        (r) => r === PermissionsAndroid.RESULTS.GRANTED
+      );
+      if (!allGranted) throw new Error('블루투스 권한이 필요합니다. 설정에서 권한을 허용해 주세요.');
+    }
+
+    this.device = await this.manager.connectToDevice(deviceId, { requestMTU: 247, timeout: 15000 });
     await this.device.discoverAllServicesAndCharacteristics();
 
     const matched = await this.detectProfile();
