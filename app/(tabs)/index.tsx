@@ -34,6 +34,7 @@ type Vehicle = {
   equipment_number: string | null;
   fuel_type: string | null;
   current_odometer: number | null;
+  obd_device_id: string | null;
 };
 
 type ActiveTrip = {
@@ -186,6 +187,7 @@ export default function DriverScreen() {
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const locationSub = useRef<LocationSubscription | null>(null);
   const latestLocationRef = useRef<TripLocation | null>(null);
+  const selectedVehicleRef = useRef<Vehicle | null>(null);
   const startOdometerRef = useRef<number | null>(null);
   const startFuelPctRef = useRef<number | null>(null);
   const [obdState, setObdState] = useState<ObdConnectionState>('idle');
@@ -205,6 +207,10 @@ export default function DriverScreen() {
   }, [location]);
 
   useEffect(() => {
+    selectedVehicleRef.current = selectedVehicle;
+  }, [selectedVehicle]);
+
+  useEffect(() => {
     getDriverInfo().then(setDriverInfoState);
   }, []);
 
@@ -220,6 +226,13 @@ export default function DriverScreen() {
       },
       onDeviceFound: (device) => {
         setObdDevices((prev) => (prev.find((d) => d.id === device.id) ? prev : [...prev, device]));
+        const sv = selectedVehicleRef.current;
+        if (sv?.obd_device_id === device.id) {
+          obdBle.stopScan();
+          void obdBle.connect(device.id).catch((e: unknown) => {
+            setObdMessage(e instanceof Error ? e.message : '자동 연결 실패');
+          });
+        }
       },
       onData: (data) => {
         setObdLiveData(data);
@@ -290,6 +303,16 @@ export default function DriverScreen() {
     setObdMessage(null);
     try {
       await obdBle.connect(deviceId);
+      const sv = selectedVehicleRef.current;
+      if (sv && sv.obd_device_id !== deviceId) {
+        const { error } = await supabase
+          .from('vehicles')
+          .update({ obd_device_id: deviceId })
+          .eq('id', sv.id);
+        if (!error) {
+          setSelectedVehicle((v) => (v ? { ...v, obd_device_id: deviceId } : v));
+        }
+      }
     } catch (e) {
       setObdMessage(e instanceof Error ? e.message : '연결 실패');
     }
@@ -460,7 +483,7 @@ export default function DriverScreen() {
         withTimeout(
           supabase
             .from('vehicles')
-            .select('id, vehicle_number, equipment_name, equipment_number, fuel_type, current_odometer')
+            .select('id, vehicle_number, equipment_name, equipment_number, fuel_type, current_odometer, obd_device_id')
             .order('vehicle_number', { ascending: true }),
           '차량 목록'
         ),
@@ -1076,16 +1099,22 @@ export default function DriverScreen() {
             ) : null}
             {obdDevices.length > 0 && obdState !== 'connected' && (
               <View style={styles.obdDeviceList}>
-                {obdDevices.map((device) => (
-                  <TouchableOpacity
-                    key={device.id}
-                    style={styles.obdDeviceItem}
-                    onPress={() => { void handleObdConnect(device.id); }}
-                    disabled={obdState === 'connecting' || obdState === 'initializing'}>
-                    <Text style={styles.obdDeviceName}>{device.name}</Text>
-                    {device.rssi != null && <Text style={styles.obdDeviceRssi}>{device.rssi} dBm</Text>}
-                  </TouchableOpacity>
-                ))}
+                {obdDevices.map((device) => {
+                  const isRegistered = selectedVehicle?.obd_device_id === device.id;
+                  return (
+                    <TouchableOpacity
+                      key={device.id}
+                      style={[styles.obdDeviceItem, isRegistered && styles.obdDeviceItemRegistered]}
+                      onPress={() => { void handleObdConnect(device.id); }}
+                      disabled={obdState === 'connecting' || obdState === 'initializing'}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.obdDeviceName}>{device.name}</Text>
+                        {isRegistered && <Text style={styles.obdDeviceRegisteredLabel}>이 차량 등록 단말기</Text>}
+                      </View>
+                      {device.rssi != null && <Text style={styles.obdDeviceRssi}>{device.rssi} dBm</Text>}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>
@@ -1228,16 +1257,22 @@ export default function DriverScreen() {
             ) : null}
             {obdDevices.length > 0 && obdState !== 'connected' && (
               <View style={styles.obdDeviceList}>
-                {obdDevices.map((device) => (
-                  <TouchableOpacity
-                    key={device.id}
-                    style={styles.obdDeviceItem}
-                    onPress={() => { void handleObdConnect(device.id); }}
-                    disabled={obdState === 'connecting' || obdState === 'initializing'}>
-                    <Text style={styles.obdDeviceName}>{device.name}</Text>
-                    {device.rssi != null && <Text style={styles.obdDeviceRssi}>{device.rssi} dBm</Text>}
-                  </TouchableOpacity>
-                ))}
+                {obdDevices.map((device) => {
+                  const isRegistered = selectedVehicle?.obd_device_id === device.id;
+                  return (
+                    <TouchableOpacity
+                      key={device.id}
+                      style={[styles.obdDeviceItem, isRegistered && styles.obdDeviceItemRegistered]}
+                      onPress={() => { void handleObdConnect(device.id); }}
+                      disabled={obdState === 'connecting' || obdState === 'initializing'}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.obdDeviceName}>{device.name}</Text>
+                        {isRegistered && <Text style={styles.obdDeviceRegisteredLabel}>이 차량 등록 단말기</Text>}
+                      </View>
+                      {device.rssi != null && <Text style={styles.obdDeviceRssi}>{device.rssi} dBm</Text>}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
             {obdState === 'connected' && obdLiveData && (
@@ -2201,6 +2236,16 @@ const styles = StyleSheet.create({
   obdDeviceRssi: {
     color: '#94A3B8',
     fontSize: 12,
+  },
+  obdDeviceItemRegistered: {
+    borderColor: '#93C5FD',
+    backgroundColor: '#EFF6FF',
+  },
+  obdDeviceRegisteredLabel: {
+    color: '#2563EB',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
   },
   obdDataGrid: {
     flexDirection: 'row',
