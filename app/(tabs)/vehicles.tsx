@@ -31,6 +31,7 @@ type Vehicle = {
   oil_changed_km: number | null;
   oil_filter_changed_km: number | null;
   air_filter_changed_km: number | null;
+  obd_device_id: string | null;
 };
 
 type Trip = {
@@ -198,7 +199,7 @@ export default function VehiclesScreen() {
     try {
       const [vehiclesResult, tripsResult] = await Promise.all([
         withTimeout(
-          supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number, fuel_type, color, current_odometer, oil_changed_km, oil_filter_changed_km, air_filter_changed_km').order('vehicle_number'),
+          supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number, fuel_type, color, current_odometer, oil_changed_km, oil_filter_changed_km, air_filter_changed_km, obd_device_id').order('vehicle_number'),
           '차량 목록'
         ),
         withTimeout(
@@ -502,6 +503,45 @@ export default function VehiclesScreen() {
     [loadVehicles]
   );
 
+  const handleClearObdDevice = useCallback(
+    (vehicle: Vehicle) => {
+      const label = vehicle.obd_device_id
+        ? `현재 등록: …${vehicle.obd_device_id.slice(-8)}`
+        : '';
+      Alert.alert(
+        'OBD 단말기 변경',
+        `${label ? label + '\n\n' : ''}이 차량의 OBD 단말기 등록을 해제합니다.\n\n해제 후 운행 탭에서 OBD를 검색하여 새 단말기에 연결하면 자동으로 등록됩니다.`,
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '해제',
+            style: 'destructive',
+            onPress: async () => {
+              setIsSaving(true);
+              setErrorMessage(null);
+              try {
+                const { error } = await withTimeout(
+                  supabase.from('vehicles').update({ obd_device_id: null }).eq('id', vehicle.id),
+                  'OBD 단말기 해제'
+                );
+                if (error) {
+                  setErrorMessage(formatDbError(error, 'OBD 단말기 해제 중 오류가 발생했습니다.'));
+                } else {
+                  await loadVehicles(true);
+                }
+              } catch (err) {
+                setErrorMessage(formatDbError(err, 'OBD 단말기 해제 중 오류가 발생했습니다.'));
+              } finally {
+                setIsSaving(false);
+              }
+            },
+          },
+        ]
+      );
+    },
+    [loadVehicles]
+  );
+
   useFocusEffect(
     useCallback(() => {
       loadVehicles();
@@ -734,6 +774,24 @@ export default function VehiclesScreen() {
                 <InfoRow label="전체 운행" value={`${counts.total}건`} />
                 <InfoRow label="최근 출발" value={formatDateTime(latestTrip?.start_time ?? null)} />
                 <InfoRow label="최근 종료" value={formatDateTime(latestTrip?.end_time ?? null)} />
+                <View style={styles.obdPairingRow}>
+                  <View style={styles.obdPairingInfo}>
+                    <Text style={styles.infoLabel}>OBD 단말기</Text>
+                    <Text style={[styles.infoValue, !vehicle.obd_device_id && styles.obdPairingNone]}>
+                      {vehicle.obd_device_id
+                        ? `…${vehicle.obd_device_id.slice(-8)}`
+                        : '미등록'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.obdPairingBtn, vehicle.obd_device_id && styles.obdPairingBtnRegistered]}
+                    onPress={() => handleClearObdDevice(vehicle)}
+                    disabled={isSaving}>
+                    <Text style={[styles.obdPairingBtnText, vehicle.obd_device_id && styles.obdPairingBtnTextRegistered]}>
+                      {vehicle.obd_device_id ? '단말기 변경' : '미등록'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
                 {isStale && (
                   <View style={styles.staleBox}>
                     <Text style={styles.staleText}>8시간 이상 종료되지 않은 운행입니다.</Text>
@@ -1927,6 +1985,43 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   colorOptionTextSelected: {
+    color: '#2563EB',
+  },
+  // OBD pairing row in vehicle info panel
+  obdPairingRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 36,
+    gap: 8,
+  },
+  obdPairingInfo: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  obdPairingNone: {
+    color: '#94A3B8',
+  },
+  obdPairingBtn: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  obdPairingBtnRegistered: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#DBEAFE',
+    borderWidth: 1,
+  },
+  obdPairingBtnText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  obdPairingBtnTextRegistered: {
     color: '#2563EB',
   },
   // Color in vehicle detail
