@@ -81,7 +81,6 @@ export default function VehiclesScreen() {
   const [newEquipmentName, setNewEquipmentName] = useState('');
   const [newEquipmentNumber, setNewEquipmentNumber] = useState('');
   const [newFuelType, setNewFuelType] = useState('');
-  const [newVehicleColor, setNewVehicleColor] = useState<string | null>(null);
   const [newInitialOdometer, setNewInitialOdometer] = useState('');
   const [showFuelTypeModal, setShowFuelTypeModal] = useState(false);
   const [showVehicleSelectorModal, setShowVehicleSelectorModal] = useState(false);
@@ -325,7 +324,6 @@ export default function VehiclesScreen() {
           equipment_name: newEquipmentName.trim() || null,
           equipment_number: newEquipmentNumber.trim() || null,
           fuel_type: newFuelType.trim() || null,
-          color: newVehicleColor || null,
           current_odometer: !isNaN(parsedOdometer as number) ? parsedOdometer : null,
         }),
         '차량 등록'
@@ -340,7 +338,6 @@ export default function VehiclesScreen() {
       setNewEquipmentName('');
       setNewEquipmentNumber('');
       setNewFuelType('');
-      setNewVehicleColor(null);
       setNewInitialOdometer('');
       setShowRegisterModal(false);
       await loadVehicles(true);
@@ -349,7 +346,7 @@ export default function VehiclesScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, loadVehicles, newEquipmentName, newEquipmentNumber, newFuelType, newInitialOdometer, newVehicleColor, newVehicleNumber, vehicles]);
+  }, [isSaving, loadVehicles, newEquipmentName, newEquipmentNumber, newFuelType, newInitialOdometer, newVehicleNumber, vehicles]);
 
   const startEditVehicle = useCallback((vehicle: Vehicle) => {
     setEditingVehicleId(vehicle.id);
@@ -866,57 +863,52 @@ export default function VehiclesScreen() {
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowRegisterModal(false)}>
           <View style={styles.modalSheet} onStartShouldSetResponder={() => true}>
             <Text style={styles.modalTitle}>차량 등록</Text>
-            <TextInput
-              style={[styles.textInput, { marginBottom: 10 }]}
-              value={newVehicleNumber}
-              onChangeText={setNewVehicleNumber}
-              placeholder="차량번호 입력 (필수)"
-              placeholderTextColor="#94A3B8"
-            />
-            <View style={styles.formRowTwo}>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <TextInput
-                style={[styles.textInput, { flex: 1, marginRight: 8 }]}
-                value={newEquipmentName}
-                onChangeText={setNewEquipmentName}
-                placeholder="장비명"
+                style={[styles.textInput, { marginBottom: 10 }]}
+                value={newVehicleNumber}
+                onChangeText={setNewVehicleNumber}
+                placeholder="차량번호 입력 (필수)"
                 placeholderTextColor="#94A3B8"
               />
+              <View style={styles.formRowTwo}>
+                <TextInput
+                  style={[styles.textInput, { flex: 1, marginRight: 8 }]}
+                  value={newEquipmentName}
+                  onChangeText={setNewEquipmentName}
+                  placeholder="장비명"
+                  placeholderTextColor="#94A3B8"
+                />
+                <TextInput
+                  style={[styles.textInput, { flex: 1 }]}
+                  value={newEquipmentNumber}
+                  onChangeText={setNewEquipmentNumber}
+                  placeholder="장비 호수"
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
               <TextInput
-                style={[styles.textInput, { flex: 1 }]}
-                value={newEquipmentNumber}
-                onChangeText={setNewEquipmentNumber}
-                placeholder="장비 호수"
+                style={[styles.textInput, { marginBottom: 10 }]}
+                value={newInitialOdometer}
+                onChangeText={setNewInitialOdometer}
+                placeholder="초기 오도미터 km (선택)"
                 placeholderTextColor="#94A3B8"
+                keyboardType="numeric"
               />
-            </View>
-            <TextInput
-              style={[styles.textInput, { marginBottom: 10 }]}
-              value={newInitialOdometer}
-              onChangeText={setNewInitialOdometer}
-              placeholder="초기 오도미터 km (선택)"
-              placeholderTextColor="#94A3B8"
-              keyboardType="numeric"
-            />
-            <TouchableOpacity style={[styles.dropdownBtn, { marginBottom: 10 }]} onPress={() => setShowFuelTypeModal(true)}>
-              <Text style={newFuelType ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
-                {newFuelType || '사용 유류 선택'}
-              </Text>
-              <Text style={styles.dropdownArrow}>▾</Text>
-            </TouchableOpacity>
-            <TextInput
-              style={[styles.textInput, { marginBottom: 10 }]}
-              value={newVehicleColor ?? ''}
-              onChangeText={(text) => setNewVehicleColor(text || null)}
-              placeholder="차량 색상 (예: 카키, 검정, 흰색)"
-              placeholderTextColor="#94A3B8"
-            />
-            <TouchableOpacity
-              accessibilityLabel="차량 등록"
-              style={[styles.compactBtn, styles.fullWidthBtn, { marginTop: 14 }, (!newVehicleNumber.trim() || isSaving) && styles.disabledBtn]}
-              onPress={handleCreateVehicle}
-              disabled={!newVehicleNumber.trim() || isSaving}>
-              <Text style={styles.compactBtnText}>{isSaving ? '저장 중...' : '등록하기'}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity style={[styles.dropdownBtn, { marginBottom: 10 }]} onPress={() => setShowFuelTypeModal(true)}>
+                <Text style={newFuelType ? styles.dropdownBtnText : styles.dropdownPlaceholder}>
+                  {newFuelType || '사용 유류 선택'}
+                </Text>
+                <Text style={styles.dropdownArrow}>▾</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityLabel="차량 등록"
+                style={[styles.compactBtn, styles.fullWidthBtn, { marginTop: 14, marginBottom: 8 }, (!newVehicleNumber.trim() || isSaving) && styles.disabledBtn]}
+                onPress={handleCreateVehicle}
+                disabled={!newVehicleNumber.trim() || isSaving}>
+                <Text style={styles.compactBtnText}>{isSaving ? '저장 중...' : '등록하기'}</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -1846,7 +1838,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '70%',
+    maxHeight: '85%',
     paddingBottom: 32,
     paddingTop: 20,
     paddingHorizontal: 20,
