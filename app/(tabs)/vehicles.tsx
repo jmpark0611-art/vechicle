@@ -32,6 +32,7 @@ type Vehicle = {
   oil_filter_changed_km: number | null;
   air_filter_changed_km: number | null;
   obd_device_id: string | null;
+  obd_ios_device_id: string | null;
 };
 
 type Trip = {
@@ -199,7 +200,7 @@ export default function VehiclesScreen() {
     try {
       const [vehiclesResult, tripsResult] = await Promise.all([
         withTimeout(
-          supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number, fuel_type, color, current_odometer, oil_changed_km, oil_filter_changed_km, air_filter_changed_km, obd_device_id').order('vehicle_number'),
+          supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number, fuel_type, color, current_odometer, oil_changed_km, oil_filter_changed_km, air_filter_changed_km, obd_device_id, obd_ios_device_id').order('vehicle_number'),
           '차량 목록'
         ),
         withTimeout(
@@ -504,13 +505,13 @@ export default function VehiclesScreen() {
   );
 
   const handleClearObdDevice = useCallback(
-    (vehicle: Vehicle) => {
-      const label = vehicle.obd_device_id
-        ? `현재 등록: …${vehicle.obd_device_id.slice(-8)}`
-        : '';
+    (vehicle: Vehicle, platform: 'android' | 'ios') => {
+      const column = platform === 'android' ? 'obd_device_id' : 'obd_ios_device_id';
+      const currentId = platform === 'android' ? vehicle.obd_device_id : vehicle.obd_ios_device_id;
+      const platformLabel = platform === 'android' ? 'Android' : 'iOS';
       Alert.alert(
-        'OBD 단말기 변경',
-        `${label ? label + '\n\n' : ''}이 차량의 OBD 단말기 등록을 해제합니다.\n\n해제 후 운행 탭에서 OBD를 검색하여 새 단말기에 연결하면 자동으로 등록됩니다.`,
+        `OBD 단말기 변경 (${platformLabel})`,
+        `${currentId ? `현재 등록: …${currentId.slice(-8)}\n\n` : ''}${platformLabel} 단말기 등록을 해제합니다.\n\n해제 후 운행 탭에서 OBD를 검색하여 연결하면 자동으로 재등록됩니다.`,
         [
           { text: '취소', style: 'cancel' },
           {
@@ -521,7 +522,7 @@ export default function VehiclesScreen() {
               setErrorMessage(null);
               try {
                 const { error } = await withTimeout(
-                  supabase.from('vehicles').update({ obd_device_id: null }).eq('id', vehicle.id),
+                  supabase.from('vehicles').update({ [column]: null }).eq('id', vehicle.id),
                   'OBD 단말기 해제'
                 );
                 if (error) {
@@ -776,19 +777,33 @@ export default function VehiclesScreen() {
                 <InfoRow label="최근 종료" value={formatDateTime(latestTrip?.end_time ?? null)} />
                 <View style={styles.obdPairingRow}>
                   <View style={styles.obdPairingInfo}>
-                    <Text style={styles.infoLabel}>OBD 단말기</Text>
+                    <Text style={styles.infoLabel}>OBD (Android)</Text>
                     <Text style={[styles.infoValue, !vehicle.obd_device_id && styles.obdPairingNone]}>
-                      {vehicle.obd_device_id
-                        ? `…${vehicle.obd_device_id.slice(-8)}`
-                        : '미등록'}
+                      {vehicle.obd_device_id ? `…${vehicle.obd_device_id.slice(-8)}` : '미등록'}
                     </Text>
                   </View>
                   <TouchableOpacity
                     style={[styles.obdPairingBtn, vehicle.obd_device_id && styles.obdPairingBtnRegistered]}
-                    onPress={() => handleClearObdDevice(vehicle)}
+                    onPress={() => handleClearObdDevice(vehicle, 'android')}
                     disabled={isSaving}>
                     <Text style={[styles.obdPairingBtnText, vehicle.obd_device_id && styles.obdPairingBtnTextRegistered]}>
-                      {vehicle.obd_device_id ? '단말기 변경' : '미등록'}
+                      {vehicle.obd_device_id ? '변경' : '미등록'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.obdPairingRow}>
+                  <View style={styles.obdPairingInfo}>
+                    <Text style={styles.infoLabel}>OBD (iOS)</Text>
+                    <Text style={[styles.infoValue, !vehicle.obd_ios_device_id && styles.obdPairingNone]}>
+                      {vehicle.obd_ios_device_id ? `…${vehicle.obd_ios_device_id.slice(-8)}` : '미등록'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.obdPairingBtn, vehicle.obd_ios_device_id && styles.obdPairingBtnRegistered]}
+                    onPress={() => handleClearObdDevice(vehicle, 'ios')}
+                    disabled={isSaving}>
+                    <Text style={[styles.obdPairingBtnText, vehicle.obd_ios_device_id && styles.obdPairingBtnTextRegistered]}>
+                      {vehicle.obd_ios_device_id ? '변경' : '미등록'}
                     </Text>
                   </TouchableOpacity>
                 </View>

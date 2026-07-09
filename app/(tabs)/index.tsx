@@ -35,6 +35,7 @@ type Vehicle = {
   fuel_type: string | null;
   current_odometer: number | null;
   obd_device_id: string | null;
+  obd_ios_device_id: string | null;
 };
 
 type ActiveTrip = {
@@ -227,7 +228,8 @@ export default function DriverScreen() {
       onDeviceFound: (device) => {
         setObdDevices((prev) => (prev.find((d) => d.id === device.id) ? prev : [...prev, device]));
         const sv = selectedVehicleRef.current;
-        if (sv?.obd_device_id === device.id) {
+        const myId = Platform.OS === 'android' ? sv?.obd_device_id : sv?.obd_ios_device_id;
+        if (myId && myId === device.id) {
           obdBle.stopScan();
           void obdBle.connect(device.id).catch((e: unknown) => {
             setObdMessage(e instanceof Error ? e.message : '자동 연결 실패');
@@ -304,13 +306,15 @@ export default function DriverScreen() {
     try {
       await obdBle.connect(deviceId);
       const sv = selectedVehicleRef.current;
-      if (sv && sv.obd_device_id !== deviceId) {
+      const column = Platform.OS === 'android' ? 'obd_device_id' : 'obd_ios_device_id';
+      const currentId = Platform.OS === 'android' ? sv?.obd_device_id : sv?.obd_ios_device_id;
+      if (sv && currentId !== deviceId) {
         const { error } = await supabase
           .from('vehicles')
-          .update({ obd_device_id: deviceId })
+          .update({ [column]: deviceId })
           .eq('id', sv.id);
         if (!error) {
-          setSelectedVehicle((v) => (v ? { ...v, obd_device_id: deviceId } : v));
+          setSelectedVehicle((v) => (v ? { ...v, [column]: deviceId } : v));
         }
       }
     } catch (e) {
@@ -483,7 +487,7 @@ export default function DriverScreen() {
         withTimeout(
           supabase
             .from('vehicles')
-            .select('id, vehicle_number, equipment_name, equipment_number, fuel_type, current_odometer, obd_device_id')
+            .select('id, vehicle_number, equipment_name, equipment_number, fuel_type, current_odometer, obd_device_id, obd_ios_device_id')
             .order('vehicle_number', { ascending: true }),
           '차량 목록'
         ),
@@ -1100,7 +1104,8 @@ export default function DriverScreen() {
             {obdDevices.length > 0 && obdState !== 'connected' && (
               <View style={styles.obdDeviceList}>
                 {obdDevices.map((device) => {
-                  const isRegistered = selectedVehicle?.obd_device_id === device.id;
+                  const myId = Platform.OS === 'android' ? selectedVehicle?.obd_device_id : selectedVehicle?.obd_ios_device_id;
+                  const isRegistered = !!myId && myId === device.id;
                   return (
                     <TouchableOpacity
                       key={device.id}
@@ -1258,7 +1263,8 @@ export default function DriverScreen() {
             {obdDevices.length > 0 && obdState !== 'connected' && (
               <View style={styles.obdDeviceList}>
                 {obdDevices.map((device) => {
-                  const isRegistered = selectedVehicle?.obd_device_id === device.id;
+                  const myId = Platform.OS === 'android' ? selectedVehicle?.obd_device_id : selectedVehicle?.obd_ios_device_id;
+                  const isRegistered = !!myId && myId === device.id;
                   return (
                     <TouchableOpacity
                       key={device.id}
