@@ -124,25 +124,46 @@ class ObdBleService {
   }
 
   async connect(deviceId: string): Promise<void> {
-    this.callbacks?.onStateChange('connecting');
+    this.callbacks?.onStateChange('connecting', '단말기 연결 시도 중...');
     this.stopScan();
 
-    if (Platform.OS === 'android' && Platform.Version >= 31) {
-      const granted = await PermissionsAndroid.requestMultiple([
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-      ]);
-      const allGranted = Object.values(granted).every(
-        (r) => r === PermissionsAndroid.RESULTS.GRANTED
-      );
-      if (!allGranted) throw new Error('블루투스 권한이 필요합니다. 설정에서 권한을 허용해 주세요.');
+    try {
+      if (Platform.OS === 'android' && Platform.Version >= 31) {
+        this.callbacks?.onStateChange('connecting', '블루투스 권한 확인 중...');
+        const granted = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+        ]);
+        const allGranted = Object.values(granted).every(
+          (r) => r === PermissionsAndroid.RESULTS.GRANTED
+        );
+        if (!allGranted) throw new Error('블루투스 권한이 필요합니다. 설정에서 허용해 주세요.');
+      }
+
+      this.callbacks?.onStateChange('connecting', 'BLE 연결 중... (최대 15초)');
+      this.device = await this.manager.connectToDevice(deviceId, { timeout: 15000 });
+
+      this.callbacks?.onStateChange('connecting', '서비스 검색 중...');
+      await sleep(300);
+      await this.device.discoverAllServicesAndCharacteristics();
+
+      this.callbacks?.onStateChange('connecting', '프로파일 확인 중...');
+      const matched = await this.detectProfile();
+      if (!matched) {
+        const services = await this.device.services();
+        const uuids = services.map((s) => s.uuid.slice(4, 8).toUpperCase()).join(', ');
+        throw new Error(`ELM327 프로파일 없음\n발견된 서비스: [${uuids || '없음'}]\n제조사 고객센터에 BLE 서비스 UUID 문의 필요`);
+      }
+    } catch (err) {
+      this.cleanup();
+      if (this.device) {
+        await this.device.cancelConnection().catch(() => {});
+        this.device = null;
+      }
+      const msg = err instanceof Error ? err.message : '연결 실패';
+      this.callbacks?.onStateChange('error', msg);
+      throw err;
     }
-
-    this.device = await this.manager.connectToDevice(deviceId, { requestMTU: 247, timeout: 15000 });
-    await this.device.discoverAllServicesAndCharacteristics();
-
-    const matched = await this.detectProfile();
-    if (!matched) throw new Error('ELM327 서비스를 찾을 수 없습니다. OBD 어댑터를 확인하세요.');
 
     this.disconnectSubscription = this.device.onDisconnected(() => {
       this.cleanup();

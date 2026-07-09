@@ -1095,7 +1095,7 @@ export default function DriverScreen() {
               )}
             </View>
             {obdMessage ? (
-              <Text style={styles.obdStatusMsg}>{obdMessage}</Text>
+              <Text style={[styles.obdStatusMsg, obdState === 'error' && styles.obdStatusMsgError]}>{obdMessage}</Text>
             ) : null}
             {obdDevices.length > 0 && obdState !== 'connected' && (
               <View style={styles.obdDeviceList}>
@@ -1253,7 +1253,7 @@ export default function DriverScreen() {
               )}
             </View>
             {obdMessage ? (
-              <Text style={styles.obdStatusMsg}>{obdMessage}</Text>
+              <Text style={[styles.obdStatusMsg, obdState === 'error' && styles.obdStatusMsgError]}>{obdMessage}</Text>
             ) : null}
             {obdDevices.length > 0 && obdState !== 'connected' && (
               <View style={styles.obdDeviceList}>
@@ -2212,6 +2212,9 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 13,
     marginBottom: 10,
+  },
+  obdStatusMsgError: {
+    color: '#DC2626',
   },
   obdDeviceList: {
     gap: 8,
