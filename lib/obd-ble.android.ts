@@ -79,7 +79,7 @@ class ObdClassicService {
   async startScan() {
     this.callbacks?.onStateChange('scanning');
     try {
-      if (Platform.Version >= 31) {
+      if (Number(Platform.Version) >= 31) {
         await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT);
       }
       const paired = await RNBluetoothClassic.getBondedDevices();
@@ -109,7 +109,7 @@ class ObdClassicService {
     this.callbacks?.onStateChange('connecting', '단말기 연결 시도 중...');
 
     try {
-      if (Platform.Version >= 31) {
+      if (Number(Platform.Version) >= 31) {
         this.callbacks?.onStateChange('connecting', '블루투스 권한 확인 중...');
         const granted = await PermissionsAndroid.requestMultiple([
           PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
