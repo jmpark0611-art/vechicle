@@ -1125,7 +1125,12 @@ export default function DriverScreen() {
           </View>
         </>
       ) : (
-        <>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 8 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.vehicleSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>차량 선택</Text>
@@ -1303,7 +1308,7 @@ export default function DriverScreen() {
               </View>
             )}
           </View>
-        </>
+        </ScrollView>
       )}
 
       {!isRunning && (
