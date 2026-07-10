@@ -1125,10 +1125,10 @@ export default function DriverScreen() {
           </View>
         </>
       ) : (
-        <>
+        <View style={{ flex: 1 }}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 8 }}
+          contentContainerStyle={{ paddingBottom: 24 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -1323,7 +1323,7 @@ export default function DriverScreen() {
         {(!operatorName.trim() || !userName.trim()) && (
           <Text style={styles.startHint}>운용자·사용자 성명을 입력하면 출발 가능합니다.</Text>
         )}
-        </>
+        </View>
       )}
       {!isRunning ? null : (
         <View style={styles.runningActionRow}>
