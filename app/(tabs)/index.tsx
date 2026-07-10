@@ -1125,6 +1125,7 @@ export default function DriverScreen() {
           </View>
         </>
       ) : (
+        <>
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 8 }}
@@ -1309,9 +1310,6 @@ export default function DriverScreen() {
             )}
           </View>
         </ScrollView>
-      )}
-
-      {!isRunning && (
         <TouchableOpacity
           accessibilityLabel="운행 출발"
           style={[
@@ -1322,9 +1320,10 @@ export default function DriverScreen() {
           disabled={!selectedVehicle || !operatorName.trim() || !userName.trim() || isSubmitting || isLoadingDashboard}>
           <Text style={styles.btnText}>{isSubmitting ? '처리 중...' : '출발'}</Text>
         </TouchableOpacity>
-      )}
-      {!isRunning && (!operatorName.trim() || !userName.trim()) && (
-        <Text style={styles.startHint}>운용자·사용자 성명을 입력하면 출발 가능합니다.</Text>
+        {(!operatorName.trim() || !userName.trim()) && (
+          <Text style={styles.startHint}>운용자·사용자 성명을 입력하면 출발 가능합니다.</Text>
+        )}
+        </>
       )}
       {!isRunning ? null : (
         <View style={styles.runningActionRow}>
