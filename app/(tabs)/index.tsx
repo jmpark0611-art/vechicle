@@ -939,7 +939,7 @@ export default function DriverScreen() {
       style={[
         styles.container,
         {
-          paddingBottom: Math.max(insets.bottom + 8, 20),
+          paddingBottom: insets.bottom + 84,
           paddingTop: Math.max(insets.top + 8, 20),
         },
       ]}>
