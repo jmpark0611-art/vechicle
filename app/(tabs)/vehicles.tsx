@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '../../lib/supabase';
+import { getStoredUnitCode } from '../../lib/unit';
 import { formatDateTime, isStaleActiveTrip } from '../../lib/format';
 import { formatDbError } from '../../lib/errors';
 import { withTimeout } from '../../lib/request';
@@ -198,11 +199,12 @@ export default function VehiclesScreen() {
     setErrorMessage(null);
 
     try {
+      const unitCode = await getStoredUnitCode();
+      const vehicleQuery = supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number, fuel_type, color, current_odometer, oil_changed_km, oil_filter_changed_km, air_filter_changed_km, obd_device_id, obd_ios_device_id').order('vehicle_number');
+      if (unitCode) vehicleQuery.eq('unit_code', unitCode);
+
       const [vehiclesResult, tripsResult] = await Promise.all([
-        withTimeout(
-          supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number, fuel_type, color, current_odometer, oil_changed_km, oil_filter_changed_km, air_filter_changed_km, obd_device_id, obd_ios_device_id').order('vehicle_number'),
-          '차량 목록'
-        ),
+        withTimeout(vehicleQuery, '차량 목록'),
         withTimeout(
           supabase
             .from('trips')

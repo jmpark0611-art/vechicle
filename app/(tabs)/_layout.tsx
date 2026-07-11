@@ -121,6 +121,16 @@ export default function TabLayout() {
         }}
       />
 
+      {/* ── 운행증 탭 — 수송부 모드 전용 ── */}
+      <Tabs.Screen
+        name="monthly-log"
+        options={{
+          title: '운행증',
+          href: isCommander ? undefined : null,
+          tabBarIcon: ({ color }) => <TabIcon name="logbook" size={26} color={color} />,
+        }}
+      />
+
       {/* ── 점검 탭 — 수송부 모드 전용 ── */}
       <Tabs.Screen
         name="check"

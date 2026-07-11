@@ -26,6 +26,7 @@ import { obdBle, ObdDevice, ObdLiveData, ObdConnectionState } from '../../lib/ob
 import { supabase } from '../../lib/supabase';
 import { withTimeout } from '../../lib/request';
 import { DriverInfo, getDriverInfo, RANKS, saveDriverInfo } from '../../lib/driver-info';
+import { getStoredUnitCode } from '../../lib/unit';
 
 type Vehicle = {
   id: string;
@@ -301,6 +302,20 @@ export default function DriverScreen() {
     setTimeout(() => obdBle.stopScan(), 10_000);
   }, []);
 
+  // 차량 선택 시 등록된 OBD 단말기 자동 검색
+  const autoScanVehicleRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!selectedVehicle || isRunning) return;
+    if (autoScanVehicleRef.current === selectedVehicle.id) return;
+    const myId = Platform.OS === 'android' ? selectedVehicle.obd_device_id : selectedVehicle.obd_ios_device_id;
+    if (!myId) return;
+    autoScanVehicleRef.current = selectedVehicle.id;
+    if (obdState === 'idle' || obdState === 'disconnected' || obdState === 'error') {
+      setTimeout(() => void handleObdScan(), 600);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVehicle?.id, isRunning]);
+
   const handleObdConnect = useCallback(async (deviceId: string) => {
     setObdMessage(null);
     try {
@@ -483,14 +498,15 @@ export default function DriverScreen() {
       const permission = await Location.getForegroundPermissionsAsync();
       setGpsPermissionStatus(permission.status === 'granted' ? 'granted' : 'denied');
 
+      const unitCode = await getStoredUnitCode();
+      const vehicleQuery = supabase
+        .from('vehicles')
+        .select('id, vehicle_number, equipment_name, equipment_number, fuel_type, current_odometer, obd_device_id, obd_ios_device_id')
+        .order('vehicle_number', { ascending: true });
+      if (unitCode) vehicleQuery.eq('unit_code', unitCode);
+
       const [vehiclesResult, activeTripResult] = await Promise.all([
-        withTimeout(
-          supabase
-            .from('vehicles')
-            .select('id, vehicle_number, equipment_name, equipment_number, fuel_type, current_odometer, obd_device_id, obd_ios_device_id')
-            .order('vehicle_number', { ascending: true }),
-          '차량 목록'
-        ),
+        withTimeout(vehicleQuery, '차량 목록'),
         withTimeout(
           supabase
             .from('trips')

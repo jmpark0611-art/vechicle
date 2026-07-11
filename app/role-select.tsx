@@ -4,6 +4,10 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { setStoredRole } from '../lib/role';
+import { fetchUnits, getStoredUnitCode, getStoredUnitName, setStoredUnit, UnitRecord } from '../lib/unit';
 
 const THEME_KEY = 'app_theme_color';
 const THEMES = [
@@ -24,11 +29,26 @@ type ThemeKey = typeof THEMES[number]['key'];
 export default function RoleSelectScreen() {
   const insets = useSafeAreaInsets();
   const [theme, setTheme] = useState<ThemeKey>('blue');
+  const [units, setUnits] = useState<UnitRecord[]>([]);
+  const [selectedUnitCode, setSelectedUnitCode] = useState<string | null>(null);
+  const [selectedUnitName, setSelectedUnitName] = useState<string | null>(null);
+  const [unitModalVisible, setUnitModalVisible] = useState(false);
+  const [loadingUnits, setLoadingUnits] = useState(true);
 
   useEffect(() => {
     AsyncStorage.getItem(THEME_KEY).then((v) => {
       if (v === 'blue' || v === 'olive' || v === 'navy') setTheme(v);
     });
+    getStoredUnitCode().then((code) => {
+      if (code) setSelectedUnitCode(code);
+    });
+    getStoredUnitName().then((name) => {
+      if (name) setSelectedUnitName(name);
+    });
+    fetchUnits()
+      .then(setUnits)
+      .catch(() => setUnits([]))
+      .finally(() => setLoadingUnits(false));
   }, []);
 
   const primaryColor = THEMES.find((t) => t.key === theme)?.color ?? '#2563EB';
@@ -38,12 +58,27 @@ export default function RoleSelectScreen() {
     await AsyncStorage.setItem(THEME_KEY, key);
   };
 
+  const handleSelectUnit = async (unit: UnitRecord) => {
+    setSelectedUnitCode(unit.code);
+    setSelectedUnitName(unit.name);
+    await setStoredUnit(unit.code, unit.name);
+    setUnitModalVisible(false);
+  };
+
   const handleDriver = async () => {
+    if (!selectedUnitCode) {
+      Alert.alert('부대 선택 필요', '소속 부대를 먼저 선택해 주세요.');
+      return;
+    }
     await setStoredRole('driver');
     router.replace('/(tabs)');
   };
 
   const handleCommander = () => {
+    if (!selectedUnitCode) {
+      Alert.alert('부대 선택 필요', '소속 부대를 먼저 선택해 주세요.');
+      return;
+    }
     router.replace('/commander-pin');
   };
 
@@ -68,6 +103,18 @@ export default function RoleSelectScreen() {
       <Text style={styles.title}>차량관리시스템</Text>
       <Text style={styles.subtitle}>모드를 선택하세요</Text>
 
+      {/* 부대 선택 */}
+      <TouchableOpacity
+        style={[styles.unitSelector, selectedUnitCode && styles.unitSelectorSelected]}
+        onPress={() => setUnitModalVisible(true)}
+        activeOpacity={0.85}>
+        <MaterialIcons name="domain" size={18} color={selectedUnitCode ? primaryColor : '#94A3B8'} />
+        <Text style={[styles.unitSelectorText, selectedUnitCode && { color: '#0F172A' }]}>
+          {selectedUnitCode ? selectedUnitName ?? selectedUnitCode : '소속 부대 선택 (필수)'}
+        </Text>
+        <MaterialIcons name="keyboard-arrow-down" size={18} color="#94A3B8" />
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.card} onPress={handleDriver} activeOpacity={0.85}>
         <View style={[styles.accent, { backgroundColor: '#EFF6FF' }]}>
           <MaterialCommunityIcons name="steering" size={26} color="#2563EB" />
@@ -82,8 +129,38 @@ export default function RoleSelectScreen() {
         </View>
         <Text style={styles.cardTitle}>수송부 모드</Text>
         <Text style={styles.cardDesc}>관리자용{'\n'}기록·차량 진단·위치 관리</Text>
-        <Text style={styles.pinHint}>비밀번호 입력 후 입장</Text>
+        <Text style={styles.pinHint}>부대 비밀번호 입력 후 입장</Text>
       </TouchableOpacity>
+
+      {/* 부대 선택 모달 */}
+      <Modal visible={unitModalVisible} transparent animationType="slide" onRequestClose={() => setUnitModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setUnitModalVisible(false)}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>소속 부대 선택</Text>
+            {loadingUnits ? (
+              <ActivityIndicator color="#2563EB" style={{ marginVertical: 24 }} />
+            ) : units.length === 0 ? (
+              <Text style={styles.modalEmpty}>등록된 부대가 없습니다.{'\n'}Supabase units 테이블에 부대를 등록해 주세요.</Text>
+            ) : (
+              <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
+                {units.map((unit) => (
+                  <TouchableOpacity
+                    key={unit.code}
+                    style={[styles.modalItem, selectedUnitCode === unit.code && styles.modalItemActive]}
+                    onPress={() => handleSelectUnit(unit)}>
+                    <Text style={[styles.modalItemText, selectedUnitCode === unit.code && styles.modalItemTextActive]}>
+                      {unit.name}
+                    </Text>
+                    {selectedUnitCode === unit.code && (
+                      <MaterialIcons name="check" size={18} color="#2563EB" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -142,14 +219,36 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 15,
     textAlign: 'center',
-    marginBottom: 48,
+    marginBottom: 20,
+  },
+  unitSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 20,
+  },
+  unitSelectorSelected: {
+    borderColor: '#2563EB',
+    backgroundColor: '#EFF6FF',
+  },
+  unitSelectorText: {
+    flex: 1,
+    color: '#94A3B8',
+    fontSize: 14,
+    fontWeight: '600',
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     marginBottom: 16,
-    minHeight: 164,
-    padding: 26,
+    minHeight: 140,
+    padding: 24,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
@@ -167,13 +266,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 18,
+    marginBottom: 14,
   },
   cardTitle: {
     color: '#0F172A',
     fontSize: 20,
     fontWeight: '800',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   cardDesc: {
     color: '#64748B',
@@ -185,5 +284,56 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginTop: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '60%',
+  },
+  modalTitle: {
+    color: '#0F172A',
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalList: {
+    maxHeight: 300,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalItemActive: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
+  modalItemText: {
+    color: '#334155',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  modalItemTextActive: {
+    color: '#2563EB',
+  },
+  modalEmpty: {
+    color: '#64748B',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingVertical: 24,
   },
 });

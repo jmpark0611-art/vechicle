@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { Link, router } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -387,13 +387,6 @@ export default function CheckScreen() {
             {role === 'commander' ? '수송부 간부' : role === 'driver' ? '운전자' : '-'}
           </Text>
         </View>
-        {role === 'commander' && (
-          <TouchableOpacity
-            style={styles.changePinBtn}
-            onPress={() => router.push({ pathname: '/commander-pin', params: { change: '1' } })}>
-            <Text style={styles.changePinText}>PIN 변경</Text>
-          </TouchableOpacity>
-        )}
         <TouchableOpacity
           style={styles.changeRoleBtn}
           onPress={async () => {
@@ -624,21 +617,6 @@ const styles = StyleSheet.create({
     color: '#B45309',
     fontSize: 14,
     fontWeight: '500',
-  },
-  changePinBtn: {
-    alignItems: 'center',
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-    borderRadius: 12,
-    borderWidth: 1,
-    justifyContent: 'center',
-    marginTop: 12,
-    minHeight: 44,
-  },
-  changePinText: {
-    color: '#2563EB',
-    fontSize: 14,
-    fontWeight: '600',
   },
   changeRoleBtn: {
     alignItems: 'center',

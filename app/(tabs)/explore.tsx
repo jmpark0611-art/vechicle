@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '../../lib/supabase';
+import { getStoredUnitCode } from '../../lib/unit';
 import {
   formatDateTime,
   formatTripDuration,
@@ -359,16 +360,25 @@ export default function TripHistoryScreen() {
     setErrorMessage(null);
 
     try {
-      const [tripsResult, vehiclesResult] = await Promise.all([
-        withTimeout(
-          supabase
-            .from('trips')
-            .select('id, vehicle_id, start_place, end_place, start_time, end_time, status, purpose, operator_name, operator_rank, user_name, user_rank, daily_km, total_km, fuel_station, fuel_added_liters, start_odometer, end_odometer')
-            .order('start_time', { ascending: false })
-            .range(0, nextLimit),
-          '운행 기록'
-        ),
-        withTimeout(supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number'), '차량 목록'),
+      const unitCode = await getStoredUnitCode();
+
+      // 부대 소속 차량 ID 목록
+      const vehicleQuery = supabase.from('vehicles').select('id, vehicle_number, equipment_name, equipment_number');
+      if (unitCode) vehicleQuery.eq('unit_code', unitCode);
+      const vehiclesResult = await withTimeout(vehicleQuery, '차량 목록');
+      const unitVehicleIds = (vehiclesResult.data ?? []).map((v: { id: string }) => v.id);
+
+      // 해당 차량 운행 기록만 조회
+      const tripsQuery = supabase
+        .from('trips')
+        .select('id, vehicle_id, start_place, end_place, start_time, end_time, status, purpose, operator_name, operator_rank, user_name, user_rank, daily_km, total_km, fuel_station, fuel_added_liters, start_odometer, end_odometer')
+        .order('start_time', { ascending: false })
+        .range(0, nextLimit);
+      if (unitCode && unitVehicleIds.length > 0) tripsQuery.in('vehicle_id', unitVehicleIds);
+      else if (unitCode && unitVehicleIds.length === 0) tripsQuery.eq('vehicle_id', 'none');
+
+      const [tripsResult] = await Promise.all([
+        withTimeout(tripsQuery, '운행 기록'),
       ]);
 
       const loadedTrips = tripsResult.error ? [] : ((tripsResult.data ?? []) as Trip[]);

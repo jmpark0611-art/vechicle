@@ -7,6 +7,7 @@ import { VehicleMap } from '../../components/vehicle-map';
 import { generateVehicleMapHtml, VehiclePosition } from '../../lib/map-html';
 import { getStoredRole } from '../../lib/role';
 import { supabase } from '../../lib/supabase';
+import { getStoredUnitCode } from '../../lib/unit';
 
 const FALLBACK_POLL_MS = 60_000;
 
@@ -39,10 +40,13 @@ export default function MapScreen() {
     isFetchingRef.current = true;
 
     try {
-      const { data: trips, error: tripError } = await supabase
+      const unitCode = await getStoredUnitCode();
+      const tripsQuery = supabase
         .from('trips')
-        .select('id, vehicle_id, start_place, end_place, vehicles(vehicle_number)')
+        .select('id, vehicle_id, start_place, end_place, vehicles!inner(vehicle_number, unit_code)')
         .eq('status', 'in_progress');
+      if (unitCode) tripsQuery.eq('vehicles.unit_code', unitCode);
+      const { data: trips, error: tripError } = await tripsQuery;
 
       if (tripError) throw tripError;
 

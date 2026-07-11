@@ -5,7 +5,6 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { getStoredRole, isCommanderPinVerified } from '../lib/role';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -15,15 +14,8 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   useEffect(() => {
-    (async () => {
-      const role = await getStoredRole();
-      if (!role) {
-        router.replace('/role-select');
-      } else if (role === 'commander' && !isCommanderPinVerified()) {
-        // Re-verify PIN on every app launch for commander mode.
-        router.replace('/commander-pin');
-      }
-    })();
+    // 매 실행마다 모드 선택 화면으로 시작
+    router.replace('/role-select');
   }, []);
 
   return (

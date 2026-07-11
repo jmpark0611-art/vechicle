@@ -1,11 +1,11 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { verifyPin } from '../lib/commander-pin';
-import { markCommanderPinVerified, setStoredRole } from '../lib/role';
+import { setStoredRole } from '../lib/role';
+import { getStoredUnitCode, getStoredUnitName, verifyCommanderPin } from '../lib/unit';
 
 const NUMPAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
@@ -13,8 +13,18 @@ export default function CommanderPinScreen() {
   const insets = useSafeAreaInsets();
   const [digits, setDigits] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [unitName, setUnitName] = useState<string>('');
+  const [unitCode, setUnitCode] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const processingRef = useRef(false);
+
+  useEffect(() => {
+    Promise.all([getStoredUnitCode(), getStoredUnitName()]).then(([code, name]) => {
+      setUnitCode(code);
+      setUnitName(name ?? code ?? '');
+    });
+  }, []);
 
   const shake = useCallback(() => {
     Animated.sequence([
@@ -27,29 +37,34 @@ export default function CommanderPinScreen() {
 
   const processPin = useCallback(
     async (pin: string) => {
-      if (processingRef.current) return;
+      if (processingRef.current || !unitCode) return;
       processingRef.current = true;
+      setVerifying(true);
       try {
-        const ok = await verifyPin(pin);
+        const ok = await verifyCommanderPin(unitCode, pin);
         if (ok) {
           await setStoredRole('commander');
-          markCommanderPinVerified();
-          router.replace('/explore');
+          router.replace('/(tabs)/explore');
         } else {
           setError('비밀번호가 올바르지 않습니다.');
           shake();
           setDigits([]);
         }
+      } catch {
+        setError('서버 연결 실패. 네트워크를 확인해 주세요.');
+        shake();
+        setDigits([]);
       } finally {
         processingRef.current = false;
+        setVerifying(false);
       }
     },
-    [shake]
+    [unitCode, shake]
   );
 
   const handleDigit = useCallback(
     (d: string) => {
-      if (processingRef.current) return;
+      if (processingRef.current || verifying) return;
       setDigits((prev) => {
         if (prev.length >= 4) return prev;
         const next = [...prev, d];
@@ -60,7 +75,7 @@ export default function CommanderPinScreen() {
       });
       setError(null);
     },
-    [processPin]
+    [processPin, verifying]
   );
 
   const handleDelete = useCallback(() => {
@@ -74,6 +89,9 @@ export default function CommanderPinScreen() {
         <MaterialIcons name="lock" size={28} color="#FFFFFF" />
       </View>
       <Text style={styles.title}>수송부 모드</Text>
+      {unitName ? (
+        <Text style={styles.unitLabel}>{unitName}</Text>
+      ) : null}
       <Text style={styles.subtitle}>비밀번호를 입력하세요</Text>
 
       <Animated.View style={[styles.dotsRow, { transform: [{ translateX: shakeAnim }] }]}>
@@ -82,7 +100,9 @@ export default function CommanderPinScreen() {
         ))}
       </Animated.View>
 
-      {error ? (
+      {verifying ? (
+        <ActivityIndicator color="#2563EB" style={{ marginBottom: 20 }} />
+      ) : error ? (
         <Text style={styles.error}>{error}</Text>
       ) : (
         <View style={styles.errorPlaceholder} />
@@ -137,13 +157,19 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 24,
     fontWeight: '800',
-    marginBottom: 6,
+    marginBottom: 4,
+  },
+  unitLabel: {
+    color: '#2563EB',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   subtitle: {
     color: '#64748B',
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 52,
+    marginBottom: 48,
     textAlign: 'center',
   },
   dotsRow: {

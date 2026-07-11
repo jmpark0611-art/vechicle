@@ -6,6 +6,7 @@ const TAB_ICON_MAP = {
   vehicle: 'car-outline',
   inspect: 'radar',
   location: 'crosshairs-gps',
+  logbook: 'calendar-month-outline',
 } as const;
 
 type TabIconName = keyof typeof TAB_ICON_MAP;
