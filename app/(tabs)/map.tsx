@@ -360,7 +360,7 @@ export default function MapScreen() {
             {zones.length === 0 ? (
               <View style={styles.zoneEmpty}>
                 <Text style={styles.zoneEmptyText}>등록된 제한구역이 없습니다.</Text>
-                <Text style={styles.zoneEmptyHint}>위 "+ 구역" 버튼을 눌러 지도에서 설정하세요.</Text>
+                <Text style={styles.zoneEmptyHint}>{'위 "+ 구역" 버튼을 눌러 지도에서 설정하세요.'}</Text>
               </View>
             ) : (
               zones.map((z) => (
