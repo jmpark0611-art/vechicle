@@ -15,8 +15,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Vibration,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatDateTime, formatTripDuration, isStaleActiveTrip } from '../../lib/format';
@@ -27,6 +29,7 @@ import { supabase } from '../../lib/supabase';
 import { withTimeout } from '../../lib/request';
 import { DriverInfo, getDriverInfo, RANKS } from '../../lib/driver-info';
 import { getStoredUnitCode } from '../../lib/unit';
+import { fetchSpeedZones, getViolatedZone, type SpeedZone } from '../../lib/speed-zones';
 
 type Vehicle = {
   id: string;
@@ -153,6 +156,10 @@ export default function DriverScreen() {
   const [obdDevices, setObdDevices] = useState<ObdDevice[]>([]);
   const [obdMessage, setObdMessage] = useState<string | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [speedZones, setSpeedZones] = useState<SpeedZone[]>([]);
+  const [speedWarning, setSpeedWarning] = useState<string | null>(null);
+  const speedZonesRef = useRef<SpeedZone[]>([]);
+  const lastWarnedZoneRef = useRef<{ id: string; ts: number } | null>(null);
 
   const selectedVehicleText = selectedVehicle?.vehicle_number ?? '선택 안 됨';
   const speedKmh = useMemo(() => (isRunning ? getSpeedKmh(location) : 0), [isRunning, location]);
@@ -163,6 +170,14 @@ export default function DriverScreen() {
   useEffect(() => {
     latestLocationRef.current = location;
   }, [location]);
+
+  useEffect(() => {
+    speedZonesRef.current = speedZones;
+  }, [speedZones]);
+
+  useEffect(() => {
+    fetchSpeedZones().then(setSpeedZones);
+  }, []);
 
   useEffect(() => {
     selectedVehicleRef.current = selectedVehicle;
@@ -405,6 +420,26 @@ export default function DriverScreen() {
         async (nextLocation) => {
           setLocation(nextLocation.coords);
           await saveGpsPoint(currentTripId, nextLocation.coords);
+
+          const spd = getSpeedKmh(nextLocation.coords);
+          const violated = getViolatedZone(
+            nextLocation.coords.latitude,
+            nextLocation.coords.longitude,
+            spd,
+            speedZonesRef.current
+          );
+          if (violated) {
+            const now = Date.now();
+            const last = lastWarnedZoneRef.current;
+            if (!last || last.id !== violated.id || now - last.ts > 10_000) {
+              lastWarnedZoneRef.current = { id: violated.id, ts: now };
+              Vibration.vibrate([0, 300, 100, 300]);
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            }
+            setSpeedWarning(`제한속도 초과: ${violated.name} (제한 ${violated.speed_limit_kmh}km/h · 현재 ${spd.toFixed(0)}km/h)`);
+          } else {
+            setSpeedWarning(null);
+          }
         }
       );
     },
@@ -868,6 +903,12 @@ export default function DriverScreen() {
       {isStaleRunningTrip && (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>8시간 이상 진행 중인 운행입니다. 실제 운행이 끝났다면 종료 버튼으로 마감해 주세요.</Text>
+        </View>
+      )}
+
+      {speedWarning && (
+        <View style={styles.speedWarningBox}>
+          <Text style={styles.speedWarningText}>⚠ {speedWarning}</Text>
         </View>
       )}
 
@@ -2176,6 +2217,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '400',
     marginTop: 10,
+    textAlign: 'center',
+  },
+  speedWarningBox: {
+    backgroundColor: '#DC2626',
+    borderRadius: 12,
+    marginBottom: 10,
+    padding: 14,
+  },
+  speedWarningText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
     textAlign: 'center',
   },
 });

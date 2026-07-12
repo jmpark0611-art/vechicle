@@ -1,12 +1,31 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface Props {
   html: string;
   style?: object;
+  onMapTap?: (lat: number, lng: number) => void;
 }
 
-export function VehicleMap({ html, style }: Props) {
+export function VehicleMap({ html, style, onMapTap }: Props) {
+  const onMapTapRef = useRef(onMapTap);
+  onMapTapRef.current = onMapTap;
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'mapTap' && onMapTapRef.current) {
+          onMapTapRef.current(msg.lat, msg.lng);
+        }
+      } catch {
+        // 무시
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   return (
     <View style={[styles.container, style]}>
       {React.createElement('iframe', {
