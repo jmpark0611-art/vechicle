@@ -46,18 +46,31 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Bundle JS into debug APK
-        run: echo "bundleInDebug=true" >> android/gradle.properties
+      - name: Configure release build
+        run: |
+          # R8 full mode 비활성화 (네이티브 모듈 클래스 제거 방지)
+          echo "android.enableR8.fullMode=false" >> android/gradle.properties
+          # 네이티브 모듈 ProGuard 유지 규칙
+          cat >> android/app/proguard-rules.pro << 'PROGUARD'
+          -keep class com.polidea.rxandroidble2.** { *; }
+          -keep class no.nordicsemi.android.** { *; }
+          -keep class com.facebook.react.** { *; }
+          -keep class com.facebook.jni.** { *; }
+          -keep class expo.modules.** { *; }
+          -keep class com.swmansion.** { *; }
+          PROGUARD
+          # Release 빌드에 debug keystore 사용 (별도 서명 키 불필요)
+          sed -i 's/signingConfig signingConfigs\.release/signingConfig signingConfigs.debug/g' android/app/build.gradle || true
 
-      - name: Build debug APK
+      - name: Build release APK
         working-directory: android
-        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vehicle-system-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: vehicle-system-apk
+          path: android/app/build/outputs/apk/release/*.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -68,7 +81,7 @@ jobs:
             자동 빌드된 APK 파일입니다.
             커밋: ${{ github.sha }}
             브랜치: ${{ github.ref_name }}
-          files: android/app/build/outputs/apk/debug/*.apk
+          files: android/app/build/outputs/apk/release/*.apk
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
