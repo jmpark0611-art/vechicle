@@ -48,17 +48,8 @@ jobs:
 
       - name: Configure release build
         run: |
-          # R8 full mode 비활성화 (네이티브 모듈 클래스 제거 방지)
-          echo "android.enableR8.fullMode=false" >> android/gradle.properties
-          # 네이티브 모듈 ProGuard 유지 규칙
-          cat >> android/app/proguard-rules.pro << 'PROGUARD'
-          -keep class com.polidea.rxandroidble2.** { *; }
-          -keep class no.nordicsemi.android.** { *; }
-          -keep class com.facebook.react.** { *; }
-          -keep class com.facebook.jni.** { *; }
-          -keep class expo.modules.** { *; }
-          -keep class com.swmansion.** { *; }
-          PROGUARD
+          # Minification 완전 비활성화 (R8이 네이티브 모듈 클래스 제거하는 문제 방지)
+          echo "android.enableProguardInReleaseBuilds=false" >> android/gradle.properties
           # Release 빌드에 debug keystore 사용 (별도 서명 키 불필요)
           sed -i 's/signingConfig signingConfigs\.release/signingConfig signingConfigs.debug/g' android/app/build.gradle || true
 
