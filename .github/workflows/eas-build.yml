@@ -46,15 +46,15 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Build release APK
+      - name: Build debug APK
         working-directory: android
-        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vehicle-system-release-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          name: vehicle-system-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -65,7 +65,7 @@ jobs:
             자동 빌드된 APK 파일입니다.
             커밋: ${{ github.sha }}
             브랜치: ${{ github.ref_name }}
-          files: android/app/build/outputs/apk/release/*.apk
+          files: android/app/build/outputs/apk/debug/*.apk
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
