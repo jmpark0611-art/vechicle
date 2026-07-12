@@ -91,6 +91,7 @@ class ObdBleService {
   private pendingTimer: ReturnType<typeof setTimeout> | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private callbacks: ObdCallbacks | null = null;
+  private scanningActive = false;
   private liveData: ObdLiveData = {
     speedKmh: null, rpm: null, coolantTempC: null,
     batteryVoltage: null, fuelLevelPercent: null,
@@ -108,6 +109,7 @@ class ObdBleService {
   }
 
   startScan() {
+    this.scanningActive = true;
     this.callbacks?.onStateChange('scanning');
     const seen = new Set<string>();
     this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
@@ -121,11 +123,16 @@ class ObdBleService {
 
   stopScan() {
     this.manager.stopDeviceScan();
+    if (this.scanningActive) {
+      this.scanningActive = false;
+      this.callbacks?.onStateChange('idle');
+    }
   }
 
   async connect(deviceId: string): Promise<void> {
+    this.scanningActive = false;
     this.callbacks?.onStateChange('connecting', '단말기 연결 시도 중...');
-    this.stopScan();
+    this.manager.stopDeviceScan();
 
     try {
       if (Platform.OS === 'android' && Platform.Version >= 31) {

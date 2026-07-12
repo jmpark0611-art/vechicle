@@ -4,6 +4,7 @@ import RNBluetoothClassic, { BluetoothDevice, type BluetoothDeviceReadEvent } fr
 const INIT_COMMANDS = ['ATZ', 'ATE0', 'ATL0', 'ATS0', 'ATH0', 'ATSP0', 'ATAT2'] as const;
 const COMMAND_TIMEOUT_MS = 5000;
 const POLL_INTERVAL_MS = 2000;
+const CONNECT_TIMEOUT_MS = 15000;
 
 export type ObdLiveData = {
   speedKmh: number | null;
@@ -122,7 +123,15 @@ class ObdClassicService {
       }
 
       this.callbacks?.onStateChange('connecting', 'SPP 연결 중... (최대 15초)');
-      this.device = await RNBluetoothClassic.connectToDevice(deviceId, { delimiter: '>' });
+      this.device = await Promise.race([
+        RNBluetoothClassic.connectToDevice(deviceId, { delimiter: '>' }),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('연결 시간 초과 (15초). OBD 단말기 전원을 확인하세요.')),
+            CONNECT_TIMEOUT_MS
+          )
+        ),
+      ]);
 
       this.dataSubscription = this.device.onDataReceived((event: BluetoothDeviceReadEvent) => {
         this.onResponse(event.data ?? '');
