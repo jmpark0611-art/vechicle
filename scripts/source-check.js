@@ -16,7 +16,6 @@ const requiredText = [
   { file: path.join('app', '(tabs)', 'index.tsx'), text: 'useSafeAreaInsets' },
   { file: path.join('app', '(tabs)', 'index.tsx'), text: '최근 저장' },
   { file: path.join('app', '(tabs)', 'index.tsx'), text: 'GPS_SAVE_RETRY_COUNT' },
-  { file: path.join('app', '(tabs)', 'index.tsx'), text: '마이크 권한' },
   { file: path.join('app', '(tabs)', 'index.tsx'), text: '위치 권한' },
   { file: path.join('app', '(tabs)', 'index.tsx'), text: 'latestLocationRef' },
   { file: path.join('app', '(tabs)', 'index.tsx'), text: 'accessibilityLabel="운행 출발"' },
