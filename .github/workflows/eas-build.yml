@@ -46,6 +46,9 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
 
+      - name: Bundle JS into debug APK
+        run: echo "bundleInDebug=true" >> android/gradle.properties
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
