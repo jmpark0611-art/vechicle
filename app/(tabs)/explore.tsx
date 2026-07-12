@@ -75,14 +75,6 @@ type LoadHistoryOptions = {
   refreshing?: boolean;
 };
 
-function getTripTime(value: string | null) {
-  if (!value) {
-    return null;
-  }
-
-  const time = new Date(value).getTime();
-  return Number.isFinite(time) ? time : null;
-}
 
 
 function formatMinutes(minutes: number | null) {
@@ -240,14 +232,6 @@ export default function TripHistoryScreen() {
 
   const runningCount = useMemo(() => {
     return trips.filter((trip) => trip.status === 'in_progress').length;
-  }, [trips]);
-
-  const completedCount = useMemo(() => {
-    return trips.filter((trip) => trip.status === 'completed').length;
-  }, [trips]);
-
-  const canceledCount = useMemo(() => {
-    return trips.filter((trip) => trip.status === 'canceled').length;
   }, [trips]);
 
   const staleRunningCount = useMemo(() => {

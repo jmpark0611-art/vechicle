@@ -25,7 +25,7 @@ import { dequeueAllGpsPoints, enqueueGpsPoint, getGpsQueueSize, QueuedGpsPoint }
 import { obdBle, ObdDevice, ObdLiveData, ObdConnectionState } from '../../lib/obd-ble';
 import { supabase } from '../../lib/supabase';
 import { withTimeout } from '../../lib/request';
-import { DriverInfo, getDriverInfo, RANKS, saveDriverInfo } from '../../lib/driver-info';
+import { DriverInfo, getDriverInfo, RANKS } from '../../lib/driver-info';
 import { getStoredUnitCode } from '../../lib/unit';
 
 type Vehicle = {
@@ -51,32 +51,10 @@ type ActiveTrip = {
 
 type TripLocation = Location.LocationObjectCoords;
 type LocationSubscription = Location.LocationSubscription;
-type VoiceTarget = 'start' | 'end';
 type GpsPermissionStatus = 'unknown' | 'granted' | 'denied';
-type SpeechRecognitionEventLike = {
-  results: {
-    [index: number]: {
-      [index: number]: {
-        transcript: string;
-      };
-    };
-  };
-};
-type SpeechRecognitionLike = {
-  lang: string;
-  interimResults: boolean;
-  maxAlternatives: number;
-  onstart: (() => void) | null;
-  onend: (() => void) | null;
-  onerror: ((event: { error?: string }) => void) | null;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  start: () => void;
-};
-type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 const START_PLACE = '배송부';
 const END_PLACE = '목적지';
-const PLACE_PRESETS = ['배송부', '물류센터', '거래처', '차고지'];
 const GPS_SAVE_RETRY_COUNT = 2;
 const GPS_SAVE_RETRY_DELAY_MS = 1000;
 
@@ -125,26 +103,6 @@ function wait(ms: number) {
   });
 }
 
-function getVoiceErrorMessage(error?: string) {
-  if (error === 'not-allowed' || error === 'service-not-allowed') {
-    return '마이크 권한이 차단되었습니다. 브라우저 주소창의 마이크 권한을 허용한 뒤 다시 시도해 주세요.';
-  }
-
-  if (error === 'no-speech') {
-    return '음성이 감지되지 않았습니다. 조용한 곳에서 다시 말해 주세요.';
-  }
-
-  if (error === 'audio-capture') {
-    return '마이크 장치를 찾지 못했습니다. PC 또는 브라우저의 마이크 설정을 확인해 주세요.';
-  }
-
-  if (error === 'network') {
-    return '브라우저 음성 인식 네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
-  }
-
-  return '음성 입력 중 오류가 발생했습니다. 직접 입력하거나 브라우저 마이크 권한을 확인해 주세요.';
-}
-
 function getGpsPermissionText(status: GpsPermissionStatus) {
   if (status === 'granted') {
     return '허용됨';
@@ -176,8 +134,6 @@ export default function DriverScreen() {
   const [lastGpsSavedAt, setLastGpsSavedAt] = useState<string | null>(null);
   const [gpsQueueSize, setGpsQueueSize] = useState(0);
   const [recoveryNotice, setRecoveryNotice] = useState<string | null>(null);
-  const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
-  const [listeningTarget, setListeningTarget] = useState<VoiceTarget | null>(null);
   const [, setMinuteTick] = useState(0);
   const [driverInfo, setDriverInfoState] = useState<DriverInfo>({ unit: '', rank: '', name: '' });
   const [purpose, setPurpose] = useState('');
@@ -341,14 +297,6 @@ export default function DriverScreen() {
     await obdBle.disconnect();
     setObdLiveData(null);
     setObdDevices([]);
-  }, []);
-
-  const updateDriverInfo = useCallback((partial: Partial<DriverInfo>) => {
-    setDriverInfoState((prev) => {
-      const next = { ...prev, ...partial };
-      void saveDriverInfo(next);
-      return next;
-    });
   }, []);
 
   const stopLocationWatch = useCallback(() => {
@@ -631,69 +579,6 @@ export default function DriverScreen() {
     pulse.start();
     return () => pulse.stop();
   }, [isRunning, pulseAnim]);
-
-  const handleVoiceInput = useCallback((target: VoiceTarget) => {
-    setVoiceNotice(null);
-
-    if (Platform.OS !== 'web') {
-      const message = 'Expo Go에서는 기기 음성 인식 모듈이 필요합니다. 현재는 웹 브라우저에서 음성 입력을 사용할 수 있습니다.';
-      setVoiceNotice(message);
-      Alert.alert('음성 입력 안내', message);
-      return;
-    }
-
-    const speechGlobal = globalThis as typeof globalThis & {
-      SpeechRecognition?: SpeechRecognitionConstructor;
-      webkitSpeechRecognition?: SpeechRecognitionConstructor;
-    };
-    const SpeechRecognition = speechGlobal.SpeechRecognition ?? speechGlobal.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      const message = '현재 브라우저가 음성 인식을 지원하지 않습니다. Chrome 또는 Edge에서 다시 시도해 주세요.';
-      setVoiceNotice(message);
-      Alert.alert('음성 입력 불가', message);
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'ko-KR';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    setListeningTarget(target);
-    setVoiceNotice('마이크 권한 요청이 보이면 허용을 눌러 주세요.');
-
-    recognition.onstart = () => {
-      setVoiceNotice('듣는 중입니다. 출발지 또는 목적지를 말해 주세요.');
-    };
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript?.trim();
-
-      if (!transcript) {
-        return;
-      }
-
-      if (target === 'start') {
-        setStartPlace(transcript);
-      } else {
-        setEndPlace(transcript);
-      }
-
-      setVoiceNotice(`음성 입력 완료: ${transcript}`);
-    };
-
-    recognition.onerror = (event) => {
-      const message = getVoiceErrorMessage(event.error);
-      setVoiceNotice(message);
-      Alert.alert('음성 입력 실패', message);
-    };
-
-    recognition.onend = () => {
-      setListeningTarget(null);
-    };
-
-    recognition.start();
-  }, []);
 
   const handleStart = async () => {
     if (isSubmitting || isRunning) {
@@ -1319,11 +1204,7 @@ export default function DriverScreen() {
                 </View>
               </View>
             )}
-            {voiceNotice && (
-              <View style={styles.voiceNoticeBox}>
-                <Text style={styles.voiceNoticeText}>{voiceNotice}</Text>
-              </View>
-            )}
+
           </View>
         </ScrollView>
         <TouchableOpacity
@@ -1675,28 +1556,6 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     color: '#64748B',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  voiceBtn: {
-    backgroundColor: '#ECFDF5',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  voiceText: {
-    color: '#059669',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  voiceNoticeBox: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 10,
-    marginTop: 14,
-    padding: 12,
-  },
-  voiceNoticeText: {
-    color: '#1D4ED8',
     fontSize: 13,
     fontWeight: '500',
   },
