@@ -22,6 +22,12 @@ import {
   type ObdInput,
   type ObdSnapshot,
 } from '@/lib/obd-data';
+import {
+  loadSelectedObdBleDevice,
+  saveSelectedObdBleDevice,
+  scanForObdBleDevices,
+  type ObdBleDevice,
+} from '@/lib/obd-ble';
 import { fetchVehiclesReadOnly, getSupabaseReadSource, type VehicleSummary } from '@/lib/readonly-data';
 
 function formatKm(value: number | null | undefined) {
@@ -51,11 +57,15 @@ export default function VehiclesScreen() {
   const [obdSnapshot, setObdSnapshot] = useState<ObdSnapshot>({});
   const [kmInputs, setKmInputs] = useState<Record<string, string>>({});
   const [obdInputs, setObdInputs] = useState<Record<string, ObdInput>>({});
+  const [bleDevices, setBleDevices] = useState<ObdBleDevice[]>([]);
+  const [selectedBleDevice, setSelectedBleDevice] = useState<ObdBleDevice | null>(null);
+  const [isScanningBle, setIsScanningBle] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState('로컬 저장');
   const [obdSyncMessage, setObdSyncMessage] = useState('수동 기록 대기');
+  const [bleMessage, setBleMessage] = useState('검색 전');
 
   const dueCount = useMemo(
     () =>
@@ -103,6 +113,15 @@ export default function VehiclesScreen() {
   useEffect(() => {
     void loadVehicles();
   }, [loadVehicles]);
+
+  useEffect(() => {
+    void loadSelectedObdBleDevice().then((device) => {
+      setSelectedBleDevice(device);
+      if (device) {
+        setBleMessage(`${device.name} 선택됨`);
+      }
+    });
+  }, []);
 
   async function saveCurrentKm(vehicle: VehicleSummary) {
     const currentKm = Number(kmInputs[vehicle.id]?.replace(/,/g, '').trim());
@@ -179,6 +198,32 @@ export default function VehiclesScreen() {
     }));
   }
 
+  async function handleScanObdBle() {
+    setIsScanningBle(true);
+    setBleMessage('BLE OBD 스캐너 검색 중');
+    try {
+      const result = await scanForObdBleDevices();
+      setBleDevices(result.devices);
+      setBleMessage(result.message);
+      if (!result.ok) {
+        Alert.alert('OBD 검색 안내', result.message);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'OBD BLE 검색에 실패했습니다.';
+      setBleMessage(message);
+      Alert.alert('OBD 검색 실패', message);
+    } finally {
+      setIsScanningBle(false);
+    }
+  }
+
+  async function handleSelectBleDevice(device: ObdBleDevice) {
+    await saveSelectedObdBleDevice(device);
+    setSelectedBleDevice(device);
+    setBleMessage(`${device.name} 선택됨`);
+    Alert.alert('OBD 스캐너 선택', `${device.name} 장치를 저장했습니다. 다음 단계에서 연결/명령 송수신을 붙입니다.`);
+  }
+
   return (
     <RebuildScreen
       title="차량 진단"
@@ -195,6 +240,27 @@ export default function VehiclesScreen() {
         <StatusLine label="연결" value={getSupabaseReadSource()} />
         <StatusLine label="정비 동기화" value={syncMessage} />
         <StatusLine label="OBD 기록" value={obdSyncMessage} />
+      </SectionCard>
+
+      <SectionCard
+        title="OBD BLE 스캐너"
+        body="앱 시작 안정성을 지키기 위해 버튼을 눌렀을 때만 Bluetooth 검색을 시작합니다. BLE 방식 ELM327은 검색될 수 있고, 구형 Classic Bluetooth 모델은 휴대폰 설정에는 보여도 이 목록에는 안 보일 수 있습니다.">
+        <StatusLine label="상태" value={bleMessage} />
+        <StatusLine label="선택 장치" value={selectedBleDevice ? selectedBleDevice.name : '-'} />
+        <Pressable style={styles.bleScanBtn} onPress={() => void handleScanObdBle()} disabled={isScanningBle}>
+          <Text style={styles.bleScanBtnText}>{isScanningBle ? '검색 중' : 'BLE 스캐너 검색'}</Text>
+        </Pressable>
+        {bleDevices.map((device) => (
+          <Pressable key={device.id} style={styles.bleDeviceBtn} onPress={() => void handleSelectBleDevice(device)}>
+            <View style={styles.bleDeviceInfo}>
+              <Text style={styles.bleDeviceName}>{device.name}</Text>
+              <Text style={styles.bleDeviceMeta}>
+                RSSI {device.rssi ?? '-'} · {device.id.slice(0, 18)}
+              </Text>
+            </View>
+            <Text style={styles.bleDeviceAction}>선택</Text>
+          </Pressable>
+        ))}
       </SectionCard>
 
       {isLoading ? (
@@ -446,4 +512,31 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   obdSaveBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  bleScanBtn: {
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  bleScanBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  bleDeviceBtn: {
+    minHeight: 64,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  bleDeviceInfo: { flex: 1, minWidth: 0 },
+  bleDeviceName: { color: '#0F172A', fontSize: 15, fontWeight: '900' },
+  bleDeviceMeta: { color: '#64748B', fontSize: 12, fontWeight: '700', marginTop: 3 },
+  bleDeviceAction: { color: '#2563EB', fontSize: 13, fontWeight: '900' },
 });

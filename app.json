@@ -15,7 +15,9 @@
       "package": "com.vehicle.tracking",
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -39,6 +41,14 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": [],
+          "bluetoothAlwaysPermission": "차량 OBD 스캐너를 검색하고 연결하기 위해 Bluetooth 권한이 필요합니다."
         }
       ]
     ],

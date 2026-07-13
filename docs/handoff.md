@@ -18,6 +18,12 @@
   - `lib/location-data.ts` calculates distance between active vehicle GPS points and registered speed zones.
   - Location tab shows vehicles inside speed zones and marks records as `초과 의심` when speed exceeds the zone limit.
   - This still uses only existing Supabase data and adds no native module or permission.
+- Experimental branch now in progress: `feature/obd-ble-elm327-probe`.
+  - Adds `react-native-ble-plx` and Android Bluetooth permissions.
+  - Vehicle tab has an `OBD BLE 스캐너` panel for BLE scan and local selected-device storage.
+  - BLE manager is created only after pressing the scan button, not during app startup.
+  - This branch must be APK-tested separately from the stable `rebuild/clean-sdk54-start` branch.
+  - Next step after device confirms app opens: test whether the user's scanner appears in BLE scan. If not, it is likely Classic Bluetooth and needs a different native approach.
 
 ## 2026-07-07 최신 APK 다운로드 상태
 

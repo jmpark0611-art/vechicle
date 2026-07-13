@@ -17,6 +17,16 @@
 - This step adds no new native module or permission; it only computes alerts from existing `gps_points` and `speed_zones` data.
 - Verification passed with `npm.cmd run verify` and Android export.
 
+## 2026-07-14 Experimental OBD BLE scanner search
+
+- Created branch `feature/obd-ble-elm327-probe` from the confirmed stable rebuild branch.
+- Added `react-native-ble-plx` and Expo config plugin settings for Android Bluetooth scan/connect permissions.
+- Added `lib/obd-ble.ts` and `lib/obd-ble.native.ts` with the same exported scan/selection API so Android bundling resolves correctly.
+- Vehicle tab now includes an `OBD BLE 스캐너` panel that scans only after the user presses the search button.
+- The scan step saves a selected BLE OBD candidate locally, but does not yet send ELM327 AT commands.
+- Important: many low-cost ELM327 adapters are Classic Bluetooth, not BLE. Those may pair in Android settings but not appear in BLE scanning.
+- Verification passed with `npm.cmd run verify`, `npx.cmd expo export --platform android`, `npx.cmd expo-doctor`, and `npx.cmd expo prebuild --platform android --no-install --clean`.
+
 ## 2026-07-13 정비 교체완료 기능
 
 - User confirmed the previous APK `apk-29252766820` as "작동 이상무".
