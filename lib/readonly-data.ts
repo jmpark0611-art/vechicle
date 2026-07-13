@@ -15,12 +15,18 @@ export type TripSummary = {
   startTime: string | null;
   endTime: string | null;
   status: string;
+  purpose: string | null;
+  operatorName: string | null;
+  userName: string | null;
 };
 
 export type ManualTripInput = {
   vehicleId: string;
   startPlace: string;
   endPlace: string;
+  purpose?: string;
+  operatorName?: string;
+  userName?: string;
 };
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -54,7 +60,20 @@ type TripRow = {
   start_time: string | null;
   end_time: string | null;
   status: string | null;
+  purpose?: string | null;
+  operator_name?: string | null;
+  user_name?: string | null;
 };
+
+type QueryResult<T> = {
+  data: T | null;
+  error: { code?: string; message: string } | null;
+};
+
+function isMissingColumnError(error: { code?: string; message: string } | null) {
+  if (!error) return false;
+  return error.code === 'PGRST204' || /column|schema cache|could not find/i.test(error.message);
+}
 
 function mapVehicle(row: VehicleRow): VehicleSummary {
   return {
@@ -74,7 +93,17 @@ function mapTrip(row: TripRow, vehicleById: Map<string, string>): TripSummary {
     startTime: row.start_time,
     endTime: row.end_time,
     status: row.status ?? 'unknown',
+    purpose: row.purpose ?? null,
+    operatorName: row.operator_name ?? null,
+    userName: row.user_name ?? null,
   };
+}
+
+const BASIC_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status';
+const EXTENDED_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status,purpose,operator_name,user_name';
+
+function tripSelect(includeExtended = true) {
+  return includeExtended ? EXTENDED_TRIP_SELECT : BASIC_TRIP_SELECT;
 }
 
 export function getSupabaseReadSource() {
@@ -98,64 +127,86 @@ export async function fetchVehiclesReadOnly(limit = 20): Promise<VehicleSummary[
   return ((result.data ?? []) as VehicleRow[]).map(mapVehicle);
 }
 
-export async function fetchTripsReadOnly(limit = 20): Promise<TripSummary[]> {
-  const [vehicles, tripsResult] = await Promise.all([
-    fetchVehiclesReadOnly(200),
-    withRequestTimeout(
-      supabase
-        .from('trips')
-        .select('id, vehicle_id, start_place, end_place, start_time, end_time, status')
-        .order('start_time', { ascending: false })
-        .limit(limit),
-      '운행 기록'
-    ),
-  ]);
+async function fetchTripsWithSelect(limit: number, activeOnly: boolean, includeExtended: boolean) {
+  let query = supabase.from('trips').select(tripSelect(includeExtended));
+  if (activeOnly) {
+    query = query.eq('status', 'in_progress');
+  }
+  return withRequestTimeout(query.order('start_time', { ascending: false }).limit(limit), activeOnly ? '진행 중 운행' : '운행 기록');
+}
 
-  if (tripsResult.error) {
-    throw new Error(tripsResult.error.message);
+async function fetchTripRows(limit: number, activeOnly: boolean): Promise<TripRow[]> {
+  const extended = await fetchTripsWithSelect(limit, activeOnly, true);
+  if (!extended.error) {
+    return (extended.data ?? []) as unknown as TripRow[];
   }
 
+  if (!isMissingColumnError(extended.error)) {
+    throw new Error(extended.error.message);
+  }
+
+  const basic = await fetchTripsWithSelect(limit, activeOnly, false);
+  if (basic.error) {
+    throw new Error(basic.error.message);
+  }
+
+  return (basic.data ?? []) as unknown as TripRow[];
+}
+
+export async function fetchTripsReadOnly(limit = 20): Promise<TripSummary[]> {
+  const [vehicles, trips] = await Promise.all([fetchVehiclesReadOnly(200), fetchTripRows(limit, false)]);
   const vehicleById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle.vehicleNumber]));
-  return ((tripsResult.data ?? []) as TripRow[]).map((trip) => mapTrip(trip, vehicleById));
+  return trips.map((trip) => mapTrip(trip, vehicleById));
 }
 
 export async function fetchActiveTrips(limit = 20): Promise<TripSummary[]> {
-  const [vehicles, tripsResult] = await Promise.all([
-    fetchVehiclesReadOnly(200),
-    withRequestTimeout(
-      supabase
-        .from('trips')
-        .select('id, vehicle_id, start_place, end_place, start_time, end_time, status')
-        .eq('status', 'in_progress')
-        .order('start_time', { ascending: false })
-        .limit(limit),
-      '진행 중 운행'
-    ),
-  ]);
-
-  if (tripsResult.error) {
-    throw new Error(tripsResult.error.message);
-  }
-
+  const [vehicles, trips] = await Promise.all([fetchVehiclesReadOnly(200), fetchTripRows(limit, true)]);
   const vehicleById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle.vehicleNumber]));
-  return ((tripsResult.data ?? []) as TripRow[]).map((trip) => mapTrip(trip, vehicleById));
+  return trips.map((trip) => mapTrip(trip, vehicleById));
+}
+
+async function insertTrip(payload: Record<string, string | null>) {
+  return withRequestTimeout(
+    supabase
+      .from('trips')
+      .insert(payload)
+      .select(tripSelect(true))
+      .single(),
+    '운행 시작'
+  ) as Promise<QueryResult<TripRow>>;
+}
+
+async function insertBasicTrip(payload: Record<string, string | null>) {
+  return withRequestTimeout(
+    supabase
+      .from('trips')
+      .insert(payload)
+      .select(tripSelect(false))
+      .single(),
+    '운행 시작'
+  ) as Promise<QueryResult<TripRow>>;
 }
 
 export async function startManualTrip(input: ManualTripInput): Promise<TripSummary> {
-  const result = await withRequestTimeout(
-    supabase
-      .from('trips')
-      .insert({
-        vehicle_id: input.vehicleId,
-        start_place: input.startPlace.trim(),
-        end_place: input.endPlace.trim(),
-        start_time: new Date().toISOString(),
-        status: 'in_progress',
-      })
-      .select('id, vehicle_id, start_place, end_place, start_time, end_time, status')
-      .single(),
-    '운행 시작'
-  );
+  const now = new Date().toISOString();
+  const basePayload = {
+    vehicle_id: input.vehicleId,
+    start_place: input.startPlace.trim(),
+    end_place: input.endPlace.trim(),
+    start_time: now,
+    status: 'in_progress',
+  };
+  const extendedPayload = {
+    ...basePayload,
+    purpose: input.purpose?.trim() || null,
+    operator_name: input.operatorName?.trim() || null,
+    user_name: input.userName?.trim() || null,
+  };
+
+  let result = await insertTrip(extendedPayload);
+  if (result.error && isMissingColumnError(result.error)) {
+    result = await insertBasicTrip(basePayload);
+  }
 
   if (result.error) {
     throw new Error(result.error.message);

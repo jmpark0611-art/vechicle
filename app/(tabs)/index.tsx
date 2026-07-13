@@ -25,6 +25,9 @@ export default function TripScreen() {
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [activeTrips, setActiveTrips] = useState<TripSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [operatorName, setOperatorName] = useState('');
+  const [userName, setUserName] = useState('');
+  const [purpose, setPurpose] = useState('');
   const [startPlace, setStartPlace] = useState('본부대');
   const [endPlace, setEndPlace] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -67,8 +70,16 @@ export default function TripScreen() {
 
     setIsSaving(true);
     try {
-      const trip = await startManualTrip({ vehicleId: selectedVehicleId, startPlace, endPlace });
+      const trip = await startManualTrip({
+        vehicleId: selectedVehicleId,
+        startPlace,
+        endPlace,
+        purpose,
+        operatorName,
+        userName,
+      });
       setActiveTrips((current) => [trip, ...current]);
+      setPurpose('');
       setEndPlace('');
       Alert.alert('운행 시작', `${trip.vehicleNumber} 운행을 시작했습니다.`);
     } catch (error) {
@@ -95,7 +106,7 @@ export default function TripScreen() {
   return (
     <RebuildScreen
       title="운행"
-      subtitle="GPS 없이 수동 입력만으로 운행 시작과 종료 저장을 복구했습니다."
+      subtitle="GPS 없이 수동 입력으로 운행 시작과 종료를 저장합니다."
       metrics={[
         { label: '차량', value: `${vehicles.length}대` },
         { label: '진행 중', value: `${activeTrips.length}건` },
@@ -125,21 +136,12 @@ export default function TripScreen() {
             </View>
           </SectionCard>
 
-          <SectionCard title="운행 정보" body="이번 단계에서는 출발지와 목적지만 저장합니다. 운전자 정보는 다음 단계에서 확장합니다.">
-            <TextInput
-              style={styles.input}
-              value={startPlace}
-              onChangeText={setStartPlace}
-              placeholder="출발지"
-              placeholderTextColor="#94A3B8"
-            />
-            <TextInput
-              style={styles.input}
-              value={endPlace}
-              onChangeText={setEndPlace}
-              placeholder="목적지"
-              placeholderTextColor="#94A3B8"
-            />
+          <SectionCard title="운행 정보" body="운전자, 사용자, 목적, 출발지, 목적지를 입력합니다. 확장 컬럼이 없는 DB에서는 기본 운행 정보만 저장됩니다.">
+            <TextInput style={styles.input} value={operatorName} onChangeText={setOperatorName} placeholder="운전자 성명" placeholderTextColor="#94A3B8" />
+            <TextInput style={styles.input} value={userName} onChangeText={setUserName} placeholder="사용자 성명" placeholderTextColor="#94A3B8" />
+            <TextInput style={styles.input} value={purpose} onChangeText={setPurpose} placeholder="운행 목적" placeholderTextColor="#94A3B8" />
+            <TextInput style={styles.input} value={startPlace} onChangeText={setStartPlace} placeholder="출발지" placeholderTextColor="#94A3B8" />
+            <TextInput style={styles.input} value={endPlace} onChangeText={setEndPlace} placeholder="목적지" placeholderTextColor="#94A3B8" />
           </SectionCard>
 
           <SectionCard title="진행 중 운행" body="GPS 없이 수동으로 시작한 운행을 종료할 수 있습니다.">
@@ -153,6 +155,8 @@ export default function TripScreen() {
                     {trip.startPlace ?? '출발지 없음'} → {trip.endPlace ?? '목적지 없음'}
                   </Text>
                   <StatusLine label="시작" value={formatTime(trip.startTime)} />
+                  {trip.purpose ? <StatusLine label="목적" value={trip.purpose} /> : null}
+                  {trip.operatorName ? <StatusLine label="운전자" value={trip.operatorName} /> : null}
                   <Pressable style={styles.completeBtn} onPress={() => void handleCompleteTrip(trip)} disabled={isSaving}>
                     <Text style={styles.completeBtnText}>운행 종료</Text>
                   </Pressable>

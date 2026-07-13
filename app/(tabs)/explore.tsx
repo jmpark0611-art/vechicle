@@ -4,13 +4,9 @@ import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/component
 import { fetchTripsReadOnly, getSupabaseReadSource, type TripSummary } from '@/lib/readonly-data';
 
 function formatTripTime(value: string | null) {
-  if (!value) {
-    return '-';
-  }
+  if (!value) return '-';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value.slice(0, 16);
-  }
+  if (Number.isNaN(date.getTime())) return value.slice(0, 16);
   return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date
     .getMinutes()
     .toString()
@@ -51,7 +47,7 @@ export default function RecordsScreen() {
   return (
     <RebuildScreen
       title="운행 기록"
-      subtitle="Supabase 최근 운행 기록을 읽기 전용으로 연결했습니다. 필터와 CSV는 다음 단계에서 복구합니다."
+      subtitle="Supabase 최근 운행 기록을 표시합니다. 필터와 CSV는 다음 단계에서 복구합니다."
       metrics={[
         { label: '최근 기록', value: `${trips.length}건` },
         { label: '운행중', value: `${inProgressCount}건` },
@@ -78,6 +74,9 @@ export default function RecordsScreen() {
             body={`${trip.startPlace ?? '출발지 없음'} → ${trip.endPlace ?? '목적지 없음'}`}>
             <StatusLine label="시작" value={formatTripTime(trip.startTime)} />
             <StatusLine label="종료" value={formatTripTime(trip.endTime)} />
+            {trip.purpose ? <StatusLine label="목적" value={trip.purpose} /> : null}
+            {trip.operatorName ? <StatusLine label="운전자" value={trip.operatorName} /> : null}
+            {trip.userName ? <StatusLine label="사용자" value={trip.userName} /> : null}
             <StatusLine label="기록 ID" value={trip.id.slice(0, 8)} />
           </SectionCard>
         ))
@@ -85,7 +84,7 @@ export default function RecordsScreen() {
 
       <SectionCard
         title="다음 단계"
-        body="수동 운행 시작과 종료 저장이 안정화되면 기간 필터, 차량 필터, CSV 내보내기를 복구합니다."
+        body="수동 운행 저장이 안정화되면 기간 필터, 차량 필터, CSV 내보내기를 복구합니다."
       />
     </RebuildScreen>
   );

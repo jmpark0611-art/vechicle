@@ -141,6 +141,21 @@
 - Updated the APK workflow to publish each APK under a unique `apk-${{ github.run_id }}` release tag instead of reusing `build-${{ github.run_number }}`.
 - This prevents old release assets from being mistaken for the latest fixed APK.
 
+## 2026-07-13 apk-29251409071 device success
+
+- User installed the unique release APK `apk-29251409071`.
+- Device test succeeded: app opens and manual trip controls respond.
+- This is the confirmed step-2 baseline for continuing rebuild work.
+
+## 2026-07-13 Clean rebuild step 2b: trip input fields
+
+- Added manual trip fields for operator name, user name, and purpose.
+- The app attempts to save these fields when DB columns exist.
+- If the DB does not have `purpose`, `operator_name`, or `user_name`, the app falls back to the minimal trip insert so trip start remains usable.
+- Records and active trip cards display the extended fields when available.
+- No GPS, WebView map, OBD/BLE, Reanimated, or new native permissions were added.
+- Verification passed with `npm run verify`, `npx expo-doctor`, and Android export.
+
 ## 2026-07-13 Android APK startup crash dependency pass
 
 - Investigated the installed APK crash reported as Android's "app keeps stopping" dialog immediately after launch.

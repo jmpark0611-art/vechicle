@@ -94,6 +94,26 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - Updated the APK release workflow to use `tag_name: apk-${{ github.run_id }}` and a matching release name. This creates a unique release URL for every APK build.
 - If a user reports a fixed bug still appearing, verify the APK release tag points to the exact commit before changing app code.
 
+## 2026-07-13 apk-29251409071 device result
+- User installed the unique-release APK `apk-29251409071`.
+- Result: app opens and manual trip controls work; user reported "성공! 다 눌러진다".
+- This confirms the rebuild branch is stable through step 2:
+  - launch baseline
+  - Supabase read-only lists
+  - manual trip start/end writes
+- Continue from this baseline. Avoid adding native modules in the next step.
+
+## 2026-07-13 rebuild step 2b trip fields
+- Added manual trip input fields for `operatorName`, `userName`, and `purpose`.
+- `startManualTrip()` now tries to write extended fields to `trips`:
+  - `purpose`
+  - `operator_name`
+  - `user_name`
+- If the remote DB does not have those columns yet, the app catches the schema-column error and retries the minimal insert. This keeps the APK stable while DB migrations are still being confirmed.
+- Records and active trip cards display purpose/operator/user when available.
+- No native modules or permissions were added.
+- Validation passed: `npm run verify`, `npx expo-doctor`, Android export.
+
 ## 2026-07-13 Android startup crash pass
 - Symptom reported from installed APK: Android system dialog "vehicle app keeps stopping" immediately on launch. No in-app diagnostic Alert was visible, so treat it as a native startup/runtime init crash until logcat proves otherwise.
 - Pulled latest branch `claude/env-permissions-session-restart-154onb` through commit `981401e`.
