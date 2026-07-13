@@ -51,6 +51,19 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
   5. Map visualization.
   6. OBD/BLE last, preferably after a separate test APK proves the BLE library does not crash startup.
 
+## 2026-07-13 rebuild step 1 data read
+- Started feature restoration from the known-good clean APK baseline.
+- Added `lib/readonly-data.ts` for Supabase read-only access only.
+- Connected minimal read-only data:
+  - `vehicles`: reads `id`, `vehicle_number`, `created_at`.
+  - `trips`: reads `id`, `vehicle_id`, `start_place`, `end_place`, `start_time`, `end_time`, `status`.
+- Updated screens:
+  - `app/(tabs)/vehicles.tsx`: shows vehicle count, connection source, and vehicle cards.
+  - `app/(tabs)/explore.tsx`: shows recent trip cards with vehicle-number mapping.
+  - `app/(tabs)/check.tsx`: runs a read-only Supabase health check.
+- No write operations were added. No GPS, map WebView, OBD/BLE, Reanimated, or native permission changes were added.
+- Android export passed after adding read-only data. Keep the next step small: manual trip start/end without GPS.
+
 ## 2026-07-13 Android startup crash pass
 - Symptom reported from installed APK: Android system dialog "vehicle app keeps stopping" immediately on launch. No in-app diagnostic Alert was visible, so treat it as a native startup/runtime init crash until logcat proves otherwise.
 - Pulled latest branch `claude/env-permissions-session-restart-154onb` through commit `981401e`.

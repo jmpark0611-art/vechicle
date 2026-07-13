@@ -109,6 +109,15 @@
 - Existing code and history remain the reference for restoring behavior and UI.
 - Cleanup will be done later after the rebuilt app is stable and feature parity is verified.
 
+## 2026-07-13 Clean rebuild step 1: Supabase read-only data
+
+- Added a read-only Supabase data module for the rebuild branch.
+- Connected `vehicles` and `trips` reads without adding writes, GPS, WebView, OBD/BLE, or new native permissions.
+- Vehicle tab now shows Supabase source, vehicle count, and read-only vehicle cards.
+- Records tab now shows recent trips with vehicle-number mapping.
+- Check tab now runs a read-only Supabase health check.
+- Android export passed after this step.
+
 ## 2026-07-13 Android APK startup crash dependency pass
 
 - Investigated the installed APK crash reported as Android's "app keeps stopping" dialog immediately after launch.

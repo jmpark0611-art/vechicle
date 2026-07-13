@@ -1,5 +1,5 @@
 import { PropsWithChildren } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Metric = {
@@ -49,11 +49,32 @@ export function RebuildScreen({ title, subtitle, metrics = [], actionLabel, onAc
   );
 }
 
-export function SectionCard({ title, body }: { title: string; body: string }) {
+export function SectionCard({ title, body, children }: PropsWithChildren<{ title: string; body: string }>) {
   return (
     <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <Text style={styles.sectionBody}>{body}</Text>
+      {children}
+    </View>
+  );
+}
+
+export function StatusLine({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.statusLine}>
+      <Text style={styles.statusLabel}>{label}</Text>
+      <Text style={styles.statusValue} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+export function LoadingCard({ label = '불러오는 중' }: { label?: string }) {
+  return (
+    <View style={styles.sectionCard}>
+      <ActivityIndicator color="#2563EB" />
+      <Text style={styles.loadingText}>{label}</Text>
     </View>
   );
 }
@@ -87,6 +108,19 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { color: '#0F172A', fontSize: 17, fontWeight: '900', marginBottom: 8 },
   sectionBody: { color: '#64748B', fontSize: 14, fontWeight: '600', lineHeight: 21 },
+  statusLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 12,
+    marginTop: 12,
+  },
+  statusLabel: { color: '#64748B', fontSize: 12, fontWeight: '800' },
+  statusValue: { color: '#0F172A', fontSize: 13, fontWeight: '900', flexShrink: 1, textAlign: 'right' },
+  loadingText: { color: '#64748B', fontSize: 13, fontWeight: '800', textAlign: 'center', marginTop: 12 },
   primaryBtn: {
     minHeight: 56,
     borderRadius: 16,
