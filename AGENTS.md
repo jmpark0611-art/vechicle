@@ -56,6 +56,13 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - This is intentionally not continuous/background tracking yet.
 - Validation passed: `npm run verify`, `npx expo-doctor` 18/18, and Android export.
 
+## 2026-07-13 database policy pass
+- Expanded `docs/schema.sql` with RLS enablement and anon policies for:
+  - `vehicles`: select/insert/update
+  - `trips`: select/insert/update
+  - `gps_points`: select/insert
+- This is needed so the rebuilt app can read vehicles/trips, start/complete trips, and insert GPS points when the schema is applied to Supabase.
+
 ## 2026-07-13 Clean rebuild branch
 - User chose a clean rebuild because installed APK builds kept crashing before the first screen.
 - Created branch `rebuild/clean-sdk54-start` from the latest work branch. Do not delete the old branch; it remains the feature reference.

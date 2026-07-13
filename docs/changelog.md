@@ -41,6 +41,11 @@
 - GPS permission denial, missing DB table, RLS failure, and timeout paths are reported through messages without blocking the trip flow.
 - Verification passed with `npm run verify`, `npx expo-doctor` 18/18, and Android export.
 
+## 2026-07-13 Supabase RLS 스키마 보강
+
+- Added RLS enablement and anon policies for vehicles, trips, and gps_points in `docs/schema.sql`.
+- The schema now covers the rebuilt app's current write paths: trip start, trip completion, GPS point insert, maintenance record insert, and speed-zone insert.
+
 ## 2026-07-07 수송부 PIN 재인증 루프 차단
 
 - 수송부 PIN 성공 후 기록 화면이 잠깐 보였다가 사라지는 문제를 수정했다.

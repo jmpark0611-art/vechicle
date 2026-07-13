@@ -113,6 +113,51 @@ execute function public.set_updated_at();
 
 alter table public.maintenance_records enable row level security;
 alter table public.speed_zones enable row level security;
+alter table public.vehicles enable row level security;
+alter table public.trips enable row level security;
+alter table public.gps_points enable row level security;
+
+drop policy if exists vehicles_anon_select on public.vehicles;
+create policy vehicles_anon_select
+  on public.vehicles for select
+  using (true);
+
+drop policy if exists vehicles_anon_insert on public.vehicles;
+create policy vehicles_anon_insert
+  on public.vehicles for insert
+  with check (true);
+
+drop policy if exists vehicles_anon_update on public.vehicles;
+create policy vehicles_anon_update
+  on public.vehicles for update
+  using (true)
+  with check (true);
+
+drop policy if exists trips_anon_select on public.trips;
+create policy trips_anon_select
+  on public.trips for select
+  using (true);
+
+drop policy if exists trips_anon_insert on public.trips;
+create policy trips_anon_insert
+  on public.trips for insert
+  with check (true);
+
+drop policy if exists trips_anon_update on public.trips;
+create policy trips_anon_update
+  on public.trips for update
+  using (true)
+  with check (true);
+
+drop policy if exists gps_points_anon_select on public.gps_points;
+create policy gps_points_anon_select
+  on public.gps_points for select
+  using (true);
+
+drop policy if exists gps_points_anon_insert on public.gps_points;
+create policy gps_points_anon_insert
+  on public.gps_points for insert
+  with check (true);
 
 drop policy if exists maintenance_records_anon_select on public.maintenance_records;
 create policy maintenance_records_anon_select
