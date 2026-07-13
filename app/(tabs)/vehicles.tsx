@@ -13,6 +13,15 @@ import {
   type MaintenanceItem,
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
+import {
+  buildObdReading,
+  EMPTY_OBD_INPUT,
+  inputFromReading,
+  loadSyncedObdSnapshot,
+  saveObdReading,
+  type ObdInput,
+  type ObdSnapshot,
+} from '@/lib/obd-data';
 import { fetchVehiclesReadOnly, getSupabaseReadSource, type VehicleSummary } from '@/lib/readonly-data';
 
 function formatKm(value: number | null | undefined) {
@@ -39,11 +48,14 @@ function isDue(remainingKm: number | null) {
 export default function VehiclesScreen() {
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [snapshot, setSnapshot] = useState<MaintenanceSnapshot>({});
+  const [obdSnapshot, setObdSnapshot] = useState<ObdSnapshot>({});
   const [kmInputs, setKmInputs] = useState<Record<string, string>>({});
+  const [obdInputs, setObdInputs] = useState<Record<string, ObdInput>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState('로컬 저장');
+  const [obdSyncMessage, setObdSyncMessage] = useState('수동 기록 대기');
 
   const dueCount = useMemo(
     () =>
@@ -60,16 +72,24 @@ export default function VehiclesScreen() {
     try {
       const nextVehicles = await fetchVehiclesReadOnly(50);
       const syncResult = await loadSyncedMaintenanceSnapshot(nextVehicles.map((vehicle) => vehicle.id));
+      const obdSyncResult = await loadSyncedObdSnapshot(nextVehicles.map((vehicle) => vehicle.id));
       const nextSnapshot = syncResult.snapshot;
       setVehicles(nextVehicles);
       setSnapshot(nextSnapshot);
+      setObdSnapshot(obdSyncResult.snapshot);
       setSyncMessage(syncResult.message);
+      setObdSyncMessage(obdSyncResult.message);
       setKmInputs(
         Object.fromEntries(
           nextVehicles.map((vehicle) => {
             const currentKm = getVehicleMaintenanceState(nextSnapshot, vehicle.id).currentKm;
             return [vehicle.id, currentKm === null ? '' : String(currentKm)];
           })
+        )
+      );
+      setObdInputs(
+        Object.fromEntries(
+          nextVehicles.map((vehicle) => [vehicle.id, inputFromReading(obdSyncResult.snapshot[vehicle.id])])
         )
       );
     } catch (error) {
@@ -133,6 +153,32 @@ export default function VehiclesScreen() {
     }
   }
 
+  async function handleSaveObd(vehicle: VehicleSummary) {
+    setIsSaving(true);
+    try {
+      const reading = buildObdReading(vehicle.id, obdInputs[vehicle.id] ?? EMPTY_OBD_INPUT);
+      const result = await saveObdReading(reading);
+      setObdSnapshot(result.snapshot);
+      setObdSyncMessage(result.message);
+      setObdInputs((current) => ({ ...current, [vehicle.id]: inputFromReading(reading) }));
+      Alert.alert('OBD 기록 완료', `${vehicle.vehicleNumber} 진단값을 저장했습니다.\n${result.message}`);
+    } catch (error) {
+      Alert.alert('OBD 기록 실패', error instanceof Error ? error.message : 'OBD 값을 저장하지 못했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function setObdInput(vehicleId: string, key: keyof ObdInput, value: string) {
+    setObdInputs((current) => ({
+      ...current,
+      [vehicleId]: {
+        ...(current[vehicleId] ?? EMPTY_OBD_INPUT),
+        [key]: value,
+      },
+    }));
+  }
+
   return (
     <RebuildScreen
       title="차량 진단"
@@ -140,14 +186,15 @@ export default function VehiclesScreen() {
       metrics={[
         { label: '등록 차량', value: `${vehicles.length}대` },
         { label: '교체 임박', value: `${dueCount}건` },
-        { label: 'OBD', value: '보류' },
-        { label: 'DTC', value: '보류' },
+        { label: 'OBD 기록', value: `${Object.keys(obdSnapshot).length}대` },
+        { label: 'DTC', value: `${Object.values(obdSnapshot).reduce((sum, item) => sum + (item.dtcCount ?? 0), 0)}건` },
       ]}
       actionLabel={isSaving ? '저장 중' : '차량/정비 새로고침'}
       onAction={() => void loadVehicles()}>
       <SectionCard title="Supabase" body="차량 목록은 Supabase에서 읽고, 정비 교체 기록은 Supabase 저장을 시도한 뒤 로컬에도 안전하게 보관합니다.">
         <StatusLine label="연결" value={getSupabaseReadSource()} />
         <StatusLine label="정비 동기화" value={syncMessage} />
+        <StatusLine label="OBD 기록" value={obdSyncMessage} />
       </SectionCard>
 
       {isLoading ? (
@@ -211,6 +258,79 @@ export default function VehiclesScreen() {
                   </View>
                 );
               })}
+
+              <View style={styles.obdPanel}>
+                <View style={styles.obdHeader}>
+                  <View>
+                    <Text style={styles.itemTitle}>OBD 수동 진단</Text>
+                    <Text style={styles.itemMeta}>스캐너 실연결 전, 측정값을 같은 구조로 먼저 기록합니다.</Text>
+                  </View>
+                  <Text style={styles.obdBadge}>
+                    {obdSnapshot[vehicle.id]?.recordedAt ? obdSnapshot[vehicle.id].recordedAt.slice(0, 10) : '대기'}
+                  </Text>
+                </View>
+                <View style={styles.obdGrid}>
+                  <TextInput
+                    style={styles.obdInput}
+                    value={obdInputs[vehicle.id]?.rpm ?? ''}
+                    onChangeText={(value) => setObdInput(vehicle.id, 'rpm', value)}
+                    placeholder="RPM"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="number-pad"
+                  />
+                  <TextInput
+                    style={styles.obdInput}
+                    value={obdInputs[vehicle.id]?.speedKmh ?? ''}
+                    onChangeText={(value) => setObdInput(vehicle.id, 'speedKmh', value)}
+                    placeholder="속도 km/h"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="number-pad"
+                  />
+                  <TextInput
+                    style={styles.obdInput}
+                    value={obdInputs[vehicle.id]?.coolantTempC ?? ''}
+                    onChangeText={(value) => setObdInput(vehicle.id, 'coolantTempC', value)}
+                    placeholder="냉각수 ℃"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="number-pad"
+                  />
+                  <TextInput
+                    style={styles.obdInput}
+                    value={obdInputs[vehicle.id]?.batteryVoltage ?? ''}
+                    onChangeText={(value) => setObdInput(vehicle.id, 'batteryVoltage', value)}
+                    placeholder="배터리 V"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="decimal-pad"
+                  />
+                  <TextInput
+                    style={styles.obdInput}
+                    value={obdInputs[vehicle.id]?.fuelPercent ?? ''}
+                    onChangeText={(value) => setObdInput(vehicle.id, 'fuelPercent', value)}
+                    placeholder="연료 %"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="number-pad"
+                  />
+                  <TextInput
+                    style={styles.obdInput}
+                    value={obdInputs[vehicle.id]?.dtcCount ?? ''}
+                    onChangeText={(value) => setObdInput(vehicle.id, 'dtcCount', value)}
+                    placeholder="DTC 건수"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <StatusLine
+                  label="최근 상태"
+                  value={
+                    obdSnapshot[vehicle.id]
+                      ? `RPM ${obdSnapshot[vehicle.id].rpm ?? '-'} · 냉각수 ${obdSnapshot[vehicle.id].coolantTempC ?? '-'}℃ · 배터리 ${obdSnapshot[vehicle.id].batteryVoltage ?? '-'}V`
+                      : '기록 없음'
+                  }
+                />
+                <Pressable style={styles.obdSaveBtn} onPress={() => void handleSaveObd(vehicle)} disabled={isSaving}>
+                  <Text style={styles.obdSaveBtnText}>OBD 기록 저장</Text>
+                </Pressable>
+              </View>
             </SectionCard>
           );
         })
@@ -218,7 +338,7 @@ export default function VehiclesScreen() {
 
       <SectionCard
         title="다음 단계"
-        body="로컬 정비 기록이 안정적으로 동작하면 Supabase 정비 테이블 동기화와 OBD 주행거리 자동 반영을 단계적으로 붙입니다."
+        body="OBD 수동 기록이 안정적으로 동작하면 별도 APK에서 Bluetooth 스캐너 실연결을 붙이고, 앱 시작 안정성을 다시 확인합니다."
       />
     </RebuildScreen>
   );
@@ -276,4 +396,54 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   completeBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  obdPanel: {
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 16,
+    marginTop: 16,
+  },
+  obdHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+  },
+  obdBadge: {
+    color: '#2563EB',
+    backgroundColor: '#EAF2FF',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+  obdGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 8,
+  },
+  obdInput: {
+    width: '48%',
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '800',
+    paddingHorizontal: 12,
+  },
+  obdSaveBtn: {
+    minHeight: 46,
+    borderRadius: 14,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  obdSaveBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
 });

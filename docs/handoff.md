@@ -1,5 +1,20 @@
 # 인수인계 메모
 
+## 2026-07-14 current branch status
+
+- Active branch: `rebuild/clean-sdk54-start`
+- Known-good installed APK before this step: `apk-29255828399`
+  - Release page: `https://github.com/jmpark0611-art/vechicle/releases/tag/apk-29255828399`
+  - APK: `https://github.com/jmpark0611-art/vechicle/releases/download/apk-29255828399/app-release.apk`
+- Current direction: rebuild features in small APK-testable steps and avoid adding risky native modules until the app launch path stays stable.
+- Latest implemented step: OBD manual diagnostic records.
+  - Added `lib/obd-data.ts`.
+  - Vehicle tab can save RPM, speed, coolant temperature, battery voltage, fuel percentage, and DTC count per vehicle.
+  - Data is saved to AsyncStorage first and attempts Supabase insert into `obd_logs`.
+  - `docs/schema.sql` now includes `obd_logs` plus RLS policies.
+  - Check tab includes `obd_logs` table diagnostics.
+- Important: no real Bluetooth/BLE package was added in this step. Real ELM327/OBD scanner connection should be added later in a separate branch/commit/APK after this manual UI/data path is confirmed on device.
+
 ## 2026-07-07 최신 APK 다운로드 상태
 
 - 최신 release APK 빌드는 성공 완료됐다.

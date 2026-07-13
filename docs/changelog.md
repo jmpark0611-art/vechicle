@@ -1,5 +1,14 @@
 # 변경 이력
 
+## 2026-07-14 OBD manual diagnostic records
+
+- Continued on branch `rebuild/clean-sdk54-start` after the known-good APK release `apk-29255828399`.
+- Added `lib/obd-data.ts` for OBD readings stored locally first with optional Supabase sync.
+- Vehicle tab now has an `OBD 수동 진단` panel per vehicle for RPM, speed, coolant temperature, battery voltage, fuel percentage, and DTC count.
+- Added `obd_logs` table, indexes, trigger, and anon select/insert RLS policies to `docs/schema.sql`.
+- Check tab now reports the `obd_logs` table status.
+- This step intentionally adds no BLE/native scanner package. Real OBD Bluetooth connection should be a separate APK-tested step after this UI/data path is stable.
+
 ## 2026-07-13 정비 교체완료 기능
 
 - User confirmed the previous APK `apk-29252766820` as "작동 이상무".

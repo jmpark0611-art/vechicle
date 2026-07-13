@@ -77,6 +77,27 @@ create table if not exists public.speed_zones (
 create index if not exists speed_zones_name_idx
   on public.speed_zones (name);
 
+create table if not exists public.obd_logs (
+  id uuid primary key default gen_random_uuid(),
+  vehicle_id uuid not null references public.vehicles (id) on delete cascade,
+  rpm numeric,
+  speed_kmh numeric,
+  coolant_temp_c numeric,
+  battery_voltage numeric,
+  fuel_percent numeric,
+  dtc_count integer,
+  recorded_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint obd_logs_rpm_check check (rpm is null or rpm >= 0),
+  constraint obd_logs_speed_check check (speed_kmh is null or speed_kmh >= 0),
+  constraint obd_logs_fuel_check check (fuel_percent is null or (fuel_percent >= 0 and fuel_percent <= 100)),
+  constraint obd_logs_dtc_check check (dtc_count is null or dtc_count >= 0)
+);
+
+create index if not exists obd_logs_vehicle_recorded_idx
+  on public.obd_logs (vehicle_id, recorded_at desc);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -111,8 +132,15 @@ before update on public.speed_zones
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists obd_logs_set_updated_at on public.obd_logs;
+create trigger obd_logs_set_updated_at
+before update on public.obd_logs
+for each row
+execute function public.set_updated_at();
+
 alter table public.maintenance_records enable row level security;
 alter table public.speed_zones enable row level security;
+alter table public.obd_logs enable row level security;
 alter table public.vehicles enable row level security;
 alter table public.trips enable row level security;
 alter table public.gps_points enable row level security;
@@ -178,4 +206,14 @@ drop policy if exists speed_zones_anon_all on public.speed_zones;
 create policy speed_zones_anon_all
   on public.speed_zones for all
   using (true)
+  with check (true);
+
+drop policy if exists obd_logs_anon_select on public.obd_logs;
+create policy obd_logs_anon_select
+  on public.obd_logs for select
+  using (true);
+
+drop policy if exists obd_logs_anon_insert on public.obd_logs;
+create policy obd_logs_anon_insert
+  on public.obd_logs for insert
   with check (true);

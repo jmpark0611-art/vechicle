@@ -81,17 +81,18 @@ export default function CheckScreen() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const [vehicles, trips, gpsPoints, maintenanceRecords, speedZones] = await Promise.all([
+      const [vehicles, trips, gpsPoints, maintenanceRecords, speedZones, obdLogs] = await Promise.all([
         fetchVehiclesReadOnly(5),
         fetchTripsReadOnly(5),
         countTable('GPS 위치', 'gps_points'),
         countTable('정비 기록', 'maintenance_records'),
         countTable('제한속도 구역', 'speed_zones'),
+        countTable('OBD 기록', 'obd_logs'),
       ]);
       setResult({
         vehicles: vehicles.length,
         trips: trips.length,
-        tableChecks: [gpsPoints, maintenanceRecords, speedZones],
+        tableChecks: [gpsPoints, maintenanceRecords, speedZones, obdLogs],
       });
     } catch (error) {
       setResult(null);
@@ -138,7 +139,7 @@ export default function CheckScreen() {
             <StatusLine label="운행" value={`${result?.trips ?? 0}건`} />
           </SectionCard>
 
-          <SectionCard title="기능 테이블" body="GPS 저장, 정비 기록, 제한속도 구역 기능에 필요한 테이블 상태입니다.">
+          <SectionCard title="기능 테이블" body="GPS 저장, 정비 기록, 제한속도 구역, OBD 기록 기능에 필요한 테이블 상태입니다.">
             {result?.tableChecks.map((item) => (
               <StatusLine key={item.table} label={item.label} value={`${statusText(item.status)} · ${item.value}`} />
             ))}
