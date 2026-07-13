@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-13 정비 교체완료 기능
+
+- User confirmed the previous APK `apk-29252766820` as "작동 이상무".
+- Added vehicle maintenance replacement completion on the rebuilt stable branch.
+- Vehicle tab now supports local current odometer entry and replacement-completion buttons for engine oil, oil filter, and air filter.
+- Pressing "교체완료" records the current km locally and recalculates the remaining km until the next replacement cycle.
+- This step adds no GPS, WebView map, OBD/BLE, Reanimated, new Android permissions, or Supabase schema writes.
+
 ## 2026-07-07 수송부 PIN 재인증 루프 차단
 
 - 수송부 PIN 성공 후 기록 화면이 잠깐 보였다가 사라지는 문제를 수정했다.
@@ -155,6 +163,7 @@
 - Records and active trip cards display the extended fields when available.
 - No GPS, WebView map, OBD/BLE, Reanimated, or new native permissions were added.
 - Verification passed with `npm run verify`, `npx expo-doctor`, and Android export.
+- User tested `apk-29252766820` and reported normal operation.
 
 ## 2026-07-13 Android APK startup crash dependency pass
 

@@ -6,6 +6,20 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 
 # Progress Notes (for AI continuity)
 
+## 2026-07-13 current rebuild status
+- Current active branch: `rebuild/clean-sdk54-start`.
+- Current known-good APK before this maintenance step: `apk-29252766820`.
+- User confirmed the installed APK state as "작동 이상무".
+- Continue with small APK-testable steps. Do not reintroduce GPS, WebView map, OBD/BLE, Reanimated, or new native permissions until the current step is tested on device.
+
+## 2026-07-13 rebuild step 3 vehicle maintenance
+- Added a non-native vehicle maintenance replacement workflow.
+- `lib/maintenance-data.ts` stores current odometer and replacement-completion km locally with AsyncStorage under `vehicle-maintenance-v1`.
+- `app/(tabs)/vehicles.tsx` now shows engine oil, oil filter, and air filter replacement cycles.
+- Users can enter current odometer, save it, and press "교체완료"; remaining km is recalculated from that completion point.
+- This step intentionally does not add Supabase schema writes, GPS, WebView, OBD/BLE, Reanimated, or new Android permissions.
+- Next safe step after APK device test: add Supabase sync for maintenance records or restore read-only location/map UI. Keep OBD/BLE last.
+
 ## 2026-07-13 Clean rebuild branch
 - User chose a clean rebuild because installed APK builds kept crashing before the first screen.
 - Created branch `rebuild/clean-sdk54-start` from the latest work branch. Do not delete the old branch; it remains the feature reference.
@@ -113,6 +127,15 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - Records and active trip cards display purpose/operator/user when available.
 - No native modules or permissions were added.
 - Validation passed: `npm run verify`, `npx expo-doctor`, Android export.
+
+## 2026-07-13 apk-29252766820 device result
+- User installed and tested `apk-29252766820`.
+- Result: "작동 이상무".
+- This confirms the rebuild branch is stable through:
+  - unique APK release links
+  - manual trip start/end
+  - manual trip fields for operator/user/purpose
+- Continue with non-native features next. Recommended next step: vehicle maintenance replacement completion.
 
 ## 2026-07-13 Android startup crash pass
 - Symptom reported from installed APK: Android system dialog "vehicle app keeps stopping" immediately on launch. No in-app diagnostic Alert was visible, so treat it as a native startup/runtime init crash until logcat proves otherwise.
