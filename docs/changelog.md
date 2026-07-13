@@ -33,6 +33,14 @@
 - Missing `speed_zones` DB table is handled with an Alert instead of a crash.
 - Verification passed with `npm run verify` and Android export.
 
+## 2026-07-13 GPS 1회 저장 복구
+
+- Reintroduced `expo-location` for foreground GPS only.
+- Added Android foreground location permissions.
+- Trip start and trip completion now attempt to save one current GPS point to `gps_points`.
+- GPS permission denial, missing DB table, RLS failure, and timeout paths are reported through messages without blocking the trip flow.
+- Verification passed with `npm run verify`, `npx expo-doctor` 18/18, and Android export.
+
 ## 2026-07-07 수송부 PIN 재인증 루프 차단
 
 - 수송부 PIN 성공 후 기록 화면이 잠깐 보였다가 사라지는 문제를 수정했다.

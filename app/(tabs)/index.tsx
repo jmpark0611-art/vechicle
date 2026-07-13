@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
+import { saveCurrentGpsPoint } from '@/lib/gps-data';
 import {
   completeManualTrip,
   fetchActiveTrips,
@@ -81,7 +82,8 @@ export default function TripScreen() {
       setActiveTrips((current) => [trip, ...current]);
       setPurpose('');
       setEndPlace('');
-      Alert.alert('운행 시작', `${trip.vehicleNumber} 운행을 시작했습니다.`);
+      const gpsResult = await saveCurrentGpsPoint(trip.id);
+      Alert.alert('운행 시작', `${trip.vehicleNumber} 운행을 시작했습니다.\n${gpsResult.message}`);
     } catch (error) {
       Alert.alert('운행 시작 실패', error instanceof Error ? error.message : '운행을 시작하지 못했습니다.');
     } finally {
@@ -94,8 +96,9 @@ export default function TripScreen() {
     setIsSaving(true);
     try {
       await completeManualTrip(trip.id, finalEndPlace);
+      const gpsResult = await saveCurrentGpsPoint(trip.id);
       setActiveTrips((current) => current.filter((item) => item.id !== trip.id));
-      Alert.alert('운행 종료', `${trip.vehicleNumber} 운행을 종료했습니다.`);
+      Alert.alert('운행 종료', `${trip.vehicleNumber} 운행을 종료했습니다.\n${gpsResult.message}`);
     } catch (error) {
       Alert.alert('운행 종료 실패', error instanceof Error ? error.message : '운행을 종료하지 못했습니다.');
     } finally {
@@ -110,7 +113,7 @@ export default function TripScreen() {
       metrics={[
         { label: '차량', value: `${vehicles.length}대` },
         { label: '진행 중', value: `${activeTrips.length}건` },
-        { label: 'GPS', value: '보류' },
+        { label: 'GPS', value: '1회 저장' },
         { label: 'OBD', value: '보류' },
       ]}
       actionLabel={isSaving ? '저장 중' : '운행 시작'}

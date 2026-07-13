@@ -47,6 +47,15 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - If the table has not been applied to Supabase yet, the app shows a clear Alert instead of crashing.
 - Validation passed: `npm run verify` and Android export.
 
+## 2026-07-13 rebuild step 5 foreground GPS point save
+- Reintroduced `expo-location` as the first native module after the clean rebuild baseline.
+- Added Android foreground location permissions only: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`.
+- Added `lib/gps-data.ts` with `saveCurrentGpsPoint(tripId)`.
+- Trip start and manual trip completion now attempt a one-time foreground GPS save to `gps_points`.
+- Permission denial, missing `gps_points`, RLS/policy errors, and timeout paths return messages and do not crash the trip flow.
+- This is intentionally not continuous/background tracking yet.
+- Validation passed: `npm run verify`, `npx expo-doctor` 18/18, and Android export.
+
 ## 2026-07-13 Clean rebuild branch
 - User chose a clean rebuild because installed APK builds kept crashing before the first screen.
 - Created branch `rebuild/clean-sdk54-start` from the latest work branch. Do not delete the old branch; it remains the feature reference.
