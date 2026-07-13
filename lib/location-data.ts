@@ -26,6 +26,14 @@ export type LocationSnapshot = {
   message: string;
 };
 
+export type CreateSpeedZoneInput = {
+  name: string;
+  latitude: number;
+  longitude: number;
+  radiusM: number;
+  speedLimitKmh: number;
+};
+
 type GpsPointRow = {
   latitude: number | null;
   longitude: number | null;
@@ -163,4 +171,27 @@ export async function fetchLocationSnapshot(): Promise<LocationSnapshot> {
     zones: zoneResult.zones,
     message: failedPoint ? '일부 GPS 조회 실패' : zoneResult.message,
   };
+}
+
+export async function createSpeedZone(input: CreateSpeedZoneInput): Promise<{ ok: boolean; message: string }> {
+  const result = await withRequestTimeout(
+    supabase.from('speed_zones').insert({
+      name: input.name.trim(),
+      latitude: input.latitude,
+      longitude: input.longitude,
+      radius_m: input.radiusM,
+      speed_limit_kmh: input.speedLimitKmh,
+    }),
+    '제한속도 구역 저장'
+  );
+
+  if (!result.error) {
+    return { ok: true, message: '제한속도 구역을 저장했습니다.' };
+  }
+
+  if (isMissingTable(result.error)) {
+    return { ok: false, message: 'speed_zones 테이블이 아직 DB에 적용되지 않았습니다.' };
+  }
+
+  return { ok: false, message: result.error.message };
 }

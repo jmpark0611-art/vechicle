@@ -39,6 +39,14 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - Validation passed: `npm run verify` and Android export.
 - Next safe step: add speed-zone creation/editing UI in 수송부 mode or restore GPS foreground permission/point saving. Keep OBD/BLE last.
 
+## 2026-07-13 rebuild step 4b speed-zone creation
+- Added `createSpeedZone()` to `lib/location-data.ts`.
+- Location tab now includes a speed-zone creation form for name, latitude, longitude, radius, and speed limit.
+- The form validates numeric ranges before saving.
+- Save writes to Supabase `speed_zones` and refreshes the location board when successful.
+- If the table has not been applied to Supabase yet, the app shows a clear Alert instead of crashing.
+- Validation passed: `npm run verify` and Android export.
+
 ## 2026-07-13 Clean rebuild branch
 - User chose a clean rebuild because installed APK builds kept crashing before the first screen.
 - Created branch `rebuild/clean-sdk54-start` from the latest work branch. Do not delete the old branch; it remains the feature reference.

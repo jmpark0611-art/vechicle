@@ -25,6 +25,14 @@
 - This step adds no GPS permission, WebView map, OBD/BLE, Reanimated, or new native startup module.
 - Verification passed with `npm run verify` and Android export.
 
+## 2026-07-13 제한속도 구역 등록
+
+- Added speed-zone creation from the location tab.
+- Users can enter zone name, latitude, longitude, radius, and speed limit.
+- The app validates coordinates/radius/speed before saving to Supabase.
+- Missing `speed_zones` DB table is handled with an Alert instead of a crash.
+- Verification passed with `npm run verify` and Android export.
+
 ## 2026-07-07 수송부 PIN 재인증 루프 차단
 
 - 수송부 PIN 성공 후 기록 화면이 잠깐 보였다가 사라지는 문제를 수정했다.
