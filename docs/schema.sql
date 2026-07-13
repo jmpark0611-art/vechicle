@@ -46,6 +46,21 @@ create table if not exists public.gps_points (
 create index if not exists gps_points_trip_id_recorded_at_idx
   on public.gps_points (trip_id, recorded_at desc);
 
+create table if not exists public.maintenance_records (
+  id uuid primary key default gen_random_uuid(),
+  vehicle_id uuid not null references public.vehicles (id) on delete cascade,
+  item_key text not null,
+  completed_km numeric not null,
+  completed_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint maintenance_records_item_key_check check (item_key in ('engineOil', 'oilFilter', 'airFilter')),
+  constraint maintenance_records_completed_km_check check (completed_km >= 0)
+);
+
+create index if not exists maintenance_records_vehicle_item_completed_idx
+  on public.maintenance_records (vehicle_id, item_key, completed_at desc);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -67,3 +82,21 @@ create trigger trips_set_updated_at
 before update on public.trips
 for each row
 execute function public.set_updated_at();
+
+drop trigger if exists maintenance_records_set_updated_at on public.maintenance_records;
+create trigger maintenance_records_set_updated_at
+before update on public.maintenance_records
+for each row
+execute function public.set_updated_at();
+
+alter table public.maintenance_records enable row level security;
+
+drop policy if exists maintenance_records_anon_select on public.maintenance_records;
+create policy maintenance_records_anon_select
+  on public.maintenance_records for select
+  using (true);
+
+drop policy if exists maintenance_records_anon_insert on public.maintenance_records;
+create policy maintenance_records_anon_insert
+  on public.maintenance_records for insert
+  with check (true);

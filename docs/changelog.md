@@ -8,6 +8,15 @@
 - Pressing "교체완료" records the current km locally and recalculates the remaining km until the next replacement cycle.
 - This step adds no GPS, WebView map, OBD/BLE, Reanimated, new Android permissions, or Supabase schema writes.
 
+## 2026-07-13 정비 Supabase 동기화 및 APK workflow 보정
+
+- Investigated the failed APK workflow run after `d42377c`; it failed in `Setup Android SDK` before app code was built.
+- Replaced the external Android SDK setup action with a runner SDK check/license step.
+- Added `maintenance_records` to `docs/schema.sql`.
+- Maintenance completion now attempts Supabase insert and safely falls back to local AsyncStorage when the DB table is not ready.
+- Vehicle tab shows the maintenance sync status.
+- Verification passed with `npm run verify` and Android export.
+
 ## 2026-07-07 수송부 PIN 재인증 루프 차단
 
 - 수송부 PIN 성공 후 기록 화면이 잠깐 보였다가 사라지는 문제를 수정했다.

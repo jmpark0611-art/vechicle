@@ -6,9 +6,10 @@ import {
   completeMaintenanceItem,
   getRemainingKm,
   getVehicleMaintenanceState,
-  loadMaintenanceSnapshot,
+  loadSyncedMaintenanceSnapshot,
   MAINTENANCE_ITEMS,
   setVehicleCurrentKm,
+  syncMaintenanceCompletion,
   type MaintenanceItem,
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
@@ -42,6 +43,7 @@ export default function VehiclesScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [syncMessage, setSyncMessage] = useState('로컬 저장');
 
   const dueCount = useMemo(
     () =>
@@ -56,9 +58,12 @@ export default function VehiclesScreen() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const [nextVehicles, nextSnapshot] = await Promise.all([fetchVehiclesReadOnly(50), loadMaintenanceSnapshot()]);
+      const nextVehicles = await fetchVehiclesReadOnly(50);
+      const syncResult = await loadSyncedMaintenanceSnapshot(nextVehicles.map((vehicle) => vehicle.id));
+      const nextSnapshot = syncResult.snapshot;
       setVehicles(nextVehicles);
       setSnapshot(nextSnapshot);
+      setSyncMessage(syncResult.message);
       setKmInputs(
         Object.fromEntries(
           nextVehicles.map((vehicle) => {
@@ -115,9 +120,11 @@ export default function VehiclesScreen() {
       }
       const nextSnapshot = await completeMaintenanceItem(vehicle.id, item.key, currentKm);
       setSnapshot(nextSnapshot);
+      const syncResult = await syncMaintenanceCompletion(vehicle.id, item.key, currentKm);
+      setSyncMessage(syncResult.message);
       Alert.alert(
         '교체완료',
-        `${vehicle.vehicleNumber} ${item.label} 교체를 ${formatKm(currentKm)} 기준으로 기록했습니다.`
+        `${vehicle.vehicleNumber} ${item.label} 교체를 ${formatKm(currentKm)} 기준으로 기록했습니다.\n${syncResult.message}`
       );
     } catch (error) {
       Alert.alert('교체 기록 실패', error instanceof Error ? error.message : '교체 기록을 저장하지 못했습니다.');
@@ -138,8 +145,9 @@ export default function VehiclesScreen() {
       ]}
       actionLabel={isSaving ? '저장 중' : '차량/정비 새로고침'}
       onAction={() => void loadVehicles()}>
-      <SectionCard title="Supabase" body="차량 목록은 Supabase에서 읽고, 정비 교체 기록은 현재 APK에서 안전하게 로컬 저장합니다.">
+      <SectionCard title="Supabase" body="차량 목록은 Supabase에서 읽고, 정비 교체 기록은 Supabase 저장을 시도한 뒤 로컬에도 안전하게 보관합니다.">
         <StatusLine label="연결" value={getSupabaseReadSource()} />
+        <StatusLine label="정비 동기화" value={syncMessage} />
       </SectionCard>
 
       {isLoading ? (

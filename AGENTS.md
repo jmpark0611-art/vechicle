@@ -20,6 +20,15 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - This step intentionally does not add Supabase schema writes, GPS, WebView, OBD/BLE, Reanimated, or new Android permissions.
 - Next safe step after APK device test: add Supabase sync for maintenance records or restore read-only location/map UI. Keep OBD/BLE last.
 
+## 2026-07-13 rebuild step 3b maintenance sync and APK workflow fix
+- User reported the APK workflow failed after commit `d42377c`.
+- GitHub API showed the failure happened at `Setup Android SDK` before dependency install, source verification, Expo prebuild, or Gradle build. Treat it as workflow environment failure, not app-code failure.
+- Removed the external `android-actions/setup-android@v3` step and replaced it with a runner Android SDK check/license acceptance step.
+- Added `maintenance_records` schema to `docs/schema.sql`.
+- `lib/maintenance-data.ts` now attempts to read/write Supabase maintenance records and falls back to local AsyncStorage if the table is not created yet.
+- Vehicle tab now displays the maintenance sync status.
+- Validation passed: `npm run verify` and Android export.
+
 ## 2026-07-13 Clean rebuild branch
 - User chose a clean rebuild because installed APK builds kept crashing before the first screen.
 - Created branch `rebuild/clean-sdk54-start` from the latest work branch. Do not delete the old branch; it remains the feature reference.
