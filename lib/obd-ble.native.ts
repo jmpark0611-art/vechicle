@@ -79,7 +79,11 @@ function sleep(ms: number) {
 }
 
 class ObdBleService {
-  private manager = new BleManager();
+  private _manager: BleManager | null = null;
+  private get manager(): BleManager {
+    if (!this._manager) this._manager = new BleManager();
+    return this._manager;
+  }
   private device: Device | null = null;
   private serviceUUID = '';
   private writeUUID = '';
