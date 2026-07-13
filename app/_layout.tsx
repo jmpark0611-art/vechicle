@@ -3,6 +3,8 @@ import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Alert } from 'react-native';
+import 'react-native-reanimated';
+
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 // 릴리즈 빌드에서 JS 에러를 화면에 표시 (진단용)
