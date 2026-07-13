@@ -64,6 +64,23 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - No write operations were added. No GPS, map WebView, OBD/BLE, Reanimated, or native permission changes were added.
 - Android export passed after adding read-only data. Keep the next step small: manual trip start/end without GPS.
 
+## 2026-07-13 rebuild step 2 manual trip writes
+- Added manual trip start/end on the known-good rebuild branch without adding GPS, map, OBD/BLE, Reanimated, WebView, or new native permissions.
+- Updated `lib/readonly-data.ts`:
+  - Added `fetchActiveTrips()`.
+  - Added `startManualTrip()` insert into `trips` with `vehicle_id`, `start_place`, `end_place`, `status: in_progress`.
+  - Added `completeManualTrip()` update with `end_place`, `end_time`, `status: completed`.
+- Updated `app/(tabs)/index.tsx`:
+  - Loads vehicles and active trips.
+  - Lets the user select a vehicle.
+  - Lets the user enter start/end place manually.
+  - Starts a trip and lists active trips.
+  - Completes active trips manually.
+- Validation passed:
+  - `npm run verify`
+  - `npx expo export --platform android --output-dir .expo-export-check-manual-trip`
+- Next safe step: extend manual trip fields (operator/user/purpose) or add commander maintenance replacement completion. Do not add GPS yet until this APK is device-tested.
+
 ## 2026-07-13 Android startup crash pass
 - Symptom reported from installed APK: Android system dialog "vehicle app keeps stopping" immediately on launch. No in-app diagnostic Alert was visible, so treat it as a native startup/runtime init crash until logcat proves otherwise.
 - Pulled latest branch `claude/env-permissions-session-restart-154onb` through commit `981401e`.

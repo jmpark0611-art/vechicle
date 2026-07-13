@@ -118,6 +118,16 @@
 - Check tab now runs a read-only Supabase health check.
 - Android export passed after this step.
 
+## 2026-07-13 Clean rebuild step 2: manual trip start/end
+
+- Added GPS-free manual trip start/end on the rebuild branch.
+- Added Supabase write helpers for:
+  - Starting trips with `vehicle_id`, `start_place`, `end_place`, and `status = in_progress`.
+  - Completing trips with `end_place`, `end_time`, and `status = completed`.
+- Updated the trip tab with vehicle selection, manual start/end inputs, active trip list, and manual completion buttons.
+- Kept the stability rule: no GPS, WebView map, OBD/BLE, Reanimated, or new native permissions were added.
+- Verification passed with `npm run verify` and Android export.
+
 ## 2026-07-13 Android APK startup crash dependency pass
 
 - Investigated the installed APK crash reported as Android's "app keeps stopping" dialog immediately after launch.
