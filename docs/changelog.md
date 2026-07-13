@@ -88,3 +88,13 @@
 - 주요 액션 버튼에 접근성 라벨을 붙였다.
 - 차량 화면에 같은 차량의 중복 미종료 운행 요약과 차량별 경고를 추가했다.
 - `npm.cmd run verify`와 `npm.cmd run health`를 기준 검증 명령으로 정리했다.
+## 2026-07-13 Android APK startup crash dependency pass
+
+- Investigated the installed APK crash reported as Android's "app keeps stopping" dialog immediately after launch.
+- Pulled the latest GitHub branch state through `981401e` and confirmed the local tree was clean before applying fixes.
+- `adb devices -l` found no connected device in this session, so live `logcat` could not be captured.
+- Found SDK 54 native dependency mismatches with `npx expo-doctor`:
+  - `@react-native-async-storage/async-storage` was `3.1.1`; SDK 54 expects `2.2.0`.
+  - `react-native-webview` was `14.0.1`; SDK 54 expects `13.15.0`.
+- Ran `npx expo install @react-native-async-storage/async-storage react-native-webview` to pin SDK-compatible native module versions.
+- Verification after the fix: `npx expo-doctor` passes 18/18 and `npm run verify` passes.

@@ -6,6 +6,17 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 
 # Progress Notes (for AI continuity)
 
+## 2026-07-13 Android startup crash pass
+- Symptom reported from installed APK: Android system dialog "vehicle app keeps stopping" immediately on launch. No in-app diagnostic Alert was visible, so treat it as a native startup/runtime init crash until logcat proves otherwise.
+- Pulled latest branch `claude/env-permissions-session-restart-154onb` through commit `981401e`.
+- `adb devices -l` showed no connected Android device in this Codex session, so logcat could not be captured here.
+- `npm run verify` passed before the fix, but `npx expo-doctor` failed SDK compatibility validation:
+  - `@react-native-async-storage/async-storage` expected `2.2.0`, found `3.1.1`
+  - `react-native-webview` expected `13.15.0`, found `14.0.1`
+- Fixed with `npx expo install @react-native-async-storage/async-storage react-native-webview`, which pinned the SDK 54 compatible native module versions.
+- Re-ran validation: `npx expo-doctor` now passes 18/18, and `npm run verify` passes.
+- If the next APK still crashes, capture `adb logcat` from the device. Search for `FATAL EXCEPTION`, `AndroidRuntime`, `ReactNativeJS`, `SoLoader`, `UnsatisfiedLinkError`, `NoClassDefFoundError`, `Reanimated`, `Worklets`, `AsyncStorage`, `WebView`, `Ble`, and `TurboModule`.
+
 ## Stack
 - Expo SDK 54 (React Native + Web, cross-platform)
 - Expo Router (file-based routing, tabs layout)
