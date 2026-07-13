@@ -5,6 +5,7 @@ on:
     branches:
       - claude/env-permissions-session-restart-154onb
       - rebuild/clean-sdk54-start
+      - feature/obd-ble-elm327-probe
       - main
   workflow_dispatch:
 
