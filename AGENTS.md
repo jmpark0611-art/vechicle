@@ -6,6 +6,32 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 
 # Progress Notes (for AI continuity)
 
+## 2026-07-13 Clean rebuild branch
+- User chose a clean rebuild because installed APK builds kept crashing before the first screen.
+- Created branch `rebuild/clean-sdk54-start` from the latest work branch. Do not delete the old branch; it remains the feature reference.
+- Stage 1 objective: produce the smallest Expo SDK 54 app that opens on Android APK and preserves the intended screen map.
+- Replaced startup/routing code with a minimal Expo Router stack:
+  - `role-select`
+  - `commander-pin`
+  - `(tabs)` with 운행, 기록, 차량, 위치, 점검
+- Removed direct startup/native risk modules from this branch:
+  - `react-native-reanimated`
+  - `react-native-worklets`
+  - `react-native-ble-plx`
+  - `react-native-webview`
+  - `expo-location`
+  - `expo-haptics`
+  - `expo-image`
+  - `expo-symbols`
+  - `expo-web-browser`
+- `app.json` was simplified: `newArchEnabled: false`, no GPS/microphone/Bluetooth permissions, only `expo-router` and `expo-splash-screen` plugins.
+- Current screens are deliberate stubs, not final functionality. They keep the desired UI structure visible while proving APK startup stability.
+- Validation passed on this branch:
+  - `npm run verify`
+  - `npx expo-doctor`
+  - `npx expo export --platform android --output-dir .expo-export-check-clean`
+- Next step after APK opens: reconnect Supabase read-only lists first, then trip start/end, then GPS permissions, then WebView map, and only after that real OBD/BLE.
+
 ## 2026-07-13 Android startup crash pass
 - Symptom reported from installed APK: Android system dialog "vehicle app keeps stopping" immediately on launch. No in-app diagnostic Alert was visible, so treat it as a native startup/runtime init crash until logcat proves otherwise.
 - Pulled latest branch `claude/env-permissions-session-restart-154onb` through commit `981401e`.

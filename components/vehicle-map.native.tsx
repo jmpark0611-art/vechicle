@@ -1,38 +1,20 @@
-import { StyleSheet } from 'react-native';
-import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-interface Props {
-  html: string;
-  style?: object;
+type Props = {
+  html?: string;
+  style?: StyleProp<ViewStyle>;
   onMapTap?: (lat: number, lng: number) => void;
-}
+};
 
-export function VehicleMap({ html, style, onMapTap }: Props) {
-  const handleMessage = (e: WebViewMessageEvent) => {
-    try {
-      const msg = JSON.parse(e.nativeEvent.data);
-      if (msg.type === 'mapTap' && onMapTap) {
-        onMapTap(msg.lat, msg.lng);
-      }
-    } catch {
-      // 무시
-    }
-  };
-
+export function VehicleMap({ style }: Props) {
   return (
-    <WebView
-      source={{ html }}
-      style={[styles.map, style]}
-      scrollEnabled={false}
-      javaScriptEnabled
-      originWhitelist={['*']}
-      onMessage={handleMessage}
-    />
+    <View style={[styles.container, style]}>
+      <Text style={styles.text}>지도 모듈은 2단계에서 다시 연결합니다.</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  map: {
-    flex: 1,
-  },
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E2E8F0' },
+  text: { color: '#64748B', fontSize: 13, fontWeight: '800' },
 });

@@ -88,6 +88,19 @@
 - 주요 액션 버튼에 접근성 라벨을 붙였다.
 - 차량 화면에 같은 차량의 중복 미종료 운행 요약과 차량별 경고를 추가했다.
 - `npm.cmd run verify`와 `npm.cmd run health`를 기준 검증 명령으로 정리했다.
+## 2026-07-13 Clean rebuild stage 1
+
+- Created branch `rebuild/clean-sdk54-start` for a clean Expo SDK 54 rebuild after repeated installed APK startup crashes.
+- Replaced the app with a minimal, launch-first route structure:
+  - role select
+  - commander PIN
+  - tabs for trip, records, vehicles, map, check
+- Kept UI direction visible with light/navy cards and readable Korean labels, but intentionally stubbed database, GPS, WebView map, and OBD/BLE functionality.
+- Removed direct native startup risk modules from this rebuild branch: Reanimated, Worklets, BLE PLX, WebView, Location, Haptics, Expo Image, Expo Symbols, and Expo Web Browser.
+- Simplified `app.json` to no runtime permissions and `newArchEnabled: false`.
+- Replaced legacy source-check rules with clean rebuild checks.
+- Verification passed: `npm run verify`, `npx expo-doctor`, and Android export.
+
 ## 2026-07-13 Android APK startup crash dependency pass
 
 - Investigated the installed APK crash reported as Android's "app keeps stopping" dialog immediately after launch.
