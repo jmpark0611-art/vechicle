@@ -46,7 +46,7 @@ function markerPercent(value: number, min: number, max: number, inverted = false
 }
 
 export default function MapScreen() {
-  const [snapshot, setSnapshot] = useState<LocationSnapshot>({ positions: [], zones: [], message: '대기' });
+  const [snapshot, setSnapshot] = useState<LocationSnapshot>({ positions: [], zones: [], alerts: [], message: '대기' });
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingZone, setIsSavingZone] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -134,7 +134,7 @@ export default function MapScreen() {
       metrics={[
         { label: '운행 차량', value: `${snapshot.positions.length}대` },
         { label: '제한구역', value: `${snapshot.zones.length}곳` },
-        { label: '지도', value: '읽기' },
+        { label: '구역 경고', value: `${snapshot.alerts.length}건` },
         { label: '동기화', value: errorMessage ? '오류' : '대기' },
       ]}
       actionLabel="위치 새로고침"
@@ -185,6 +185,29 @@ export default function MapScreen() {
               </View>
             ) : null}
           </View>
+
+          <SectionCard title="제한속도 경고" body="최근 GPS가 제한속도 구역 반경 안에 들어온 차량을 표시합니다. 속도값이 제한보다 높으면 초과 의심으로 표시합니다.">
+            {snapshot.alerts.length === 0 ? (
+              <StatusLine label="상태" value="감지된 차량 없음" />
+            ) : (
+              snapshot.alerts.map((alert) => (
+                <View key={`${alert.tripId}-${alert.zoneName}`} style={styles.listItem}>
+                  <View style={styles.alertHeader}>
+                    <Text style={styles.listTitle}>{alert.vehicleNumber}</Text>
+                    <Text style={[styles.alertBadge, alert.status === 'overspeed' && styles.alertBadgeDanger]}>
+                      {alert.status === 'overspeed' ? '초과 의심' : '구역 안'}
+                    </Text>
+                  </View>
+                  <Text style={styles.listBody}>{alert.zoneName}</Text>
+                  <StatusLine label="거리" value={`${Math.round(alert.distanceM)}m`} />
+                  <StatusLine
+                    label="속도"
+                    value={`${alert.speedKmh === null ? '-' : `${Math.round(alert.speedKmh)}km/h`} / 제한 ${Math.round(alert.speedLimitKmh)}km/h`}
+                  />
+                </View>
+              ))
+            )}
+          </SectionCard>
 
           <SectionCard title="운행 중 차량" body="각 차량의 마지막 GPS 저장 시각과 좌표를 표시합니다.">
             {snapshot.positions.length === 0 ? (
@@ -345,6 +368,26 @@ const styles = StyleSheet.create({
     borderTopColor: '#F1F5F9',
     paddingTop: 14,
     marginTop: 14,
+  },
+  alertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  alertBadge: {
+    color: '#0F766E',
+    backgroundColor: '#ECFDF5',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    fontSize: 12,
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+  alertBadgeDanger: {
+    color: '#B91C1C',
+    backgroundColor: '#FEF2F2',
   },
   listTitle: { color: '#0F172A', fontSize: 16, fontWeight: '900' },
   listBody: { color: '#64748B', fontSize: 13, fontWeight: '700', lineHeight: 19, marginTop: 4 },

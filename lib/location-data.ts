@@ -20,9 +20,20 @@ export type SpeedZone = {
   speedLimitKmh: number;
 };
 
+export type SpeedZoneAlert = {
+  tripId: string;
+  vehicleNumber: string;
+  zoneName: string;
+  distanceM: number;
+  speedKmh: number | null;
+  speedLimitKmh: number;
+  status: 'inside' | 'overspeed';
+};
+
 export type LocationSnapshot = {
   positions: VehiclePosition[];
   zones: SpeedZone[];
+  alerts: SpeedZoneAlert[];
   message: string;
 };
 
@@ -82,6 +93,49 @@ function routeLabel(trip: TripSummary) {
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function distanceMeters(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {
+  const earthRadiusM = 6_371_000;
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLng = toRad(b.longitude - a.longitude);
+  const lat1 = toRad(a.latitude);
+  const lat2 = toRad(b.latitude);
+  const haversine =
+    Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * earthRadiusM * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+function buildSpeedZoneAlerts(positions: VehiclePosition[], zones: SpeedZone[]): SpeedZoneAlert[] {
+  const alerts: SpeedZoneAlert[] = [];
+
+  for (const position of positions) {
+    for (const zone of zones) {
+      const distanceM = distanceMeters(position, zone);
+      if (distanceM > zone.radiusM) {
+        continue;
+      }
+
+      const isOverspeed = position.speedKmh !== null && position.speedKmh > zone.speedLimitKmh;
+      alerts.push({
+        tripId: position.tripId,
+        vehicleNumber: position.vehicleNumber,
+        zoneName: zone.name,
+        distanceM,
+        speedKmh: position.speedKmh,
+        speedLimitKmh: zone.speedLimitKmh,
+        status: isOverspeed ? 'overspeed' : 'inside',
+      });
+    }
+  }
+
+  return alerts.sort((a, b) => {
+    if (a.status !== b.status) {
+      return a.status === 'overspeed' ? -1 : 1;
+    }
+    return a.distanceM - b.distanceM;
+  });
 }
 
 async function fetchLatestPoint(trip: TripSummary): Promise<VehiclePosition | null> {
@@ -169,6 +223,7 @@ export async function fetchLocationSnapshot(): Promise<LocationSnapshot> {
   return {
     positions,
     zones: zoneResult.zones,
+    alerts: buildSpeedZoneAlerts(positions, zoneResult.zones),
     message: failedPoint ? '일부 GPS 조회 실패' : zoneResult.message,
   };
 }

@@ -14,6 +14,10 @@
   - `docs/schema.sql` now includes `obd_logs` plus RLS policies.
   - Check tab includes `obd_logs` table diagnostics.
 - Important: no real Bluetooth/BLE package was added in this step. Real ELM327/OBD scanner connection should be added later in a separate branch/commit/APK after this manual UI/data path is confirmed on device.
+- Follow-up implemented step: speed-zone alert preview.
+  - `lib/location-data.ts` calculates distance between active vehicle GPS points and registered speed zones.
+  - Location tab shows vehicles inside speed zones and marks records as `초과 의심` when speed exceeds the zone limit.
+  - This still uses only existing Supabase data and adds no native module or permission.
 
 ## 2026-07-07 최신 APK 다운로드 상태
 

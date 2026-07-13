@@ -9,6 +9,14 @@
 - Check tab now reports the `obd_logs` table status.
 - This step intentionally adds no BLE/native scanner package. Real OBD Bluetooth connection should be a separate APK-tested step after this UI/data path is stable.
 
+## 2026-07-14 Speed-zone alert preview
+
+- Added distance-based speed-zone alert calculation to `lib/location-data.ts`.
+- Location tab now shows vehicles detected inside registered speed zones.
+- If a GPS point includes speed and it is higher than the zone limit, the card marks it as `초과 의심`.
+- This step adds no new native module or permission; it only computes alerts from existing `gps_points` and `speed_zones` data.
+- Verification passed with `npm.cmd run verify` and Android export.
+
 ## 2026-07-13 정비 교체완료 기능
 
 - User confirmed the previous APK `apk-29252766820` as "작동 이상무".
