@@ -100,6 +100,14 @@
 - Simplified `app.json` to no runtime permissions and `newArchEnabled: false`.
 - Replaced legacy source-check rules with clean rebuild checks.
 - Verification passed: `npm run verify`, `npx expo-doctor`, and Android export.
+- Built APK #96 and confirmed from user device screenshot/report that the app opens successfully.
+- Marked build #96 as the known-good launch baseline. Future work should add features one small APK-testable step at a time.
+
+## Deferred cleanup note
+
+- Do not delete old project files during the early rebuild just because the clean baseline does not currently use them.
+- Existing code and history remain the reference for restoring behavior and UI.
+- Cleanup will be done later after the rebuilt app is stable and feature parity is verified.
 
 ## 2026-07-13 Android APK startup crash dependency pass
 

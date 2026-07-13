@@ -32,6 +32,25 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
   - `npx expo export --platform android --output-dir .expo-export-check-clean`
 - Next step after APK opens: reconnect Supabase read-only lists first, then trip start/end, then GPS permissions, then WebView map, and only after that real OBD/BLE.
 
+## Cleanup policy for rebuild work
+- Continue new development on `rebuild/clean-sdk54-start`.
+- Do not delete old project files just because they are not used in the current clean baseline.
+- The old files/history are the reference source for restoring features and UI behavior.
+- Cleanup is intentionally deferred. Later, after the rebuilt app is stable and feature parity is confirmed, review unused files one by one and delete only with clear evidence.
+- Handoff instruction for other AI agents: prioritize rebuilding working features in small tested steps over removing legacy code. Keep each step APK-testable.
+
+## 2026-07-13 build-96 device result
+- User installed and opened `build-96` from branch `rebuild/clean-sdk54-start`.
+- Result: APK opens successfully on the Android device.
+- This is the new known-good baseline. Do not add multiple native modules at once from here.
+- Next recommended rebuild order:
+  1. Supabase read-only connection and basic vehicles/trips list.
+  2. Trip start/end with manual fields, no GPS yet.
+  3. GPS foreground permission and point saving.
+  4. Commander records, maintenance replacement completion, and speed-zone data model.
+  5. Map visualization.
+  6. OBD/BLE last, preferably after a separate test APK proves the BLE library does not crash startup.
+
 ## 2026-07-13 Android startup crash pass
 - Symptom reported from installed APK: Android system dialog "vehicle app keeps stopping" immediately on launch. No in-app diagnostic Alert was visible, so treat it as a native startup/runtime init crash until logcat proves otherwise.
 - Pulled latest branch `claude/env-permissions-session-restart-154onb` through commit `981401e`.
