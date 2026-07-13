@@ -46,6 +46,13 @@
 - Added RLS enablement and anon policies for vehicles, trips, and gps_points in `docs/schema.sql`.
 - The schema now covers the rebuilt app's current write paths: trip start, trip completion, GPS point insert, maintenance record insert, and speed-zone insert.
 
+## 2026-07-13 시스템 점검 화면 보강
+
+- Rebuilt the check tab as a clean Korean diagnostics screen.
+- The screen now checks vehicles/trips plus gps_points, maintenance_records, and speed_zones.
+- Missing table and query failures are shown per table to make device testing easier.
+- Verification passed with `npm run verify` and Android export.
+
 ## 2026-07-07 수송부 PIN 재인증 루프 차단
 
 - 수송부 PIN 성공 후 기록 화면이 잠깐 보였다가 사라지는 문제를 수정했다.

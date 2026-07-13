@@ -63,6 +63,16 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
   - `gps_points`: select/insert
 - This is needed so the rebuilt app can read vehicles/trips, start/complete trips, and insert GPS points when the schema is applied to Supabase.
 
+## 2026-07-13 diagnostics screen refresh
+- Replaced the old check screen copy with clean Korean diagnostics.
+- `app/(tabs)/check.tsx` now checks:
+  - vehicles/trips read path
+  - `gps_points`
+  - `maintenance_records`
+  - `speed_zones`
+- Missing table and query errors are displayed per feature table.
+- Validation passed: `npm run verify` and Android export.
+
 ## 2026-07-13 Clean rebuild branch
 - User chose a clean rebuild because installed APK builds kept crashing before the first screen.
 - Created branch `rebuild/clean-sdk54-start` from the latest work branch. Do not delete the old branch; it remains the feature reference.
