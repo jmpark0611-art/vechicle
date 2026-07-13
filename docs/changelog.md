@@ -17,6 +17,14 @@
 - Vehicle tab shows the maintenance sync status.
 - Verification passed with `npm run verify` and Android export.
 
+## 2026-07-13 읽기 전용 위치판
+
+- Added a read-only location data layer for active trips, latest GPS points, and speed zones.
+- Replaced the location tab placeholder with a simple marker board, active vehicle list, and speed-zone list.
+- Added `speed_zones` table schema, indexes, triggers, and RLS policies to `docs/schema.sql`.
+- This step adds no GPS permission, WebView map, OBD/BLE, Reanimated, or new native startup module.
+- Verification passed with `npm run verify` and Android export.
+
 ## 2026-07-07 수송부 PIN 재인증 루프 차단
 
 - 수송부 PIN 성공 후 기록 화면이 잠깐 보였다가 사라지는 문제를 수정했다.

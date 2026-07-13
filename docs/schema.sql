@@ -61,6 +61,22 @@ create table if not exists public.maintenance_records (
 create index if not exists maintenance_records_vehicle_item_completed_idx
   on public.maintenance_records (vehicle_id, item_key, completed_at desc);
 
+create table if not exists public.speed_zones (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  latitude double precision not null,
+  longitude double precision not null,
+  radius_m numeric not null,
+  speed_limit_kmh numeric not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint speed_zones_radius_check check (radius_m > 0),
+  constraint speed_zones_limit_check check (speed_limit_kmh > 0)
+);
+
+create index if not exists speed_zones_name_idx
+  on public.speed_zones (name);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -89,7 +105,14 @@ before update on public.maintenance_records
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists speed_zones_set_updated_at on public.speed_zones;
+create trigger speed_zones_set_updated_at
+before update on public.speed_zones
+for each row
+execute function public.set_updated_at();
+
 alter table public.maintenance_records enable row level security;
+alter table public.speed_zones enable row level security;
 
 drop policy if exists maintenance_records_anon_select on public.maintenance_records;
 create policy maintenance_records_anon_select
@@ -99,4 +122,15 @@ create policy maintenance_records_anon_select
 drop policy if exists maintenance_records_anon_insert on public.maintenance_records;
 create policy maintenance_records_anon_insert
   on public.maintenance_records for insert
+  with check (true);
+
+drop policy if exists speed_zones_anon_select on public.speed_zones;
+create policy speed_zones_anon_select
+  on public.speed_zones for select
+  using (true);
+
+drop policy if exists speed_zones_anon_all on public.speed_zones;
+create policy speed_zones_anon_all
+  on public.speed_zones for all
+  using (true)
   with check (true);

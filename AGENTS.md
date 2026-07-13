@@ -29,6 +29,16 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - Vehicle tab now displays the maintenance sync status.
 - Validation passed: `npm run verify` and Android export.
 
+## 2026-07-13 rebuild step 4 read-only location board
+- Added `lib/location-data.ts` to read active trips, latest `gps_points`, and `speed_zones` without adding GPS permissions, WebView, or map native modules.
+- Replaced the location tab mock with a read-only location board:
+  - simple relative marker panel
+  - active vehicle list with latest GPS time, coordinates, and speed
+  - speed-zone list with limit and radius
+- Added `speed_zones` schema, indexes, triggers, and permissive anon policies to `docs/schema.sql`.
+- Validation passed: `npm run verify` and Android export.
+- Next safe step: add speed-zone creation/editing UI in 수송부 mode or restore GPS foreground permission/point saving. Keep OBD/BLE last.
+
 ## 2026-07-13 Clean rebuild branch
 - User chose a clean rebuild because installed APK builds kept crashing before the first screen.
 - Created branch `rebuild/clean-sdk54-start` from the latest work branch. Do not delete the old branch; it remains the feature reference.
