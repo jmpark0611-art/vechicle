@@ -134,6 +134,13 @@
 - `startManualTrip()` now explicitly sends `start_time` as the current ISO timestamp.
 - Verification passed with `npm run verify` and Android export.
 
+## 2026-07-13 Unique APK release tags
+
+- User still saw the same `start_time` error after installing from the old `build-99` release link.
+- Confirmed the source already had the `start_time` fix.
+- Updated the APK workflow to publish each APK under a unique `apk-${{ github.run_id }}` release tag instead of reusing `build-${{ github.run_number }}`.
+- This prevents old release assets from being mistaken for the latest fixed APK.
+
 ## 2026-07-13 Android APK startup crash dependency pass
 
 - Investigated the installed APK crash reported as Android's "app keeps stopping" dialog immediately after launch.

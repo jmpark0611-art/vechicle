@@ -87,6 +87,13 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - Rationale: do not rely on the remote DB default during rebuild; required fields should be explicit in app writes.
 - Validation passed: `npm run verify` and Android export.
 
+## 2026-07-13 release tag collision fix
+- User still saw the same `start_time` error after downloading from the `build-99` release.
+- Verified the source code already includes `start_time` in `startManualTrip()`.
+- Found the Android APK workflow still used `tag_name: build-${{ github.run_number }}`, which can collide with old releases and make users download an older APK.
+- Updated the APK release workflow to use `tag_name: apk-${{ github.run_id }}` and a matching release name. This creates a unique release URL for every APK build.
+- If a user reports a fixed bug still appearing, verify the APK release tag points to the exact commit before changing app code.
+
 ## 2026-07-13 Android startup crash pass
 - Symptom reported from installed APK: Android system dialog "vehicle app keeps stopping" immediately on launch. No in-app diagnostic Alert was visible, so treat it as a native startup/runtime init crash until logcat proves otherwise.
 - Pulled latest branch `claude/env-permissions-session-restart-154onb` through commit `981401e`.
