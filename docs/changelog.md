@@ -128,6 +128,12 @@
 - Kept the stability rule: no GPS, WebView map, OBD/BLE, Reanimated, or new native permissions were added.
 - Verification passed with `npm run verify` and Android export.
 
+## 2026-07-13 Manual trip start_time fix
+
+- Fixed build #99 trip-start failure where Supabase rejected inserts because `trips.start_time` was null.
+- `startManualTrip()` now explicitly sends `start_time` as the current ISO timestamp.
+- Verification passed with `npm run verify` and Android export.
+
 ## 2026-07-13 Android APK startup crash dependency pass
 
 - Investigated the installed APK crash reported as Android's "app keeps stopping" dialog immediately after launch.

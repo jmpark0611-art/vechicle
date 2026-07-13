@@ -81,6 +81,12 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
   - `npx expo export --platform android --output-dir .expo-export-check-manual-trip`
 - Next safe step: extend manual trip fields (operator/user/purpose) or add commander maintenance replacement completion. Do not add GPS yet until this APK is device-tested.
 
+## 2026-07-13 manual trip start_time fix
+- User tested build #99 and trip start failed with Supabase error: `null value in column "start_time" of relation "trips" violates not-null constraint`.
+- Fixed `startManualTrip()` to explicitly send `start_time: new Date().toISOString()` during insert.
+- Rationale: do not rely on the remote DB default during rebuild; required fields should be explicit in app writes.
+- Validation passed: `npm run verify` and Android export.
+
 ## 2026-07-13 Android startup crash pass
 - Symptom reported from installed APK: Android system dialog "vehicle app keeps stopping" immediately on launch. No in-app diagnostic Alert was visible, so treat it as a native startup/runtime init crash until logcat proves otherwise.
 - Pulled latest branch `claude/env-permissions-session-restart-154onb` through commit `981401e`.

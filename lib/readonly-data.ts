@@ -149,6 +149,7 @@ export async function startManualTrip(input: ManualTripInput): Promise<TripSumma
         vehicle_id: input.vehicleId,
         start_place: input.startPlace.trim(),
         end_place: input.endPlace.trim(),
+        start_time: new Date().toISOString(),
         status: 'in_progress',
       })
       .select('id, vehicle_id, start_place, end_place, start_time, end_time, status')
