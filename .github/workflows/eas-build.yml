@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - claude/env-permissions-session-restart-154onb
+      - rebuild/clean-sdk54-start
       - main
   workflow_dispatch:
 
@@ -48,9 +49,7 @@ jobs:
 
       - name: Configure release build
         run: |
-          # Minification 완전 비활성화 (R8이 네이티브 모듈 클래스 제거하는 문제 방지)
           echo "android.enableProguardInReleaseBuilds=false" >> android/gradle.properties
-          # Release 빌드에 debug keystore 사용 (별도 서명 키 불필요)
           sed -i 's/signingConfig signingConfigs\.release/signingConfig signingConfigs.debug/g' android/app/build.gradle || true
 
       - name: Build release APK
