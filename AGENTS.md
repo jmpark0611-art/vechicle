@@ -17,6 +17,15 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - Re-ran validation: `npx expo-doctor` now passes 18/18, and `npm run verify` passes.
 - If the next APK still crashes, capture `adb logcat` from the device. Search for `FATAL EXCEPTION`, `AndroidRuntime`, `ReactNativeJS`, `SoLoader`, `UnsatisfiedLinkError`, `NoClassDefFoundError`, `Reanimated`, `Worklets`, `AsyncStorage`, `WebView`, `Ble`, and `TurboModule`.
 
+## 2026-07-13 Android startup crash pass 2
+- User retested build #94 and reported the exact same Android "keeps stopping" symptom.
+- Android JS export succeeds (`npx expo export --platform android`), so the bundle itself is not failing to generate.
+- No device was visible in `adb devices -l`, so the actual native stack trace is still unavailable.
+- Current native OBD implementation is a pure JS stub in `lib/obd-ble.native.ts`; the app does not import `react-native-ble-plx`.
+- Removed unused `react-native-ble-plx` from `package.json`, removed the `react-native-ble-plx` config plugin from `app.json`, and removed Android Bluetooth permissions for this stability build.
+- Rationale: a native BLE module that is not used by JS should not participate in startup while the APK is crashing before UI appears. Restore real BLE only after a stable APK launch is confirmed, preferably with logcat attached.
+- Re-ran validation after removing BLE native integration: `npx expo-doctor` passes 18/18, `npm run verify` passes, and Android export passes.
+
 ## Stack
 - Expo SDK 54 (React Native + Web, cross-platform)
 - Expo Router (file-based routing, tabs layout)

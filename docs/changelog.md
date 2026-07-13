@@ -98,3 +98,15 @@
   - `react-native-webview` was `14.0.1`; SDK 54 expects `13.15.0`.
 - Ran `npx expo install @react-native-async-storage/async-storage react-native-webview` to pin SDK-compatible native module versions.
 - Verification after the fix: `npx expo-doctor` passes 18/18 and `npm run verify` passes.
+
+## 2026-07-13 Android APK startup crash BLE native removal
+
+- User confirmed the same startup crash remained after build #94.
+- Confirmed Android JS export succeeds, so the release bundle can be generated.
+- Removed unused native BLE integration from the stability APK path:
+  - Uninstalled `react-native-ble-plx`.
+  - Removed the `react-native-ble-plx` config plugin from `app.json`.
+  - Removed Android Bluetooth permissions from `app.json`.
+- The current `lib/obd-ble.native.ts` remains a pure JS simulation/stub, so no JS import depends on `react-native-ble-plx`.
+- Verification after removal: `npx expo-doctor` passes 18/18, `npm run verify` passes, and Android export passes.
+- Next if this APK still crashes: capture device `adb logcat`; without it the remaining issue is likely another native startup module or Android build configuration problem.
