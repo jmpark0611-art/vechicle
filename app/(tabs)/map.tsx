@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
+import { VehicleMap } from '@/components/vehicle-map';
 import {
   createSpeedZone,
   fetchLocationSnapshot,
   type LocationSnapshot,
-  type SpeedZone,
-  type VehiclePosition,
 } from '@/lib/location-data';
+import { generateVehicleMapHtml } from '@/lib/map-html';
 
 function formatTime(value: string) {
   const date = new Date(value);
@@ -22,29 +22,6 @@ function formatCoord(value: number) {
   return value.toFixed(5);
 }
 
-function getBounds(items: (VehiclePosition | SpeedZone)[]) {
-  if (items.length === 0) {
-    return null;
-  }
-  const latitudes = items.map((item) => item.latitude);
-  const longitudes = items.map((item) => item.longitude);
-  return {
-    minLat: Math.min(...latitudes),
-    maxLat: Math.max(...latitudes),
-    minLng: Math.min(...longitudes),
-    maxLng: Math.max(...longitudes),
-  };
-}
-
-function markerPercent(value: number, min: number, max: number, inverted = false): `${number}%` {
-  if (min === max) {
-    return '50%';
-  }
-  const ratio = (value - min) / (max - min);
-  const padded = 12 + ratio * 76;
-  return `${inverted ? 100 - padded : padded}%` as `${number}%`;
-}
-
 export default function MapScreen() {
   const [snapshot, setSnapshot] = useState<LocationSnapshot>({ positions: [], zones: [], alerts: [], message: '대기' });
   const [isLoading, setIsLoading] = useState(true);
@@ -55,10 +32,11 @@ export default function MapScreen() {
   const [zoneLng, setZoneLng] = useState('');
   const [zoneRadius, setZoneRadius] = useState('100');
   const [zoneLimit, setZoneLimit] = useState('30');
+  const [zoneAddMode, setZoneAddMode] = useState(false);
 
-  const bounds = useMemo(
-    () => getBounds([...snapshot.positions, ...snapshot.zones]),
-    [snapshot.positions, snapshot.zones]
+  const mapHtml = useMemo(
+    () => generateVehicleMapHtml(snapshot.positions, snapshot.zones, zoneAddMode),
+    [snapshot.positions, snapshot.zones, zoneAddMode]
   );
 
   const loadLocation = useCallback(async () => {
@@ -139,8 +117,9 @@ export default function MapScreen() {
       ]}
       actionLabel="위치 새로고침"
       onAction={() => void loadLocation()}>
-      <SectionCard title="위치 동기화" body="GPS 권한과 WebView 지도는 아직 붙이지 않고, Supabase에 저장된 최근 위치만 먼저 읽습니다.">
-        <StatusLine label="상태" value={errorMessage ?? snapshot.message} />
+      <SectionCard title="위치 동기화" body={errorMessage ?? snapshot.message}>
+        <StatusLine label="차량" value={`${snapshot.positions.length}대 운행 중`} />
+        <StatusLine label="제한구역" value={`${snapshot.zones.length}곳`} />
       </SectionCard>
 
       {isLoading ? (
@@ -149,42 +128,11 @@ export default function MapScreen() {
         <SectionCard title="위치 데이터 오류" body={errorMessage} />
       ) : (
         <>
-          <View style={styles.mapPanel}>
-            <View style={styles.gridLineVertical} />
-            <View style={styles.gridLineHorizontal} />
-            {bounds && snapshot.zones.map((zone) => (
-              <View
-                key={zone.id}
-                style={[
-                  styles.zoneMarker,
-                  {
-                    left: markerPercent(zone.longitude, bounds.minLng, bounds.maxLng),
-                    top: markerPercent(zone.latitude, bounds.minLat, bounds.maxLat, true),
-                  },
-                ]}>
-                <Text style={styles.zoneMarkerText}>{Math.round(zone.speedLimitKmh)}</Text>
-              </View>
-            ))}
-            {bounds && snapshot.positions.map((position) => (
-              <View
-                key={position.tripId}
-                style={[
-                  styles.vehicleMarker,
-                  {
-                    left: markerPercent(position.longitude, bounds.minLng, bounds.maxLng),
-                    top: markerPercent(position.latitude, bounds.minLat, bounds.maxLat, true),
-                  },
-                ]}>
-                <Text style={styles.vehicleMarkerText}>{position.vehicleNumber}</Text>
-              </View>
-            ))}
-            {!bounds ? (
-              <View style={styles.emptyMap}>
-                <Text style={styles.emptyMapTitle}>표시할 위치 없음</Text>
-                <Text style={styles.emptyMapBody}>진행 중 운행의 GPS 포인트가 쌓이면 이곳에 표시됩니다.</Text>
-              </View>
-            ) : null}
-          </View>
+          <VehicleMap
+            html={mapHtml}
+            style={styles.map}
+            onMapTap={zoneAddMode ? (lat, lng) => { setZoneLat(lat.toFixed(6)); setZoneLng(lng.toFixed(6)); setZoneAddMode(false); } : undefined}
+          />
 
           <SectionCard title="제한속도 경고" body="최근 GPS가 제한속도 구역 반경 안에 들어온 차량을 표시합니다. 속도값이 제한보다 높으면 초과 의심으로 표시합니다.">
             {snapshot.alerts.length === 0 ? (
@@ -271,6 +219,13 @@ export default function MapScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
+            <Pressable
+              style={[styles.mapPickBtn, zoneAddMode && styles.mapPickBtnActive]}
+              onPress={() => setZoneAddMode((v) => !v)}>
+              <Text style={styles.mapPickBtnText}>
+                {zoneAddMode ? '지도 선택 취소' : '지도에서 선택'}
+              </Text>
+            </Pressable>
             <View style={styles.inputRow}>
               <TextInput
                 style={styles.inputHalf}
@@ -295,74 +250,16 @@ export default function MapScreen() {
           </SectionCard>
         </>
       )}
-
-      <SectionCard
-        title="다음 단계"
-        body="이 읽기 전용 위치판이 APK에서 안정적으로 동작하면 GPS 권한/저장, 구역 등록 UI, WebView 지도 순서로 복구합니다."
-      />
     </RebuildScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  mapPanel: {
-    height: 280,
-    borderRadius: 22,
-    backgroundColor: '#EAF2FF',
-    borderWidth: 1,
-    borderColor: '#D8E3F0',
-    marginBottom: 14,
-    overflow: 'hidden',
-  },
-  gridLineVertical: {
-    position: 'absolute',
-    left: '50%',
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: 'rgba(37, 99, 235, 0.12)',
-  },
-  gridLineHorizontal: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '50%',
-    height: 1,
-    backgroundColor: 'rgba(37, 99, 235, 0.12)',
-  },
-  vehicleMarker: {
-    position: 'absolute',
-    transform: [{ translateX: -34 }, { translateY: -16 }],
-    minWidth: 68,
-    minHeight: 32,
+  map: {
+    height: 320,
     borderRadius: 16,
-    backgroundColor: '#0F766E',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
+    marginBottom: 14,
   },
-  vehicleMarkerText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
-  zoneMarker: {
-    position: 'absolute',
-    transform: [{ translateX: -15 }, { translateY: -15 }],
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#F59E0B',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  zoneMarkerText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
-  emptyMap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  emptyMapTitle: { color: '#0F172A', fontSize: 18, fontWeight: '900', marginBottom: 8 },
-  emptyMapBody: { color: '#64748B', fontSize: 13, fontWeight: '700', lineHeight: 20, textAlign: 'center' },
   listItem: {
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
@@ -416,6 +313,20 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     paddingHorizontal: 14,
   },
+  mapPickBtn: {
+    minHeight: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  mapPickBtnActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#1D4ED8',
+  },
+  mapPickBtnText: { color: '#2563EB', fontSize: 14, fontWeight: '900' },
   saveZoneBtn: {
     minHeight: 48,
     borderRadius: 14,

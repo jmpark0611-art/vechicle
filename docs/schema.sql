@@ -22,10 +22,28 @@ create table if not exists public.trips (
   end_lat double precision,
   end_lng double precision,
   status text not null default 'in_progress',
+  purpose text,
+  operator_name text,
+  operator_rank text,
+  user_name text,
+  user_rank text,
+  daily_km numeric,
+  start_odometer numeric,
+  end_odometer numeric,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint trips_status_check check (status in ('in_progress', 'completed', 'canceled'))
 );
+
+-- Migration: add extended trip columns if they don't exist yet
+alter table public.trips add column if not exists purpose text;
+alter table public.trips add column if not exists operator_name text;
+alter table public.trips add column if not exists operator_rank text;
+alter table public.trips add column if not exists user_name text;
+alter table public.trips add column if not exists user_rank text;
+alter table public.trips add column if not exists daily_km numeric;
+alter table public.trips add column if not exists start_odometer numeric;
+alter table public.trips add column if not exists end_odometer numeric;
 
 create index if not exists trips_status_start_time_idx
   on public.trips (status, start_time desc);
@@ -79,24 +97,45 @@ create index if not exists speed_zones_name_idx
 
 create table if not exists public.obd_logs (
   id uuid primary key default gen_random_uuid(),
-  vehicle_id uuid not null references public.vehicles (id) on delete cascade,
-  rpm numeric,
+  vehicle_id uuid references public.vehicles (id) on delete cascade,
+  trip_id uuid references public.trips (id) on delete set null,
+  rpm integer,
   speed_kmh numeric,
   coolant_temp_c numeric,
   battery_voltage numeric,
-  fuel_percent numeric,
-  dtc_count integer,
+  fuel_level_percent numeric,
+  engine_load_percent numeric,
+  throttle_percent numeric,
+  intake_air_temp_c numeric,
+  ignition_status text,
+  dtc_codes text[],
   recorded_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
   constraint obd_logs_rpm_check check (rpm is null or rpm >= 0),
   constraint obd_logs_speed_check check (speed_kmh is null or speed_kmh >= 0),
-  constraint obd_logs_fuel_check check (fuel_percent is null or (fuel_percent >= 0 and fuel_percent <= 100)),
-  constraint obd_logs_dtc_check check (dtc_count is null or dtc_count >= 0)
+  constraint obd_logs_fuel_check check (fuel_level_percent is null or (fuel_level_percent >= 0 and fuel_level_percent <= 100))
 );
 
 create index if not exists obd_logs_vehicle_recorded_idx
   on public.obd_logs (vehicle_id, recorded_at desc);
+
+create index if not exists obd_logs_trip_id_idx
+  on public.obd_logs (trip_id);
+
+create table if not exists public.units (
+  code text primary key,
+  name text not null,
+  commander_pin text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.units enable row level security;
+
+drop policy if exists units_anon_all on public.units;
+create policy units_anon_all
+  on public.units for all
+  using (true)
+  with check (true);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -129,12 +168,6 @@ execute function public.set_updated_at();
 drop trigger if exists speed_zones_set_updated_at on public.speed_zones;
 create trigger speed_zones_set_updated_at
 before update on public.speed_zones
-for each row
-execute function public.set_updated_at();
-
-drop trigger if exists obd_logs_set_updated_at on public.obd_logs;
-create trigger obd_logs_set_updated_at
-before update on public.obd_logs
 for each row
 execute function public.set_updated_at();
 

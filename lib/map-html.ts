@@ -1,14 +1,4 @@
-import type { SpeedZone } from './speed-zones';
-
-export type VehiclePosition = {
-  vehicleNumber: string;
-  latitude: number;
-  longitude: number;
-  speedKmh: number | null;
-  recordedAt: string | null;
-  startPlace: string | null;
-  endPlace: string | null;
-};
+import type { SpeedZone, VehiclePosition } from './location-data';
 
 export function generateVehicleMapHtml(
   vehicles: VehiclePosition[],
@@ -18,7 +8,7 @@ export function generateVehicleMapHtml(
   const center = vehicles.length > 0
     ? `[${vehicles[0].latitude}, ${vehicles[0].longitude}]`
     : zones.length > 0
-    ? `[${zones[0].center_lat}, ${zones[0].center_lng}]`
+    ? `[${zones[0].latitude}, ${zones[0].longitude}]`
     : '[36.5, 127.9]';
   const zoom = vehicles.length > 0 || zones.length > 0 ? 14 : 7;
 
@@ -31,29 +21,26 @@ export function generateVehicleMapHtml(
     : '';
 
   const markersJs = vehicles.map((v) => {
-    const speed = v.speedKmh != null ? `${v.speedKmh.toFixed(1)} km/h` : '-';
-    const time = v.recordedAt
-      ? new Date(v.recordedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-      : '-';
-    const route = v.startPlace && v.endPlace
-      ? `${v.startPlace} → ${v.endPlace}`
-      : (v.startPlace ?? '-');
+    const speed = v.speedKmh != null ? `${Math.round(v.speedKmh)} km/h` : '-';
+    const time = new Date(v.recordedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    const route = v.route.replace(/'/g, "\\'");
+    const name = v.vehicleNumber.replace(/'/g, "\\'");
     return `L.marker([${v.latitude}, ${v.longitude}], {icon: carIcon})
       .addTo(map)
-      .bindPopup('<div style="font-family:sans-serif;min-width:160px"><b style="font-size:15px">${v.vehicleNumber}</b><br><span style="color:#2563EB">● 운행 중</span><br><span style="color:#64748B;font-size:12px">${route}</span><br><span style="font-size:12px">속도: ${speed} · ${time}</span></div>')`;
+      .bindPopup('<div style="font-family:sans-serif;min-width:160px"><b style="font-size:15px">${name}</b><br><span style="color:#2563EB">● 운행 중</span><br><span style="color:#64748B;font-size:12px">${route}</span><br><span style="font-size:12px">속도: ${speed} · ${time}</span></div>')`;
   }).join(';\n') + (vehicles.length > 0 ? ';' : '');
 
   const zonesJs = zones.map((z) => {
     const escaped = z.name.replace(/'/g, "\\'");
-    return `L.circle([${z.center_lat}, ${z.center_lng}], {
-      radius: ${z.radius_m},
+    return `L.circle([${z.latitude}, ${z.longitude}], {
+      radius: ${z.radiusM},
       color: '#DC2626',
       fillColor: '#FEF2F2',
       fillOpacity: 0.25,
       weight: 2
     }).addTo(map)
-    .bindPopup('<div style="font-family:sans-serif"><b>${escaped}</b><br>제한속도: ${z.speed_limit_kmh}km/h<br>반경: ${z.radius_m}m</div>');
-    L.circleMarker([${z.center_lat}, ${z.center_lng}], {
+    .bindPopup('<div style="font-family:sans-serif"><b>${escaped}</b><br>제한속도: ${z.speedLimitKmh}km/h<br>반경: ${z.radiusM}m</div>');
+    L.circleMarker([${z.latitude}, ${z.longitude}], {
       radius: 5, color: '#DC2626', fillColor: '#DC2626', fillOpacity: 1, weight: 0
     }).addTo(map);`;
   }).join('\n');
