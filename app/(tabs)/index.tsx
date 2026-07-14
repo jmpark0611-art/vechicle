@@ -49,6 +49,7 @@ export default function TripScreen() {
   const activeTripsRef = useRef<TripSummary[]>([]);
   const obdLiveRef = useRef<ObdLiveData | null>(null);
   const obdSaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const gpsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   activeTripsRef.current = activeTrips;
   obdLiveRef.current = obdLiveData;
@@ -71,6 +72,7 @@ export default function TripScreen() {
       obdBle.stopPolling();
       void obdBle.disconnect();
       _stopObdSaveTimer();
+      _stopGpsTimer();
     };
   }, []);
 
@@ -101,6 +103,24 @@ export default function TripScreen() {
     if (obdSaveTimerRef.current !== null) {
       clearInterval(obdSaveTimerRef.current);
       obdSaveTimerRef.current = null;
+    }
+  }
+
+  function _startGpsTimer() {
+    _stopGpsTimer();
+    gpsTimerRef.current = setInterval(() => {
+      const trips = activeTripsRef.current;
+      if (trips.length === 0) return;
+      for (const trip of trips) {
+        void saveCurrentGpsPoint(trip.id);
+      }
+    }, 60_000);
+  }
+
+  function _stopGpsTimer() {
+    if (gpsTimerRef.current !== null) {
+      clearInterval(gpsTimerRef.current);
+      gpsTimerRef.current = null;
     }
   }
 
@@ -159,6 +179,7 @@ export default function TripScreen() {
         });
       }
       const gpsResult = await saveCurrentGpsPoint(trip.id);
+      _startGpsTimer();
       Alert.alert('운행 시작', `${trip.vehicleNumber} 운행을 시작했습니다.\n${gpsResult.message}`);
     } catch (error) {
       Alert.alert('운행 시작 실패', error instanceof Error ? error.message : '운행을 시작하지 못했습니다.');
@@ -177,7 +198,11 @@ export default function TripScreen() {
           setIsSaving(true);
           try {
             await cancelManualTrip(trip.id);
-            setActiveTrips((current) => current.filter((item) => item.id !== trip.id));
+            setActiveTrips((current) => {
+              const next = current.filter((item) => item.id !== trip.id);
+              if (next.length === 0) _stopGpsTimer();
+              return next;
+            });
           } catch (error) {
             Alert.alert('취소 실패', error instanceof Error ? error.message : '운행을 취소하지 못했습니다.');
           } finally {
@@ -204,6 +229,7 @@ export default function TripScreen() {
         obdBle.stopPolling();
         void obdBle.disconnect();
         _stopObdSaveTimer();
+        _stopGpsTimer();
         setIsObdConnected(false);
         setObdLiveData(null);
       }

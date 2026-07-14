@@ -1,8 +1,11 @@
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { fetchTripsReadOnly, fetchVehiclesReadOnly, getSupabaseReadSource } from '@/lib/readonly-data';
+import { clearStoredRole, getStoredRole } from '@/lib/role';
 import { supabase } from '@/lib/supabase';
 
 type TableCheck = {
@@ -61,6 +64,24 @@ export default function CheckScreen() {
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getStoredRole().then(setCurrentRole);
+  }, []);
+
+  async function handleChangeRole() {
+    Alert.alert('역할 변경', '현재 역할을 해제하고 선택 화면으로 이동합니다.', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '변경',
+        onPress: async () => {
+          await clearStoredRole();
+          router.replace('/role-select');
+        },
+      },
+    ]);
+  }
 
   const runReadCheck = useCallback(async () => {
     setIsLoading(true);
@@ -103,14 +124,18 @@ export default function CheckScreen() {
       actionLabel="다시 점검"
       onAction={() => void runReadCheck()}>
 
-      <SectionCard title="Supabase">
-        <StatusLine label="연결" value={getSupabaseReadSource()} />
+      <SectionCard title="현재 설정">
+        <StatusLine label="역할" value={currentRole === 'commander' ? '수송부 모드' : currentRole === 'driver' ? '운행 모드' : '-'} />
+        <StatusLine label="Supabase" value={getSupabaseReadSource()} />
         {result ? (
           <>
             <StatusLine label="차량" value={`${result.vehicles}건`} />
             <StatusLine label="운행" value={`${result.trips}건`} />
           </>
         ) : null}
+        <Pressable style={styles.changeRoleBtn} onPress={() => void handleChangeRole()}>
+          <Text style={styles.changeRoleBtnText}>역할 변경</Text>
+        </Pressable>
       </SectionCard>
 
       {isLoading ? (
@@ -127,3 +152,15 @@ export default function CheckScreen() {
     </RebuildScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  changeRoleBtn: {
+    minHeight: 44,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  changeRoleBtnText: { color: '#64748B', fontSize: 14, fontWeight: '900' },
+});

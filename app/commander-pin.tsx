@@ -3,23 +3,29 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const PIN = '0000';
+import { verifyPin } from '@/lib/commander-pin';
+import { setStoredRole } from '@/lib/role';
 
 export default function CommanderPinScreen() {
   const insets = useSafeAreaInsets();
   const [input, setInput] = useState('');
   const [message, setMessage] = useState('수송부 비밀번호를 입력하세요');
+  const [shaking, setShaking] = useState(false);
 
-  function pressDigit(digit: string) {
+  async function pressDigit(digit: string) {
     const next = (input + digit).slice(0, 4);
     setInput(next);
-    if (next.length === 4) {
-      if (next === PIN) {
-        router.replace('/(tabs)/explore');
-        return;
-      }
+    if (next.length < 4) return;
+
+    const ok = await verifyPin(next);
+    if (ok) {
+      await setStoredRole('commander');
+      router.replace('/(tabs)');
+    } else {
+      setShaking(true);
       setInput('');
       setMessage('비밀번호가 맞지 않습니다');
+      setTimeout(() => setShaking(false), 500);
     }
   }
 
@@ -37,7 +43,7 @@ export default function CommanderPinScreen() {
         <Text style={styles.message}>{message}</Text>
       </View>
 
-      <View style={styles.dots}>
+      <View style={[styles.dots, shaking && styles.dotsShake]}>
         {[0, 1, 2, 3].map((idx) => (
           <View key={idx} style={[styles.dot, idx < input.length && styles.dotActive]} />
         ))}
@@ -54,7 +60,7 @@ export default function CommanderPinScreen() {
               } else if (key === 'del') {
                 setInput((v) => v.slice(0, -1));
               } else {
-                pressDigit(key);
+                void pressDigit(key);
               }
             }}>
             <Text style={[styles.keyText, key === 'back' && styles.keyGhostText]}>
@@ -76,6 +82,7 @@ const styles = StyleSheet.create({
   title: { color: '#0F172A', fontSize: 30, fontWeight: '900' },
   message: { color: '#64748B', fontSize: 14, fontWeight: '700', marginTop: 10 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 14, marginTop: 44, marginBottom: 42 },
+  dotsShake: { opacity: 0.4 },
   dot: { width: 15, height: 15, borderRadius: 8, backgroundColor: '#CBD5E1' },
   dotActive: { backgroundColor: '#2563EB' },
   pad: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' },
