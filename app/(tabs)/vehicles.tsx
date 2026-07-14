@@ -24,9 +24,11 @@ import {
 } from '@/lib/obd-data';
 import {
   loadSelectedObdBleDevice,
+  probeElm327Connection,
   saveSelectedObdBleDevice,
   scanForObdBleDevices,
   type ObdBleDevice,
+  type ObdProbeResult,
 } from '@/lib/obd-ble';
 import { fetchVehiclesReadOnly, getSupabaseReadSource, type VehicleSummary } from '@/lib/readonly-data';
 
@@ -60,6 +62,8 @@ export default function VehiclesScreen() {
   const [bleDevices, setBleDevices] = useState<ObdBleDevice[]>([]);
   const [selectedBleDevice, setSelectedBleDevice] = useState<ObdBleDevice | null>(null);
   const [isScanningBle, setIsScanningBle] = useState(false);
+  const [isProbing, setIsProbing] = useState(false);
+  const [probeResult, setProbeResult] = useState<ObdProbeResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -220,8 +224,26 @@ export default function VehiclesScreen() {
   async function handleSelectBleDevice(device: ObdBleDevice) {
     await saveSelectedObdBleDevice(device);
     setSelectedBleDevice(device);
+    setProbeResult(null);
     setBleMessage(`${device.name} 선택됨`);
-    Alert.alert('OBD 스캐너 선택', `${device.name} 장치를 저장했습니다. 다음 단계에서 연결/명령 송수신을 붙입니다.`);
+  }
+
+  async function handleProbeElm327() {
+    if (!selectedBleDevice) return;
+    setIsProbing(true);
+    setProbeResult(null);
+    setBleMessage('ELM327 연결 테스트 중…');
+    try {
+      const result = await probeElm327Connection(selectedBleDevice.id);
+      setProbeResult(result);
+      setBleMessage(result.summary);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'ELM327 프로브 실패';
+      setBleMessage(message);
+      Alert.alert('연결 테스트 실패', message);
+    } finally {
+      setIsProbing(false);
+    }
   }
 
   return (
@@ -247,8 +269,8 @@ export default function VehiclesScreen() {
         body="앱 시작 안정성을 지키기 위해 버튼을 눌렀을 때만 Bluetooth 검색을 시작합니다. BLE 방식 ELM327은 검색될 수 있고, 구형 Classic Bluetooth 모델은 휴대폰 설정에는 보여도 이 목록에는 안 보일 수 있습니다.">
         <StatusLine label="상태" value={bleMessage} />
         <StatusLine label="선택 장치" value={selectedBleDevice ? selectedBleDevice.name : '-'} />
-        <Pressable style={styles.bleScanBtn} onPress={() => void handleScanObdBle()} disabled={isScanningBle}>
-          <Text style={styles.bleScanBtnText}>{isScanningBle ? '검색 중' : 'BLE 스캐너 검색'}</Text>
+        <Pressable style={styles.bleScanBtn} onPress={() => void handleScanObdBle()} disabled={isScanningBle || isProbing}>
+          <Text style={styles.bleScanBtnText}>{isScanningBle ? '검색 중…' : 'BLE 스캐너 검색'}</Text>
         </Pressable>
         {bleDevices.map((device) => (
           <Pressable key={device.id} style={styles.bleDeviceBtn} onPress={() => void handleSelectBleDevice(device)}>
@@ -258,9 +280,59 @@ export default function VehiclesScreen() {
                 RSSI {device.rssi ?? '-'} · {device.id.slice(0, 18)}
               </Text>
             </View>
-            <Text style={styles.bleDeviceAction}>선택</Text>
+            <Text style={[styles.bleDeviceAction, selectedBleDevice?.id === device.id && styles.bleDeviceActionSelected]}>
+              {selectedBleDevice?.id === device.id ? '선택됨' : '선택'}
+            </Text>
           </Pressable>
         ))}
+        {selectedBleDevice && (
+          <Pressable
+            style={[styles.bleProbeBtn, isProbing && styles.bleProbeBtnDisabled]}
+            onPress={() => void handleProbeElm327()}
+            disabled={isProbing || isScanningBle}>
+            <Text style={styles.bleProbeBtnText}>
+              {isProbing ? 'ELM327 테스트 중…' : `ELM327 연결 테스트 — ${selectedBleDevice.name}`}
+            </Text>
+          </Pressable>
+        )}
+        {probeResult && (
+          <View style={styles.probeResultCard}>
+            <View style={styles.probeResultHeader}>
+              <Text style={styles.probeResultTitle}>연결 테스트 결과</Text>
+              <View style={[styles.probeResultBadge, probeResult.ok ? styles.probeResultBadgeOk : styles.probeResultBadgeFail]}>
+                <Text style={styles.probeResultBadgeText}>{probeResult.ok ? '성공' : '실패'}</Text>
+              </View>
+            </View>
+            {probeResult.profile && (
+              <Text style={styles.probeProfileText}>프로필: {probeResult.profile}</Text>
+            )}
+            {(probeResult.rpm !== null || probeResult.speedKmh !== null) && (
+              <View style={styles.probeDataRow}>
+                {probeResult.rpm !== null && (
+                  <View style={styles.probeDataChip}>
+                    <Text style={styles.probeDataLabel}>RPM</Text>
+                    <Text style={styles.probeDataValue}>{probeResult.rpm}</Text>
+                  </View>
+                )}
+                {probeResult.speedKmh !== null && (
+                  <View style={styles.probeDataChip}>
+                    <Text style={styles.probeDataLabel}>속도</Text>
+                    <Text style={styles.probeDataValue}>{probeResult.speedKmh} km/h</Text>
+                  </View>
+                )}
+              </View>
+            )}
+            {probeResult.logs.map((log: import('@/lib/obd-ble').ObdProbeLog, index: number) => (
+              <View key={index} style={styles.probeLogRow}>
+                <Text style={[styles.probeLogDot, log.ok ? styles.probeLogDotOk : styles.probeLogDotFail]}>●</Text>
+                <View style={styles.probeLogTextWrap}>
+                  <Text style={styles.probeLogStep}>{log.step}</Text>
+                  {log.detail ? <Text style={styles.probeLogDetail}>{log.detail}</Text> : null}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
       </SectionCard>
 
       {isLoading ? (
@@ -539,4 +611,54 @@ const styles = StyleSheet.create({
   bleDeviceName: { color: '#0F172A', fontSize: 15, fontWeight: '900' },
   bleDeviceMeta: { color: '#64748B', fontSize: 12, fontWeight: '700', marginTop: 3 },
   bleDeviceAction: { color: '#2563EB', fontSize: 13, fontWeight: '900' },
+  bleDeviceActionSelected: { color: '#0F766E' },
+  bleProbeBtn: {
+    minHeight: 52,
+    borderRadius: 14,
+    backgroundColor: '#1D4ED8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingHorizontal: 16,
+  },
+  bleProbeBtnDisabled: { backgroundColor: '#94A3B8' },
+  bleProbeBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900', textAlign: 'center' },
+  probeResultCard: {
+    marginTop: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    padding: 16,
+    gap: 8,
+  },
+  probeResultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  probeResultTitle: { color: '#0F172A', fontSize: 15, fontWeight: '900' },
+  probeResultBadge: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },
+  probeResultBadgeOk: { backgroundColor: '#D1FAE5' },
+  probeResultBadgeFail: { backgroundColor: '#FEE2E2' },
+  probeResultBadgeText: { fontSize: 12, fontWeight: '900', color: '#0F172A' },
+  probeProfileText: { color: '#2563EB', fontSize: 13, fontWeight: '800' },
+  probeDataRow: { flexDirection: 'row', gap: 10, marginVertical: 4 },
+  probeDataChip: {
+    flex: 1,
+    borderRadius: 14,
+    backgroundColor: '#EAF2FF',
+    padding: 12,
+    alignItems: 'center',
+  },
+  probeDataLabel: { color: '#64748B', fontSize: 11, fontWeight: '800' },
+  probeDataValue: { color: '#0F172A', fontSize: 20, fontWeight: '900', marginTop: 2 },
+  probeLogRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 3 },
+  probeLogDot: { fontSize: 10, marginTop: 3, minWidth: 14 },
+  probeLogDotOk: { color: '#10B981' },
+  probeLogDotFail: { color: '#EF4444' },
+  probeLogTextWrap: { flex: 1, minWidth: 0 },
+  probeLogStep: { color: '#0F172A', fontSize: 13, fontWeight: '800' },
+  probeLogDetail: { color: '#64748B', fontSize: 11, fontWeight: '600', marginTop: 1 },
 });

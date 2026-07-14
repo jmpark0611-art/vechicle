@@ -126,3 +126,29 @@ export async function loadSelectedObdBleDevice(): Promise<ObdBleDevice | null> {
 export async function saveSelectedObdBleDevice(device: ObdBleDevice) {
   await AsyncStorage.setItem(SELECTED_DEVICE_KEY, JSON.stringify(device));
 }
+
+export type ObdProbeLog = {
+  step: string;
+  ok: boolean;
+  detail?: string;
+};
+
+export type ObdProbeResult = {
+  ok: boolean;
+  profile: string | null;
+  logs: ObdProbeLog[];
+  rpm: number | null;
+  speedKmh: number | null;
+  summary: string;
+};
+
+export async function probeElm327Connection(_deviceId: string): Promise<ObdProbeResult> {
+  return {
+    ok: false,
+    profile: null,
+    logs: [{ step: 'ELM327 프로브', ok: false, detail: '웹 환경에서는 BLE 연결이 지원되지 않습니다.' }],
+    rpm: null,
+    speedKmh: null,
+    summary: '웹 환경 미지원',
+  };
+}
