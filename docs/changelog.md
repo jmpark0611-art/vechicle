@@ -262,6 +262,15 @@
 - The current `lib/obd-ble.native.ts` remains a pure JS simulation/stub, so no JS import depends on `react-native-ble-plx`.
 - Verification after removal: `npx expo-doctor` passes 18/18, `npm run verify` passes, and Android export passes.
 - Next if this APK still crashes: capture device `adb logcat`; without it the remaining issue is likely another native startup module or Android build configuration problem.
+# 2026-07-14 map and driver-mode refinement
+
+- Driver mode now shows only the 운행 tab; commander mode keeps 기록, 차량, 위치, 점검.
+- Location map zone setup now supports a center crosshair and `중심 좌표 사용` button inside the map.
+- Map selection mode also keeps tap-to-select for users who prefer direct tapping.
+- Cards and metric blocks now have subtle shadows for a more polished light UI.
+- 운행 screen now shows saved OBD device status and clarifies that it auto-connects when a trip starts.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-14 UI simplification pass
 
 - Simplified the bottom tabs with restrained monochrome symbols: 운행, 기록, 차량, 위치, 점검.

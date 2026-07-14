@@ -3,18 +3,12 @@ import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleMap } from '@/components/vehicle-map';
-import {
-  createSpeedZone,
-  fetchLocationSnapshot,
-  type LocationSnapshot,
-} from '@/lib/location-data';
+import { createSpeedZone, fetchLocationSnapshot, type LocationSnapshot } from '@/lib/location-data';
 import { generateVehicleMapHtml } from '@/lib/map-html';
 
 function formatTime(value: string) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value.slice(0, 16);
-  }
+  if (Number.isNaN(date.getTime())) return value.slice(0, 16);
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }
 
@@ -55,6 +49,12 @@ export default function MapScreen() {
     void loadLocation();
   }, [loadLocation]);
 
+  function applyMapPoint(lat: number, lng: number) {
+    setZoneLat(lat.toFixed(6));
+    setZoneLng(lng.toFixed(6));
+    setZoneAddMode(false);
+  }
+
   async function handleCreateZone() {
     const latitude = Number(zoneLat.trim());
     const longitude = Number(zoneLng.trim());
@@ -84,13 +84,7 @@ export default function MapScreen() {
 
     setIsSavingZone(true);
     try {
-      const result = await createSpeedZone({
-        name: zoneName,
-        latitude,
-        longitude,
-        radiusM,
-        speedLimitKmh,
-      });
+      const result = await createSpeedZone({ name: zoneName, latitude, longitude, radiusM, speedLimitKmh });
       Alert.alert(result.ok ? '구역 저장' : '구역 저장 실패', result.message);
       if (result.ok) {
         setZoneName('');
@@ -114,7 +108,6 @@ export default function MapScreen() {
       ]}
       actionLabel="새로고침"
       onAction={() => void loadLocation()}>
-
       {isLoading ? (
         <LoadingCard label="위치 데이터를 불러오는 중" />
       ) : errorMessage ? (
@@ -124,69 +117,13 @@ export default function MapScreen() {
           <VehicleMap
             html={mapHtml}
             style={styles.map}
-            onMapTap={zoneAddMode ? (lat, lng) => { setZoneLat(lat.toFixed(6)); setZoneLng(lng.toFixed(6)); setZoneAddMode(false); } : undefined}
+            onMapTap={zoneAddMode ? applyMapPoint : undefined}
+            onMapCenter={zoneAddMode ? applyMapPoint : undefined}
           />
 
-          <SectionCard title="제한속도 경고">
-            {snapshot.alerts.length === 0 ? (
-              <StatusLine label="상태" value="감지된 차량 없음" />
-            ) : (
-              snapshot.alerts.map((alert) => (
-                <View key={`${alert.tripId}-${alert.zoneName}`} style={styles.listItem}>
-                  <View style={styles.alertHeader}>
-                    <Text style={styles.listTitle}>{alert.vehicleNumber}</Text>
-                    <Text style={[styles.alertBadge, alert.status === 'overspeed' && styles.alertBadgeDanger]}>
-                      {alert.status === 'overspeed' ? '초과 의심' : '구역 안'}
-                    </Text>
-                  </View>
-                  <Text style={styles.listBody}>{alert.zoneName}</Text>
-                  <StatusLine label="거리" value={`${Math.round(alert.distanceM)}m`} />
-                  <StatusLine
-                    label="속도"
-                    value={`${alert.speedKmh === null ? '-' : `${Math.round(alert.speedKmh)}km/h`} / 제한 ${Math.round(alert.speedLimitKmh)}km/h`}
-                  />
-                </View>
-              ))
-            )}
-          </SectionCard>
-
-          <SectionCard title="운행 중 차량">
-            {snapshot.positions.length === 0 ? (
-              <StatusLine label="상태" value="최근 GPS 없음" />
-            ) : (
-              snapshot.positions.map((position) => (
-                <View key={position.tripId} style={styles.listItem}>
-                  <Text style={styles.listTitle}>{position.vehicleNumber}</Text>
-                  <Text style={styles.listBody}>{position.route}</Text>
-                  <StatusLine label="마지막 GPS" value={formatTime(position.recordedAt)} />
-                  <StatusLine
-                    label="좌표"
-                    value={`${formatCoord(position.latitude)}, ${formatCoord(position.longitude)}`}
-                  />
-                  <StatusLine
-                    label="속도"
-                    value={position.speedKmh === null ? '-' : `${Math.round(position.speedKmh)}km/h`}
-                  />
-                </View>
-              ))
-            )}
-          </SectionCard>
-
-          <SectionCard title="제한속도 구역">
-            {snapshot.zones.length === 0 ? (
-              <StatusLine label="상태" value="등록 구역 없음" />
-            ) : (
-              snapshot.zones.map((zone) => (
-                <View key={zone.id} style={styles.listItem}>
-                  <Text style={styles.listTitle}>{zone.name}</Text>
-                  <StatusLine label="제한속도" value={`${Math.round(zone.speedLimitKmh)}km/h`} />
-                  <StatusLine label="반경" value={`${Math.round(zone.radiusM)}m`} />
-                </View>
-              ))
-            )}
-          </SectionCard>
-
-          <SectionCard title="속도구역 등록">
+          <SectionCard
+            title="속도구역 등록"
+            body={zoneAddMode ? '지도를 움직여 원하는 위치를 가운데에 맞춘 뒤 중심 좌표를 사용하세요.' : undefined}>
             <TextInput
               style={styles.input}
               value={zoneName}
@@ -194,6 +131,11 @@ export default function MapScreen() {
               placeholder="예: 본부대 정문"
               placeholderTextColor="#94A3B8"
             />
+            <Pressable
+              style={[styles.mapPickBtn, zoneAddMode && styles.mapPickBtnActive]}
+              onPress={() => setZoneAddMode((current) => !current)}>
+              <Text style={styles.mapPickBtnText}>{zoneAddMode ? '지도 선택 취소' : '지도에서 위치 선택'}</Text>
+            </Pressable>
             <View style={styles.inputRow}>
               <TextInput
                 style={styles.inputHalf}
@@ -212,13 +154,6 @@ export default function MapScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
-            <Pressable
-              style={[styles.mapPickBtn, zoneAddMode && styles.mapPickBtnActive]}
-              onPress={() => setZoneAddMode((v) => !v)}>
-              <Text style={styles.mapPickBtnText}>
-                {zoneAddMode ? '지도 선택 취소' : '지도에서 선택'}
-              </Text>
-            </Pressable>
             <View style={styles.inputRow}>
               <TextInput
                 style={styles.inputHalf}
@@ -241,6 +176,59 @@ export default function MapScreen() {
               <Text style={styles.saveZoneBtnText}>{isSavingZone ? '저장 중' : '구역 저장'}</Text>
             </Pressable>
           </SectionCard>
+
+          <SectionCard title="제한속도 경고">
+            {snapshot.alerts.length === 0 ? (
+              <StatusLine label="상태" value="감지된 차량 없음" />
+            ) : (
+              snapshot.alerts.map((alert) => (
+                <View key={`${alert.tripId}-${alert.zoneName}`} style={styles.listItem}>
+                  <View style={styles.alertHeader}>
+                    <Text style={styles.listTitle}>{alert.vehicleNumber}</Text>
+                    <Text style={[styles.alertBadge, alert.status === 'overspeed' && styles.alertBadgeDanger]}>
+                      {alert.status === 'overspeed' ? '초과 위험' : '구역 안'}
+                    </Text>
+                  </View>
+                  <Text style={styles.listBody}>{alert.zoneName}</Text>
+                  <StatusLine label="거리" value={`${Math.round(alert.distanceM)}m`} />
+                  <StatusLine
+                    label="속도"
+                    value={`${alert.speedKmh === null ? '-' : `${Math.round(alert.speedKmh)}km/h`} / 제한 ${Math.round(alert.speedLimitKmh)}km/h`}
+                  />
+                </View>
+              ))
+            )}
+          </SectionCard>
+
+          <SectionCard title="운행 중 차량">
+            {snapshot.positions.length === 0 ? (
+              <StatusLine label="상태" value="최근 GPS 없음" />
+            ) : (
+              snapshot.positions.map((position) => (
+                <View key={position.tripId} style={styles.listItem}>
+                  <Text style={styles.listTitle}>{position.vehicleNumber}</Text>
+                  <Text style={styles.listBody}>{position.route}</Text>
+                  <StatusLine label="마지막 GPS" value={formatTime(position.recordedAt)} />
+                  <StatusLine label="좌표" value={`${formatCoord(position.latitude)}, ${formatCoord(position.longitude)}`} />
+                  <StatusLine label="속도" value={position.speedKmh === null ? '-' : `${Math.round(position.speedKmh)}km/h`} />
+                </View>
+              ))
+            )}
+          </SectionCard>
+
+          <SectionCard title="제한속도 구역">
+            {snapshot.zones.length === 0 ? (
+              <StatusLine label="상태" value="등록 구역 없음" />
+            ) : (
+              snapshot.zones.map((zone) => (
+                <View key={zone.id} style={styles.listItem}>
+                  <Text style={styles.listTitle}>{zone.name}</Text>
+                  <StatusLine label="제한속도" value={`${Math.round(zone.speedLimitKmh)}km/h`} />
+                  <StatusLine label="반경" value={`${Math.round(zone.radiusM)}m`} />
+                </View>
+              ))
+            )}
+          </SectionCard>
         </>
       )}
     </RebuildScreen>
@@ -249,8 +237,8 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
   map: {
-    height: 320,
-    borderRadius: 16,
+    height: 360,
+    borderRadius: 8,
     marginBottom: 14,
   },
   listItem: {
@@ -283,7 +271,7 @@ const styles = StyleSheet.create({
   listBody: { color: '#64748B', fontSize: 13, fontWeight: '700', lineHeight: 19, marginTop: 4 },
   input: {
     minHeight: 52,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
@@ -297,7 +285,7 @@ const styles = StyleSheet.create({
   inputHalf: {
     flex: 1,
     minHeight: 52,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
@@ -308,7 +296,7 @@ const styles = StyleSheet.create({
   },
   mapPickBtn: {
     minHeight: 44,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#2563EB',
     alignItems: 'center',
@@ -322,7 +310,7 @@ const styles = StyleSheet.create({
   mapPickBtnText: { color: '#2563EB', fontSize: 14, fontWeight: '900' },
   saveZoneBtn: {
     minHeight: 48,
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',

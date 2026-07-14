@@ -172,6 +172,20 @@ npm.cmd run health
 - 진행 중 운행이 이미 있으면 운행 시작 시 새 운행을 만들지 않고 기존 운행을 복구한다.
 - 운행 화면은 최신 GPS 좌표를 ref로 보관해 위치 변경 때마다 대시보드 복구 로직이 불필요하게 재생성되지 않도록 했다.
 - Supabase 요청은 `lib/request.ts`의 `withTimeout`을 거치며, 완료 후 내부 타이머를 정리한다.
+# 2026-07-14 handoff: map and driver-mode refinement
+
+- Added after commit `b71d20f`.
+- Driver mode tab bar should show only `운행`. Commander mode keeps the management tabs.
+- Location map zone setup was improved:
+  - `지도에서 위치 선택` enables selection mode.
+  - The map displays a center crosshair and a `중심 좌표 사용` button.
+  - Users can still tap the map directly to fill latitude/longitude.
+- Shared card styling now uses subtle shadows for a more polished UI.
+- OBD behavior:
+  - If a BLE OBD device was saved from the vehicle/diagnosis flow, 운행 start attempts automatic connection.
+  - The 운행 screen now displays the saved OBD device and whether it will auto-connect.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-14 handoff: simplified UI direction
 
 - Current branch for this pass: `claude/env-permissions-session-restart-154onb`.

@@ -271,6 +271,12 @@ export default function TripScreen() {
           </SectionCard>
 
           <SectionCard title="운행 정보">
+            {savedBleDeviceName ? (
+              <StatusLine
+                label="OBD"
+                value={isObdConnected ? '연결됨' : `${savedBleDeviceName} · 운행 시작 시 자동 연결`}
+              />
+            ) : null}
             <TextInput style={styles.input} value={operatorName} onChangeText={setOperatorName} placeholder="운전자 성명" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.input} value={userName} onChangeText={setUserName} placeholder="사용자 성명" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.input} value={purpose} onChangeText={setPurpose} placeholder="운행 목적" placeholderTextColor="#94A3B8" />
