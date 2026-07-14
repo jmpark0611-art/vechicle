@@ -42,6 +42,8 @@ export default function TripScreen() {
   const [purpose, setPurpose] = useState('');
   const [startPlace, setStartPlace] = useState('본부대');
   const [endPlace, setEndPlace] = useState('');
+  const [startOdometer, setStartOdometer] = useState('');
+  const [endOdometers, setEndOdometers] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -158,10 +160,12 @@ export default function TripScreen() {
         purpose,
         operatorName,
         userName,
+        startOdometer: startOdometer.trim() ? Number(startOdometer.trim()) : undefined,
       });
       setActiveTrips((current) => [trip, ...current]);
       setPurpose('');
       setEndPlace('');
+      setStartOdometer('');
       const gpsResult = await saveCurrentGpsPoint(trip.id);
       Alert.alert('운행 시작', `${trip.vehicleNumber} 운행을 시작했습니다.\n${gpsResult.message}`);
     } catch (error) {
@@ -173,13 +177,15 @@ export default function TripScreen() {
 
   async function handleCompleteTrip(trip: TripSummary) {
     const finalEndPlace = endPlace.trim() || trip.endPlace || '목적지 미입력';
+    const endOdo = endOdometers[trip.id]?.trim() ? Number(endOdometers[trip.id].trim()) : undefined;
+    const startOdo = trip.startOdometer ?? undefined;
     setIsSaving(true);
     try {
       // Save one last OBD snapshot before ending
       if (isObdConnected && obdLiveData && trip.vehicleId) {
         await saveTripObdLog(trip.vehicleId, trip.id, obdLiveData);
       }
-      await completeManualTrip(trip.id, finalEndPlace);
+      await completeManualTrip(trip.id, finalEndPlace, endOdo, startOdo);
       const gpsResult = await saveCurrentGpsPoint(trip.id);
       setActiveTrips((current) => current.filter((item) => item.id !== trip.id));
       // If no more active trips, disconnect OBD
@@ -318,6 +324,14 @@ export default function TripScreen() {
             <TextInput style={styles.input} value={purpose} onChangeText={setPurpose} placeholder="운행 목적" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.input} value={startPlace} onChangeText={setStartPlace} placeholder="출발지" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.input} value={endPlace} onChangeText={setEndPlace} placeholder="목적지" placeholderTextColor="#94A3B8" />
+            <TextInput
+              style={styles.input}
+              value={startOdometer}
+              onChangeText={setStartOdometer}
+              placeholder="출발 시 계기판 km (선택)"
+              placeholderTextColor="#94A3B8"
+              keyboardType="number-pad"
+            />
           </SectionCard>
 
           <SectionCard title="진행 중 운행" body="운행 종료 시 마지막 OBD 데이터가 자동 저장됩니다.">
@@ -333,6 +347,9 @@ export default function TripScreen() {
                   <StatusLine label="시작" value={formatTime(trip.startTime)} />
                   {trip.purpose ? <StatusLine label="목적" value={trip.purpose} /> : null}
                   {trip.operatorName ? <StatusLine label="운전자" value={trip.operatorName} /> : null}
+                  {trip.startOdometer !== null && (
+                    <StatusLine label="출발 계기판" value={`${trip.startOdometer} km`} />
+                  )}
                   {isObdConnected && (
                     <StatusLine
                       label="OBD"
@@ -341,6 +358,14 @@ export default function TripScreen() {
                         : `RPM ${obdLiveData?.rpm ?? '-'} · ${obdLiveData?.speedKmh ?? '-'} km/h`}
                     />
                   )}
+                  <TextInput
+                    style={[styles.input, styles.inputSmall]}
+                    value={endOdometers[trip.id] ?? ''}
+                    onChangeText={(v) => setEndOdometers((prev) => ({ ...prev, [trip.id]: v }))}
+                    placeholder="도착 시 계기판 km (선택)"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="number-pad"
+                  />
                   <Pressable style={styles.completeBtn} onPress={() => void handleCompleteTrip(trip)} disabled={isSaving}>
                     <Text style={styles.completeBtnText}>운행 종료</Text>
                   </Pressable>
@@ -409,6 +434,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginTop: 12,
   },
+  inputSmall: { minHeight: 44, marginTop: 10, fontSize: 14 },
   activeTrip: { borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 14, marginTop: 14 },
   activeTripTitle: { color: '#0F172A', fontSize: 16, fontWeight: '900' },
   activeTripRoute: { color: '#64748B', fontSize: 13, fontWeight: '700', marginTop: 5 },

@@ -1,6 +1,9 @@
 import { Tabs } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { getStoredRole } from '@/lib/role';
 
 const TAB_COLOR = '#2563EB';
 const MUTED = '#94A3B8';
@@ -11,6 +14,11 @@ function TabGlyph({ label, color }: { label: string; color: string }) {
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const [isCommander, setIsCommander] = useState(false);
+
+  useEffect(() => {
+    void getStoredRole().then((role) => setIsCommander(role === 'commander'));
+  }, []);
 
   return (
     <Tabs
@@ -45,7 +53,14 @@ export default function TabLayout() {
       <Tabs.Screen name="vehicles" options={{ title: '차량', tabBarIcon: ({ color }) => <TabGlyph label="차" color={color} /> }} />
       <Tabs.Screen name="map" options={{ title: '위치', tabBarIcon: ({ color }) => <TabGlyph label="위" color={color} /> }} />
       <Tabs.Screen name="check" options={{ title: '점검', tabBarIcon: ({ color }) => <TabGlyph label="점" color={color} /> }} />
-      <Tabs.Screen name="monthly-log" options={{ title: '운행증', tabBarIcon: ({ color }) => <TabGlyph label="증" color={color} /> }} />
+      <Tabs.Screen
+        name="monthly-log"
+        options={{
+          title: '운행증',
+          tabBarIcon: ({ color }) => <TabGlyph label="증" color={color} />,
+          href: isCommander ? undefined : null,
+        }}
+      />
     </Tabs>
   );
 }

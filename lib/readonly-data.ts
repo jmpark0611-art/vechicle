@@ -18,6 +18,7 @@ export type TripSummary = {
   purpose: string | null;
   operatorName: string | null;
   userName: string | null;
+  startOdometer: number | null;
 };
 
 export type ManualTripInput = {
@@ -27,6 +28,7 @@ export type ManualTripInput = {
   purpose?: string;
   operatorName?: string;
   userName?: string;
+  startOdometer?: number;
 };
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -63,6 +65,7 @@ type TripRow = {
   purpose?: string | null;
   operator_name?: string | null;
   user_name?: string | null;
+  start_odometer?: number | null;
 };
 
 type QueryResult<T> = {
@@ -96,11 +99,12 @@ function mapTrip(row: TripRow, vehicleById: Map<string, string>): TripSummary {
     purpose: row.purpose ?? null,
     operatorName: row.operator_name ?? null,
     userName: row.user_name ?? null,
+    startOdometer: row.start_odometer ?? null,
   };
 }
 
 const BASIC_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status';
-const EXTENDED_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status,purpose,operator_name,user_name';
+const EXTENDED_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status,purpose,operator_name,user_name,start_odometer';
 
 function tripSelect(includeExtended = true) {
   return includeExtended ? EXTENDED_TRIP_SELECT : BASIC_TRIP_SELECT;
@@ -165,7 +169,7 @@ export async function fetchActiveTrips(limit = 20): Promise<TripSummary[]> {
   return trips.map((trip) => mapTrip(trip, vehicleById));
 }
 
-async function insertTrip(payload: Record<string, string | null>) {
+async function insertTrip(payload: Record<string, string | number | null>) {
   return withRequestTimeout(
     supabase
       .from('trips')
@@ -176,7 +180,7 @@ async function insertTrip(payload: Record<string, string | null>) {
   ) as Promise<QueryResult<TripRow>>;
 }
 
-async function insertBasicTrip(payload: Record<string, string | null>) {
+async function insertBasicTrip(payload: Record<string, string | number | null>) {
   return withRequestTimeout(
     supabase
       .from('trips')
@@ -201,6 +205,7 @@ export async function startManualTrip(input: ManualTripInput): Promise<TripSumma
     purpose: input.purpose?.trim() || null,
     operator_name: input.operatorName?.trim() || null,
     user_name: input.userName?.trim() || null,
+    start_odometer: input.startOdometer ?? null,
   };
 
   let result = await insertTrip(extendedPayload);
@@ -290,16 +295,26 @@ export async function fetchMonthlyTrips(vehicleId: string, year: number, month: 
   }));
 }
 
-export async function completeManualTrip(tripId: string, endPlace: string): Promise<void> {
+export async function completeManualTrip(
+  tripId: string,
+  endPlace: string,
+  endOdometer?: number,
+  startOdometer?: number,
+): Promise<void> {
+  const update: Record<string, string | number | null> = {
+    end_place: endPlace.trim(),
+    end_time: new Date().toISOString(),
+    status: 'completed',
+  };
+  if (endOdometer !== undefined && endOdometer > 0) {
+    update.end_odometer = endOdometer;
+    if (startOdometer !== undefined && startOdometer > 0 && endOdometer > startOdometer) {
+      update.daily_km = endOdometer - startOdometer;
+    }
+  }
+
   const result = await withRequestTimeout(
-    supabase
-      .from('trips')
-      .update({
-        end_place: endPlace.trim(),
-        end_time: new Date().toISOString(),
-        status: 'completed',
-      })
-      .eq('id', tripId),
+    supabase.from('trips').update(update).eq('id', tripId),
     '운행 종료'
   );
 
