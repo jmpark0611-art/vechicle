@@ -25,6 +25,34 @@
   - This branch must be APK-tested separately from the stable `rebuild/clean-sdk54-start` branch.
   - Next step after device confirms app opens: test whether the user's scanner appears in BLE scan. If not, it is likely Classic Bluetooth and needs a different native approach.
 
+## 2026-07-14 latest handoff for next AI
+
+- Current local/remote branch: `feature/obd-ble-elm327-probe`
+- Latest commits:
+  - `1ac7a94 feat: add experimental obd ble scanner search`
+  - `111ab2d ci: build obd ble experiment branch`
+- Latest experimental BLE APK build succeeded:
+  - Run: `29292928878`
+  - Release: `https://github.com/jmpark0611-art/vechicle/releases/tag/apk-29292928878`
+  - APK: `https://github.com/jmpark0611-art/vechicle/releases/download/apk-29292928878/app-release.apk`
+- Last stable non-BLE APK remains available:
+  - Release: `https://github.com/jmpark0611-art/vechicle/releases/tag/apk-29286648719`
+  - APK: `https://github.com/jmpark0611-art/vechicle/releases/download/apk-29286648719/app-release.apk`
+- User should test the BLE APK in this order:
+  1. Install `apk-29292928878` and confirm the app opens.
+  2. Go to the vehicle/diagnosis tab.
+  3. Press `OBD BLE 스캐너 검색`.
+  4. Allow Bluetooth permissions.
+  5. Report whether the scanner appears in the list.
+- If the scanner appears:
+  - Next work is ELM327 connect/init probe: connect to the selected BLE device, discover services/characteristics, then try safe AT commands (`ATZ`, `ATE0`, `ATL0`, `ATS0`, `010C`, `010D`) behind a user button.
+- If the scanner does not appear:
+  - It is probably Classic Bluetooth rather than BLE.
+  - Do not keep changing the current BLE branch blindly.
+  - Next AI should inspect the scanner model/photo and consider a Classic Bluetooth serial approach or a user-facing note that the current APK supports BLE adapters only.
+- Safety rule:
+  - Do not merge `feature/obd-ble-elm327-probe` into the stable branch until the user confirms the BLE APK opens normally on the device.
+
 ## 2026-07-07 최신 APK 다운로드 상태
 
 - 최신 release APK 빌드는 성공 완료됐다.

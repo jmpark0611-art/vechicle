@@ -26,6 +26,9 @@
 - The scan step saves a selected BLE OBD candidate locally, but does not yet send ELM327 AT commands.
 - Important: many low-cost ELM327 adapters are Classic Bluetooth, not BLE. Those may pair in Android settings but not appear in BLE scanning.
 - Verification passed with `npm.cmd run verify`, `npx.cmd expo export --platform android`, `npx.cmd expo-doctor`, and `npx.cmd expo prebuild --platform android --no-install --clean`.
+- GitHub Actions APK build succeeded for run `29292928878`.
+- Experimental APK: `https://github.com/jmpark0611-art/vechicle/releases/download/apk-29292928878/app-release.apk`
+- Stable non-BLE APK before this experiment: `https://github.com/jmpark0611-art/vechicle/releases/download/apk-29286648719/app-release.apk`
 
 ## 2026-07-13 정비 교체완료 기능
 
