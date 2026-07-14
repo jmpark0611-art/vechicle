@@ -1,654 +1,156 @@
-import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
-import { Link, router } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useEffect, useState } from 'react';
 
-import { AppRole, clearStoredRole, getStoredRole } from '../../lib/role';
-import { supabase, supabaseConfig } from '../../lib/supabase';
-import { formatDateTime, formatTripDuration, isStaleActiveTrip } from '../../lib/format';
-import { formatDbError } from '../../lib/errors';
-import { withTimeout } from '../../lib/request';
+import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
+import { fetchTripsReadOnly, fetchVehiclesReadOnly, getSupabaseReadSource } from '@/lib/readonly-data';
+import { supabase } from '@/lib/supabase';
 
-type HealthStatus = 'checking' | 'ok' | 'error';
-const ACTIVE_TRIP_DETAIL_LIMIT = 10;
+type TableCheck = {
+  label: string;
+  table: string;
+  status: 'ok' | 'empty' | 'missing' | 'error';
+  value: string;
+};
 
-type HealthSummary = {
+type DiagnosticResult = {
   vehicles: number;
-  activeTrips: number;
-  completedTrips: number;
-  canceledTrips: number;
-  gpsPoints: number;
-  latestGpsAt: string | null;
+  trips: number;
+  tableChecks: TableCheck[];
 };
 
-type ActiveTrip = {
-  id: string;
-  vehicle_id: string | null;
-  start_time: string | null;
-};
+const REQUEST_TIMEOUT_MS = 8_000;
 
-type Vehicle = {
-  id: string;
-  vehicle_number: string;
-};
+async function withRequestTimeout<T>(promise: PromiseLike<T>, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} 응답 시간이 초과되었습니다.`)), REQUEST_TIMEOUT_MS);
+  });
 
-function getAgeHours(value: string | null) {
-  if (!value) {
-    return null;
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
+function isMissingTable(error: { code?: string; message: string } | null) {
+  if (!error) return false;
+  return error.code === '42P01' || error.code === 'PGRST205' || /does not exist|schema cache|could not find/i.test(error.message);
+}
+
+async function countTable(label: string, table: string): Promise<TableCheck> {
+  const result = await withRequestTimeout(
+    supabase.from(table).select('id', { count: 'exact', head: true }),
+    `${label} 점검`
+  );
+
+  if (result.error) {
+    return {
+      label,
+      table,
+      status: isMissingTable(result.error) ? 'missing' : 'error',
+      value: result.error.message,
+    };
   }
 
-  const time = new Date(value).getTime();
+  const count = result.count ?? 0;
+  return {
+    label,
+    table,
+    status: count > 0 ? 'ok' : 'empty',
+    value: `${count.toLocaleString('ko-KR')}건`,
+  };
+}
 
-  if (!Number.isFinite(time)) {
-    return null;
-  }
-
-  return Math.max(0, Math.round((Date.now() - time) / 3600000));
+function statusText(status: TableCheck['status']) {
+  if (status === 'ok') return '정상';
+  if (status === 'empty') return '비어 있음';
+  if (status === 'missing') return '테이블 없음';
+  return '오류';
 }
 
 export default function CheckScreen() {
-  const insets = useSafeAreaInsets();
-  const appVersion = Constants.expoConfig?.version ?? '-';
-  const sdkVersion = Constants.expoConfig?.sdkVersion ?? '-';
-  const [status, setStatus] = useState<HealthStatus>('checking');
-  const [summary, setSummary] = useState<HealthSummary>({
-    vehicles: 0,
-    activeTrips: 0,
-    completedTrips: 0,
-    canceledTrips: 0,
-    gpsPoints: 0,
-    latestGpsAt: null,
-  });
-  const [activeTrips, setActiveTrips] = useState<ActiveTrip[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [role, setRole] = useState<AppRole | null>(null);
+  const sdkVersion = Constants.expoConfig?.sdkVersion ?? '54';
+  const [result, setResult] = useState<DiagnosticResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadStatus = useCallback(async (refreshing = false) => {
-    setStatus('checking');
-    setMessage(null);
-
-    if (refreshing) {
-      setIsRefreshing(true);
-    }
-
+  const runReadCheck = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
     try {
-      const [
-        vehiclesResult,
-        activeTripsResult,
-        completedTripsResult,
-        canceledTripsResult,
-        gpsCountResult,
-        latestGpsResult,
-        activeTripListResult,
-        vehicleListResult,
-      ] = await Promise.all([
-          withTimeout(
-            supabase.from('vehicles').select('id', { count: 'exact', head: true }),
-            '차량 점검'
-          ),
-          withTimeout(
-            supabase
-              .from('trips')
-              .select('id', { count: 'exact', head: true })
-              .eq('status', 'in_progress'),
-            '진행 운행 점검'
-          ),
-          withTimeout(
-            supabase
-              .from('trips')
-              .select('id', { count: 'exact', head: true })
-              .eq('status', 'completed'),
-            '완료 운행 점검'
-          ),
-          withTimeout(
-            supabase
-              .from('trips')
-              .select('id', { count: 'exact', head: true })
-              .eq('status', 'canceled'),
-            '무효 운행 점검'
-          ),
-          withTimeout(
-            supabase.from('gps_points').select('trip_id', { count: 'exact', head: true }),
-            'GPS 점검'
-          ),
-          withTimeout(
-            supabase.from('gps_points').select('recorded_at').order('recorded_at', {
-              ascending: false,
-            }).limit(1).maybeSingle(),
-            '최근 GPS 점검'
-          ),
-          withTimeout(
-            supabase
-              .from('trips')
-              .select('id, vehicle_id, start_time')
-              .eq('status', 'in_progress')
-              .order('start_time', { ascending: false })
-              .limit(ACTIVE_TRIP_DETAIL_LIMIT),
-            '진행 운행 목록'
-          ),
-          withTimeout(supabase.from('vehicles').select('id, vehicle_number'), '차량 목록'),
-        ]);
-
-      const firstError =
-        vehiclesResult.error ??
-        activeTripsResult.error ??
-        completedTripsResult.error ??
-        canceledTripsResult.error ??
-        gpsCountResult.error ??
-        latestGpsResult.error ??
-        activeTripListResult.error ??
-        vehicleListResult.error;
-
-      if (firstError) {
-        setStatus('error');
-        setMessage(formatDbError(firstError, '점검 중 오류가 발생했습니다.'));
-        return;
-      }
-
-      setSummary({
-        vehicles: vehiclesResult.count ?? 0,
-        activeTrips: activeTripsResult.count ?? 0,
-        completedTrips: completedTripsResult.count ?? 0,
-        canceledTrips: canceledTripsResult.count ?? 0,
-        gpsPoints: gpsCountResult.count ?? 0,
-        latestGpsAt: latestGpsResult.data?.recorded_at ?? null,
+      const [vehicles, trips, gpsPoints, maintenanceRecords, speedZones, obdLogs] = await Promise.all([
+        fetchVehiclesReadOnly(5),
+        fetchTripsReadOnly(5),
+        countTable('GPS 위치', 'gps_points'),
+        countTable('정비 기록', 'maintenance_records'),
+        countTable('제한속도 구역', 'speed_zones'),
+        countTable('OBD 기록', 'obd_logs'),
+      ]);
+      setResult({
+        vehicles: vehicles.length,
+        trips: trips.length,
+        tableChecks: [gpsPoints, maintenanceRecords, speedZones, obdLogs],
       });
-      setActiveTrips((activeTripListResult.data ?? []) as ActiveTrip[]);
-      setVehicles((vehicleListResult.data ?? []) as Vehicle[]);
-      setStatus('ok');
-      setMessage('Supabase 연결과 기본 테이블 조회가 정상입니다.');
     } catch (error) {
-      setStatus('error');
-      setActiveTrips([]);
-      setVehicles([]);
-      setMessage(formatDbError(error, '점검 중 오류가 발생했습니다.'));
+      setResult(null);
+      setErrorMessage(error instanceof Error ? error.message : 'Supabase 점검에 실패했습니다.');
     } finally {
-      setIsRefreshing(false);
+      setIsLoading(false);
     }
   }, []);
 
-  const staleActiveTripCount = activeTrips.filter((trip) => isStaleActiveTrip(trip.start_time)).length;
-  const latestGpsAgeHours = getAgeHours(summary.latestGpsAt);
-  const isLatestGpsStale = summary.gpsPoints > 0 && latestGpsAgeHours !== null && latestGpsAgeHours >= 24;
-  const hasTripsWithoutGps =
-    summary.gpsPoints === 0 &&
-    summary.activeTrips + summary.completedTrips + summary.canceledTrips > 0;
-  const duplicatedActiveTrips = useMemo(() => {
-    const counts = new Map<string, number>();
+  useEffect(() => {
+    void runReadCheck();
+  }, [runReadCheck]);
 
-    activeTrips.forEach((trip) => {
-      if (!trip.vehicle_id) {
-        return;
-      }
-
-      counts.set(trip.vehicle_id, (counts.get(trip.vehicle_id) ?? 0) + 1);
-    });
-
-    return activeTrips.filter((trip) => {
-      return trip.vehicle_id ? (counts.get(trip.vehicle_id) ?? 0) > 1 : false;
-    });
-  }, [activeTrips]);
-
-  const getVehicleNumber = useCallback(
-    (vehicleId: string | null) => {
-      return vehicles.find((vehicle) => vehicle.id === vehicleId)?.vehicle_number ?? '차량 정보 없음';
-    },
-    [vehicles]
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      loadStatus();
-      getStoredRole().then(setRole);
-    }, [loadStatus])
-  );
+  const failedChecks = result?.tableChecks.filter((item) => item.status === 'missing' || item.status === 'error').length ?? 0;
 
   return (
-    <ScrollView
-      contentContainerStyle={[
-        styles.container,
-        {
-          paddingBottom: Math.max(insets.bottom + 96, 112),
-          paddingTop: Math.max(insets.top + 24, 56),
-        },
+    <RebuildScreen
+      title="시스템 점검"
+      subtitle="앱, Supabase 연결, GPS/정비/제한속도 테이블 상태를 한 화면에서 확인합니다."
+      metrics={[
+        { label: 'Expo SDK', value: sdkVersion },
+        { label: 'Supabase', value: errorMessage ? '오류' : '연결' },
+        { label: '차량 샘플', value: `${result?.vehicles ?? 0}건` },
+        { label: '점검 오류', value: `${failedChecks}건` },
       ]}
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={() => loadStatus(true)} />
-      }>
-      <Text style={styles.title}>시스템 점검</Text>
+      actionLabel="점검 다시 실행"
+      onAction={() => void runReadCheck()}>
+      <SectionCard title="현재 기준" body="클린 리빌드 브랜치에서 기능을 작은 단위로 복구하고 있습니다.">
+        <StatusLine label="브랜치" value="rebuild/clean-sdk54-start" />
+      </SectionCard>
 
-      <View style={[styles.statusPanel, status === 'error' && styles.errorPanel]}>
-        <View>
-          <Text style={styles.statusLabel}>상태</Text>
-          <Text style={[styles.statusValue, status === 'error' && styles.errorValue]}>
-            {status === 'checking' ? '확인 중' : status === 'ok' ? '정상' : '확인 필요'}
-          </Text>
-        </View>
-        {status === 'checking' && <ActivityIndicator color="#2563EB" />}
-      </View>
+      <SectionCard title="Supabase 설정" body="환경변수 또는 fallback 설정으로 연결된 Supabase 정보를 표시합니다.">
+        <StatusLine label="출처" value={getSupabaseReadSource()} />
+      </SectionCard>
 
-      {message && (
-        <View style={status === 'error' ? styles.errorBox : styles.noticeBox}>
-          <Text style={status === 'error' ? styles.errorText : styles.noticeText}>{message}</Text>
-        </View>
+      {isLoading ? (
+        <LoadingCard label="Supabase 점검 중" />
+      ) : errorMessage ? (
+        <SectionCard title="점검 오류" body={errorMessage} />
+      ) : (
+        <>
+          <SectionCard title="기본 테이블" body="차량과 운행 기록 읽기 경로를 확인했습니다.">
+            <StatusLine label="차량" value={`${result?.vehicles ?? 0}건`} />
+            <StatusLine label="운행" value={`${result?.trips ?? 0}건`} />
+          </SectionCard>
+
+          <SectionCard title="기능 테이블" body="GPS 저장, 정비 기록, 제한속도 구역, OBD 기록 기능에 필요한 테이블 상태입니다.">
+            {result?.tableChecks.map((item) => (
+              <StatusLine key={item.table} label={item.label} value={`${statusText(item.status)} · ${item.value}`} />
+            ))}
+          </SectionCard>
+        </>
       )}
 
-      <View style={styles.grid}>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>차량</Text>
-          <Text style={styles.metricValue}>{summary.vehicles}</Text>
-        </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>운행 중</Text>
-          <Text style={[styles.metricValue, summary.activeTrips > 1 && styles.warningValue]}>
-            {summary.activeTrips}
-          </Text>
-        </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>완료</Text>
-          <Text style={styles.metricValue}>{summary.completedTrips}</Text>
-        </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>무효</Text>
-          <Text style={styles.metricValue}>{summary.canceledTrips}</Text>
-        </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>GPS</Text>
-          <Text style={styles.metricValue}>{summary.gpsPoints}</Text>
-        </View>
-      </View>
-
-      {summary.activeTrips > 1 && (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningText}>
-            진행 중 운행이 여러 건입니다. 운행 탭은 최신 운행을 복구하므로, 이전 미종료 운행은
-            기록 탭에서 확인해 주세요.
-          </Text>
-        </View>
-      )}
-
-      {duplicatedActiveTrips.length > 0 && (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>
-            같은 차량에 진행 중 운행이 겹친 기록이 {duplicatedActiveTrips.length}건 있습니다.
-            아래 상세 화면에서 정상 운행만 남기고 나머지는 무효 처리해 주세요.
-          </Text>
-        </View>
-      )}
-
-      {staleActiveTripCount > 0 && (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>8시간 이상 종료되지 않은 운행이 {staleActiveTripCount}건 있습니다. 운행 탭에서 복구 후 종료 여부를 확인해 주세요.</Text>
-        </View>
-      )}
-
-      {isLatestGpsStale && (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningText}>
-            최근 GPS가 {latestGpsAgeHours}시간 전 기록입니다. 최근 운행이 있었는데 GPS가 갱신되지 않았다면 위치 권한과 네트워크 상태를 확인해 주세요.
-          </Text>
-        </View>
-      )}
-
-      {hasTripsWithoutGps && (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningText}>
-            운행 기록은 있지만 GPS 포인트가 없습니다. 위치 권한, gps_points 테이블, Supabase RLS/insert 정책을 확인해 주세요.
-          </Text>
-        </View>
-      )}
-
-      {activeTrips.length > 0 && (
-        <View style={styles.infoPanel}>
-          <Text style={styles.sectionTitle}>진행 중 운행</Text>
-          {summary.activeTrips > activeTrips.length && (
-            <Text style={styles.sectionHint}>
-              최근 진행 운행 표시 {activeTrips.length}건 / 전체 {summary.activeTrips}건
-            </Text>
-          )}
-          {activeTrips.map((trip) => {
-            const isStale = isStaleActiveTrip(trip.start_time);
-            const isDuplicated =
-              duplicatedActiveTrips.find((duplicatedTrip) => duplicatedTrip.id === trip.id) != null;
-
-            return (
-              <View
-                key={trip.id}
-                style={[
-                  styles.activeTripRow,
-                  isStale && styles.staleTripRow,
-                  isDuplicated && styles.duplicatedTripRow,
-                ]}>
-              <View style={styles.activeTripTextBox}>
-                <Text style={styles.activeTripTitle}>{getVehicleNumber(trip.vehicle_id)}</Text>
-                <Text style={styles.activeTripMeta}>출발 {formatDateTime(trip.start_time)}</Text>
-                <Text style={[styles.activeTripMeta, isStale && styles.staleTripMeta]}>
-                  {isDuplicated ? '중복 진행 중 · ' : ''}
-                  {formatTripDuration(trip.start_time, null)}
-                </Text>
-              </View>
-              <Link
-                href={{
-                  pathname: '/trips/[id]',
-                  params: { id: trip.id },
-                }}
-                asChild>
-                <TouchableOpacity style={styles.detailBtn}>
-                  <Text style={styles.detailText}>상세</Text>
-                </TouchableOpacity>
-              </Link>
-              </View>
-            );
-          })}
-        </View>
-      )}
-
-      <View style={styles.infoPanel}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>앱 버전</Text>
-          <Text style={styles.infoValue}>{appVersion}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Expo SDK</Text>
-          <Text style={styles.infoValue}>{sdkVersion}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Supabase</Text>
-          <Text style={styles.infoValue}>{supabaseConfig.urlHost}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>최근 GPS</Text>
-          <Text style={styles.infoValue}>{formatDateTime(summary.latestGpsAt)}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>GPS 경과</Text>
-          <Text style={[styles.infoValue, isLatestGpsStale && styles.warningInfoValue]}>
-            {latestGpsAgeHours === null ? '-' : `${latestGpsAgeHours}시간 전`}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.infoPanel}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>사용자 역할</Text>
-          <Text style={styles.infoValue}>
-            {role === 'commander' ? '수송부 간부' : role === 'driver' ? '운전자' : '-'}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={styles.changeRoleBtn}
-          onPress={async () => {
-            await clearStoredRole();
-            router.replace('/role-select');
-          }}>
-          <Text style={styles.changeRoleText}>역할 변경</Text>
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity style={styles.reloadBtn} onPress={() => loadStatus(true)} disabled={isRefreshing}>
-        <Text style={styles.reloadText}>{isRefreshing ? '확인 중...' : '다시 점검'}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      <SectionCard
+        title="실기기 확인"
+        body="APK 설치 후 운행 시작, GPS 권한 허용, 운행 종료, 차량 정비 교체완료, 제한속도 구역 저장 순서로 확인하면 됩니다."
+      />
+    </RebuildScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: '#F8FAFC',
-    padding: 20,
-  },
-  title: {
-    color: '#0F172A',
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  statusPanel: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'space-between',
-    marginBottom: 14,
-    padding: 20,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  errorPanel: {
-    borderColor: '#FECACA',
-  },
-  statusLabel: {
-    color: '#64748B',
-    fontSize: 13,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  statusValue: {
-    color: '#059669',
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  errorValue: {
-    color: '#DC2626',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 14,
-  },
-  metricCard: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    borderWidth: 1,
-    flexBasis: '47%',
-    flexGrow: 1,
-    padding: 16,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  metricLabel: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  metricValue: {
-    color: '#0F172A',
-    fontSize: 26,
-    fontWeight: '700',
-  },
-  warningValue: {
-    color: '#D97706',
-  },
-  infoPanel: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 14,
-    padding: 18,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  sectionTitle: {
-    color: '#0F172A',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  sectionHint: {
-    color: '#64748B',
-    fontSize: 13,
-    fontWeight: '400',
-    marginBottom: 10,
-  },
-  activeTripRow: {
-    alignItems: 'center',
-    borderBottomColor: '#F1F5F9',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 56,
-  },
-  staleTripRow: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 10,
-    marginBottom: 6,
-    paddingHorizontal: 10,
-  },
-  duplicatedTripRow: {
-    borderColor: '#FECACA',
-    borderWidth: 1,
-    borderRadius: 10,
-  },
-  activeTripTextBox: {
-    flex: 1,
-    marginRight: 12,
-  },
-  activeTripTitle: {
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  activeTripMeta: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '400',
-    marginTop: 3,
-  },
-  staleTripMeta: {
-    color: '#DC2626',
-    fontWeight: '600',
-  },
-  detailBtn: {
-    alignItems: 'center',
-    backgroundColor: '#EFF6FF',
-    borderRadius: 20,
-    justifyContent: 'center',
-    minHeight: 36,
-    paddingHorizontal: 14,
-  },
-  detailText: {
-    color: '#2563EB',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  infoRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    justifyContent: 'space-between',
-    minHeight: 34,
-  },
-  infoLabel: {
-    color: '#64748B',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  infoValue: {
-    color: '#0F172A',
-    flexShrink: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 14,
-    textAlign: 'right',
-  },
-  warningInfoValue: {
-    color: '#D97706',
-  },
-  noticeBox: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    marginBottom: 14,
-    padding: 14,
-  },
-  noticeText: {
-    color: '#1D4ED8',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  errorBox: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 12,
-    marginBottom: 14,
-    padding: 14,
-  },
-  errorText: {
-    color: '#B91C1C',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  warningBox: {
-    backgroundColor: '#FFFBEB',
-    borderRadius: 12,
-    marginBottom: 14,
-    padding: 14,
-  },
-  warningText: {
-    color: '#B45309',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  changeRoleBtn: {
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    borderWidth: 1,
-    justifyContent: 'center',
-    marginTop: 10,
-    minHeight: 44,
-  },
-  changeRoleText: {
-    color: '#64748B',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  reloadBtn: {
-
-    alignItems: 'center',
-    backgroundColor: '#2563EB',
-    borderRadius: 14,
-    minHeight: 52,
-    justifyContent: 'center',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  reloadText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-});

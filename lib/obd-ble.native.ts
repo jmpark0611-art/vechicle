@@ -1,116 +1,522 @@
-// Native stub — BLE temporarily disabled for crash diagnosis.
-// Same interface as obd-ble.ts (web simulation) so index.tsx works unchanged.
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PermissionsAndroid, Platform } from 'react-native';
 
-export type ObdLiveData = {
-  speedKmh: number | null;
+export type ObdBleDevice = {
+  id: string;
+  name: string;
+  rssi: number | null;
+  serviceUUIDs: string[];
+};
+
+export type ObdBleScanResult = {
+  ok: boolean;
+  message: string;
+  devices: ObdBleDevice[];
+};
+
+export type ObdProbeLog = {
+  step: string;
+  ok: boolean;
+  detail?: string;
+};
+
+export type ObdProbeResult = {
+  ok: boolean;
+  profile: string | null;
+  logs: ObdProbeLog[];
   rpm: number | null;
-  coolantTempC: number | null;
-  batteryVoltage: number | null;
-  fuelLevelPercent: number | null;
-  engineLoadPercent: number | null;
-  throttlePercent: number | null;
-  intakeAirTempC: number | null;
-  dtcCodes: string[];
-  ignitionOn: boolean;
-  recordedAt: string;
+  speedKmh: number | null;
+  coolantC: number | null;
+  batteryV: number | null;
+  summary: string;
 };
 
-export type ObdDevice = { id: string; name: string; rssi: number | null };
+const SELECTED_DEVICE_KEY = 'vehicle-obd-ble-selected-device-v1';
+const DEFAULT_SCAN_MS = 8_000;
 
-export type ObdConnectionState =
-  | 'idle' | 'scanning' | 'connecting' | 'initializing' | 'connected' | 'error' | 'disconnected';
-
-export type ObdCallbacks = {
-  onStateChange: (state: ObdConnectionState, message?: string) => void;
-  onDeviceFound: (device: ObdDevice) => void;
-  onData: (data: ObdLiveData) => void;
-};
-
-const SIM_DEVICES: ObdDevice[] = [
-  { id: 'SIM-001', name: 'Vgate iCar Pro BLE', rssi: -52 },
-  { id: 'SIM-002', name: 'OBDII BLE Adapter', rssi: -71 },
+// Known BLE OBD serial profiles (service / notify / write characteristic prefixes)
+const OBD_BLE_PROFILES = [
+  { name: 'HM-10 / Vgate iCar BLE (FFE0)', servicePrefix: 'FFE0',     notifyPrefix: 'FFE1',     writePrefix: 'FFE1' },
+  { name: 'Generic OBD BLE (FFF0)',         servicePrefix: 'FFF0',     notifyPrefix: 'FFF1',     writePrefix: 'FFF2' },
+  { name: 'Nordic UART Service',            servicePrefix: '6E400001', notifyPrefix: '6E400003', writePrefix: '6E400002' },
+  // IOS-Vlink / Veepeak BLE — service 18F0, chars 2AF0(write) + 2AF1(notify)
+  { name: 'IOS-Vlink / Veepeak (18F0)',     servicePrefix: '18F0',     notifyPrefix: '2AF1',     writePrefix: '2AF0' },
+  // Vlink custom service starting with E7810A71
+  { name: 'Vlink Custom (E7810A71)',         servicePrefix: 'E7810A71', notifyPrefix: 'BEF8D6C9', writePrefix: 'BEF8D6C9' },
 ];
 
-let cbs: ObdCallbacks | null = null;
-let dataTimer: ReturnType<typeof setInterval> | null = null;
-let scanTimer: ReturnType<typeof setTimeout> | null = null;
-let fuelLevel = 65;
+function uuidMatches(uuid: string, prefix: string): boolean {
+  const u = uuid.toUpperCase().replace(/-/g, '');
+  const p = prefix.toUpperCase().replace(/-/g, '');
+  // Match short-form (e.g. "FFE0" inside "0000FFE0-...") or long-form prefix
+  return u.startsWith(p) || u.includes(p.slice(0, 8));
+}
 
-function makeLiveData(): ObdLiveData {
-  const t = Date.now() / 1000;
-  fuelLevel = Math.max(5, fuelLevel - 0.002);
+function decodeB64(b64: string): string {
+  try { return atob(b64); } catch { return ''; }
+}
+
+function encodeB64(str: string): string {
+  try { return btoa(str); } catch { return ''; }
+}
+
+// Parse RPM from ELM327 response to PID 010C  →  41 0C xx yy  →  (xx*256+yy)/4
+function parseRpm(response: string): number | null {
+  const m = response.replace(/\s/g, '').match(/410C([0-9A-Fa-f]{4})/i);
+  if (!m) return null;
+  return Math.round(parseInt(m[1], 16) / 4);
+}
+
+// Parse speed from PID 010D  →  41 0D xx  →  xx km/h
+function parseSpeed(response: string): number | null {
+  const m = response.replace(/\s/g, '').match(/410D([0-9A-Fa-f]{2})/i);
+  if (!m) return null;
+  return parseInt(m[1], 16);
+}
+
+function deviceName(device: { name?: string | null; localName?: string | null }) {
+  return device.localName || device.name || '이름 없는 BLE 장치';
+}
+
+function isLikelyObdDevice(device: { name?: string | null; localName?: string | null; serviceUUIDs?: string[] | null }) {
+  const name = deviceName(device).toLowerCase();
+  const serviceText = (device.serviceUUIDs ?? []).join(' ').toLowerCase();
+  return /obd|elm|vlink|v-link|icar|car|ble|uart|ffe0|fff0/.test(`${name} ${serviceText}`);
+}
+
+async function requestAndroidBluetoothPermissions() {
+  if (Platform.OS !== 'android') {
+    return true;
+  }
+
+  const permissions: string[] = [];
+  const version = typeof Platform.Version === 'number' ? Platform.Version : Number(Platform.Version);
+
+  if (version >= 31) {
+    permissions.push('android.permission.BLUETOOTH_SCAN', 'android.permission.BLUETOOTH_CONNECT');
+  } else {
+    permissions.push(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+  }
+
+  const result = await PermissionsAndroid.requestMultiple(permissions as Parameters<typeof PermissionsAndroid.requestMultiple>[0]);
+  return Object.values(result).every((value) => value === PermissionsAndroid.RESULTS.GRANTED);
+}
+
+export async function scanForObdBleDevices(scanMs = DEFAULT_SCAN_MS): Promise<ObdBleScanResult> {
+  const hasPermission = await requestAndroidBluetoothPermissions();
+  if (!hasPermission) {
+    return { ok: false, message: 'Bluetooth 권한이 허용되지 않았습니다.', devices: [] };
+  }
+
+  const { BleManager } = await import('react-native-ble-plx');
+  const manager = new BleManager();
+  const found = new Map<string, ObdBleDevice>();
+
+  try {
+    const state = await manager.state();
+    if (state !== 'PoweredOn') {
+      return { ok: false, message: `Bluetooth 상태가 ${state}입니다. 휴대폰 Bluetooth를 켜 주세요.`, devices: [] };
+    }
+
+    await new Promise<void>((resolve) => {
+      const timeoutId = setTimeout(() => {
+        manager.stopDeviceScan();
+        resolve();
+      }, scanMs);
+
+      manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
+        if (error) {
+          clearTimeout(timeoutId);
+          manager.stopDeviceScan();
+          resolve();
+          return;
+        }
+
+        if (!device || !isLikelyObdDevice(device)) {
+          return;
+        }
+
+        found.set(device.id, {
+          id: device.id,
+          name: deviceName(device),
+          rssi: typeof device.rssi === 'number' ? device.rssi : null,
+          serviceUUIDs: device.serviceUUIDs ?? [],
+        });
+      });
+    });
+  } finally {
+    manager.destroy();
+  }
+
+  const devices = Array.from(found.values()).sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999));
   return {
-    speedKmh: Math.max(0, Math.round(50 + 35 * Math.sin(t / 9))),
-    rpm: Math.max(750, Math.round(1500 + 900 * Math.abs(Math.sin(t / 6)))),
-    coolantTempC: Math.round(85 + 6 * Math.sin(t / 22)),
-    batteryVoltage: parseFloat((13.8 + 0.5 * Math.sin(t / 14)).toFixed(1)),
-    fuelLevelPercent: Math.round(fuelLevel),
-    engineLoadPercent: Math.round(30 + 20 * Math.abs(Math.sin(t / 8))),
-    throttlePercent: Math.round(15 + 25 * Math.abs(Math.sin(t / 7))),
-    intakeAirTempC: Math.round(28 + 3 * Math.sin(t / 30)),
-    dtcCodes: [],
-    ignitionOn: true,
-    recordedAt: new Date().toISOString(),
+    ok: true,
+    message:
+      devices.length > 0
+        ? `${devices.length}개 BLE OBD 후보를 찾았습니다.`
+        : 'BLE OBD 후보를 찾지 못했습니다. 구형 ELM327 Classic Bluetooth 모델은 BLE 검색에 표시되지 않을 수 있습니다.',
+    devices,
   };
 }
 
-export const obdBle = {
-  setCallbacks(callbacks: ObdCallbacks) {
-    cbs = callbacks;
-  },
-
-  async checkBluetoothState(): Promise<boolean> {
-    return true;
-  },
-
-  startScan() {
-    cbs?.onStateChange('scanning', '시뮬레이션 모드 — 가상 장치를 검색합니다.');
-    let i = 0;
-    const addNext = () => {
-      if (i < SIM_DEVICES.length) {
-        cbs?.onDeviceFound(SIM_DEVICES[i++]);
-        scanTimer = setTimeout(addNext, 900);
-      }
-    };
-    scanTimer = setTimeout(addNext, 700);
-  },
-
-  stopScan() {
-    if (scanTimer) { clearTimeout(scanTimer); scanTimer = null; }
-    cbs?.onStateChange('idle');
-  },
-
-  async connect(_deviceId: string) {
-    cbs?.onStateChange('connecting');
-    await new Promise((r) => setTimeout(r, 900));
-    cbs?.onStateChange('initializing', 'ELM327 초기화 중...');
-    await new Promise((r) => setTimeout(r, 1300));
-    cbs?.onStateChange('connected', '연결 완료 (시뮬레이션)');
-    cbs?.onData(makeLiveData());
-    dataTimer = setInterval(() => cbs?.onData(makeLiveData()), 1000);
-  },
-
-  async disconnect() {
-    if (dataTimer) { clearInterval(dataTimer); dataTimer = null; }
-    if (scanTimer) { clearTimeout(scanTimer); scanTimer = null; }
-    cbs?.onStateChange('idle');
-  },
-
-  isConnected(): boolean {
-    return dataTimer !== null;
-  },
-
-  async readOdometerKm(): Promise<number | null> {
+export async function loadSelectedObdBleDevice(): Promise<ObdBleDevice | null> {
+  const raw = await AsyncStorage.getItem(SELECTED_DEVICE_KEY);
+  if (!raw) {
     return null;
-  },
+  }
 
-  async readFuelSnapshot(): Promise<number | null> {
-    return Math.round(fuelLevel);
-  },
+  try {
+    const parsed = JSON.parse(raw) as ObdBleDevice;
+    if (!parsed.id || !parsed.name) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
-  async readDtcCodes() {
-    await new Promise((r) => setTimeout(r, 600));
-    const base = makeLiveData();
-    cbs?.onData({ ...base, dtcCodes: [] });
-  },
-};
+export async function saveSelectedObdBleDevice(device: ObdBleDevice) {
+  await AsyncStorage.setItem(SELECTED_DEVICE_KEY, JSON.stringify(device));
+}
+
+/**
+ * Connect to a BLE OBD device, auto-detect the serial profile (FFE0 / FFF0 / Nordic UART),
+ * run an ELM327 AT-command init sequence, and probe RPM + speed PIDs.
+ *
+ * One-shot: creates and destroys the BleManager internally.
+ * The device is disconnected on return (success or failure).
+ */
+export async function probeElm327Connection(deviceId: string): Promise<ObdProbeResult> {
+  const logs: ObdProbeLog[] = [];
+  let rpm: number | null = null;
+  let speedKmh: number | null = null;
+  let matchedProfileName: string | null = null;
+
+  const hasPermission = await requestAndroidBluetoothPermissions();
+  if (!hasPermission) {
+    return {
+      ok: false,
+      profile: null,
+      logs: [{ step: 'Bluetooth 권한', ok: false, detail: '권한이 허용되지 않았습니다.' }],
+      rpm: null,
+      speedKmh: null,
+      coolantC: null,
+      batteryV: null,
+      summary: 'Bluetooth 권한 필요',
+    };
+  }
+
+  const { BleManager } = await import('react-native-ble-plx');
+  const manager = new BleManager();
+
+  try {
+    const btState = await manager.state();
+    if (btState !== 'PoweredOn') {
+      return {
+        ok: false,
+        profile: null,
+        logs: [{ step: 'Bluetooth 상태', ok: false, detail: `${btState} — Bluetooth를 켜 주세요` }],
+        rpm: null,
+        speedKmh: null,
+        coolantC: null,
+        batteryV: null,
+        summary: 'Bluetooth 꺼짐',
+      };
+    }
+    logs.push({ step: 'Bluetooth 상태', ok: true, detail: 'PoweredOn' });
+
+    // Connect
+    logs.push({ step: '연결 시도', ok: true, detail: deviceId.slice(0, 24) });
+    const device = await manager.connectToDevice(deviceId, { autoConnect: false });
+    logs.push({ step: '연결됨', ok: true });
+
+    // Discover services and characteristics
+    await device.discoverAllServicesAndCharacteristics();
+    const services = await device.services();
+    logs.push({
+      step: '서비스 검색',
+      ok: true,
+      detail: services.map((s) => s.uuid.toUpperCase().slice(0, 8)).join(' / '),
+    });
+
+    // Find a matching OBD BLE profile
+    type BleChar = Awaited<ReturnType<(typeof services)[0]['characteristics']>>[0];
+    let notifyChar: BleChar | null = null;
+    let writeChar: BleChar | null = null;
+
+    outer: for (const profile of OBD_BLE_PROFILES) {
+      const svc = services.find((s) => uuidMatches(s.uuid, profile.servicePrefix));
+      if (!svc) continue;
+
+      const chars = await svc.characteristics();
+      const notify = chars.find((c) => uuidMatches(c.uuid, profile.notifyPrefix) && c.isNotifiable);
+      const write = chars.find(
+        (c) =>
+          uuidMatches(c.uuid, profile.writePrefix) &&
+          (c.isWritableWithResponse || c.isWritableWithoutResponse)
+      );
+
+      if (notify && write) {
+        matchedProfileName = profile.name;
+        notifyChar = notify;
+        writeChar = write;
+        logs.push({ step: 'BLE 프로필 매칭', ok: true, detail: profile.name });
+        break outer;
+      }
+    }
+
+    // Auto-discover fallback: scan every non-standard service for a notifiable + writable characteristic pair
+    if (!notifyChar || !writeChar) {
+      const STANDARD_PREFIXES = ['1800', '1801', '1802', '1803', '1804', '1805', '1806', '1807',
+                                  '1808', '1809', '180A', '180B', '180C', '180D', '180E', '180F'];
+      const nonStdServices = services.filter(
+        (s) => !STANDARD_PREFIXES.some((p) => uuidMatches(s.uuid, p))
+      );
+
+      for (const svc of nonStdServices) {
+        const chars = await svc.characteristics();
+        const allUUIDs = chars.map((c) => c.uuid.toUpperCase().slice(0, 8)).join(' / ');
+        logs.push({ step: `자동탐색 서비스 ${svc.uuid.toUpperCase().slice(0, 8)}`, ok: true, detail: allUUIDs });
+
+        // Prefer a single char that is both notifiable and writable (common in cheap adapters)
+        const dual = chars.find(
+          (c) => c.isNotifiable && (c.isWritableWithResponse || c.isWritableWithoutResponse)
+        );
+        if (dual) {
+          matchedProfileName = `자동탐색 — ${svc.uuid.toUpperCase().slice(0, 8)} / ${dual.uuid.toUpperCase().slice(0, 8)}`;
+          notifyChar = dual;
+          writeChar = dual;
+          logs.push({ step: 'BLE 프로필 자동탐색', ok: true, detail: matchedProfileName });
+          break;
+        }
+
+        // Try separate notify + write characteristics
+        const notify = chars.find((c) => c.isNotifiable);
+        const write = chars.find((c) => c.isWritableWithResponse || c.isWritableWithoutResponse);
+        if (notify && write) {
+          matchedProfileName = `자동탐색 — ${svc.uuid.toUpperCase().slice(0, 8)}`;
+          notifyChar = notify;
+          writeChar = write;
+          logs.push({ step: 'BLE 프로필 자동탐색', ok: true, detail: matchedProfileName });
+          break;
+        }
+      }
+    }
+
+    if (!notifyChar || !writeChar) {
+      logs.push({
+        step: 'BLE 프로필 매칭',
+        ok: false,
+        detail: '알려진 프로필과 자동탐색 모두 실패했습니다. 서비스 UUID를 개발자에게 공유해 주세요.',
+      });
+      return { ok: false, profile: null, logs, rpm: null, speedKmh: null, coolantC: null, batteryV: null, summary: '호환 BLE 프로필 없음' };
+    }
+
+    // Buffer incoming notify chunks; resolve when ELM327 prompt '>' arrives
+    let rxBuffer = '';
+    let rxResolve: ((s: string) => void) | null = null;
+
+    const subscription = notifyChar.monitor((error, char) => {
+      if (error || !char?.value) return;
+      rxBuffer += decodeB64(char.value);
+      if (rxBuffer.includes('>') && rxResolve) {
+        const response = rxBuffer;
+        rxBuffer = '';
+        const resolve = rxResolve;
+        rxResolve = null;
+        resolve(response);
+      }
+    });
+
+    const capturedWrite = writeChar;
+
+    async function sendCmd(cmd: string, timeoutMs = 4000): Promise<string> {
+      rxBuffer = '';
+      return new Promise<string>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          rxResolve = null;
+          reject(new Error('응답 시간 초과'));
+        }, timeoutMs);
+
+        rxResolve = (response: string) => {
+          clearTimeout(timer);
+          resolve(response);
+        };
+
+        const encoded = encodeB64(cmd + '\r');
+        const writeOp = capturedWrite.isWritableWithResponse
+          ? capturedWrite.writeWithResponse(encoded)
+          : capturedWrite.writeWithoutResponse(encoded);
+
+        writeOp.catch((err: Error) => {
+          clearTimeout(timer);
+          rxResolve = null;
+          reject(err);
+        });
+      });
+    }
+
+    // Helper to clean up ELM327 response text for display
+    function cleanResp(r: string): string {
+      return r.replace(/\r\n|\r|\n/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 60);
+    }
+
+    // Returns true if response indicates OBD supported the PID (not NODATA / ERROR / ?)
+    function isObdOk(r: string): boolean {
+      const up = r.toUpperCase();
+      return !up.includes('NODATA') && !up.includes('ERROR') && !up.includes('?') && !up.includes('UNABLE');
+    }
+
+    let coolantC: number | null = null;
+    let batteryV: number | null = null;
+
+    try {
+      // ATZ — reset ELM327 (allow 6 s; PHEV ECUs are slower)
+      const atzResp = await sendCmd('ATZ', 6000);
+      logs.push({
+        step: 'ATZ (리셋)',
+        ok: atzResp.includes('>'),
+        detail: cleanResp(atzResp),
+      });
+
+      // Echo off
+      const ate0Resp = await sendCmd('ATE0', 4000);
+      logs.push({
+        step: 'ATE0 (에코 끔)',
+        ok: ate0Resp.includes('OK') || ate0Resp.includes('>'),
+        detail: ate0Resp.trim().slice(0, 40),
+      });
+
+      // Linefeeds off, spaces off
+      await sendCmd('ATL0', 3000);
+      await sendCmd('ATS0', 3000);
+      logs.push({ step: 'ATL0/ATS0 (포맷)', ok: true });
+
+      // Adaptive timing level 2 — helps PHEV/hybrid ECUs that respond slowly
+      await sendCmd('ATAT2', 3000);
+      logs.push({ step: 'ATAT2 (적응형 타이밍)', ok: true });
+
+      // Auto OBD protocol (SEARCHING... is normal on PHEVs — allow 10 s)
+      const atspResp = await sendCmd('ATSP0', 10000);
+      logs.push({
+        step: 'ATSP0 (자동 프로토콜)',
+        ok: atspResp.includes('OK') || atspResp.includes('>'),
+        detail: cleanResp(atspResp),
+      });
+
+      // Log the detected protocol so we know which bus was found
+      try {
+        const dpnResp = await sendCmd('ATDPN', 3000);
+        logs.push({ step: 'ATDPN (감지 프로토콜)', ok: true, detail: cleanResp(dpnResp) });
+      } catch { /* non-critical */ }
+
+      // PID 010C — RPM (allow 8 s for PHEV first PID query)
+      try {
+        const rpmResp = await sendCmd('010C', 8000);
+        if (isObdOk(rpmResp)) {
+          rpm = parseRpm(rpmResp);
+          logs.push({
+            step: 'RPM (010C)',
+            ok: rpm !== null,
+            detail: `${cleanResp(rpmResp)} → ${rpm !== null ? `${rpm} RPM` : '파싱 실패'}`,
+          });
+        } else {
+          // NODATA on RPM is expected in EV mode (engine off)
+          const up = rpmResp.toUpperCase();
+          const reason = up.includes('NODATA') ? 'NODATA — EV 모드(엔진 꺼짐) 또는 ECU 미응답' : cleanResp(rpmResp);
+          logs.push({ step: 'RPM (010C)', ok: false, detail: reason });
+        }
+      } catch (e) {
+        logs.push({ step: 'RPM (010C)', ok: false, detail: e instanceof Error ? e.message : '오류' });
+      }
+
+      // PID 010D — speed
+      try {
+        const speedResp = await sendCmd('010D', 8000);
+        if (isObdOk(speedResp)) {
+          speedKmh = parseSpeed(speedResp);
+          logs.push({
+            step: '속도 (010D)',
+            ok: speedKmh !== null,
+            detail: `${cleanResp(speedResp)} → ${speedKmh !== null ? `${speedKmh} km/h` : '파싱 실패'}`,
+          });
+        } else {
+          logs.push({ step: '속도 (010D)', ok: false, detail: cleanResp(speedResp) });
+        }
+      } catch (e) {
+        logs.push({ step: '속도 (010D)', ok: false, detail: e instanceof Error ? e.message : '오류' });
+      }
+
+      // PID 0105 — coolant temperature
+      try {
+        const coolResp = await sendCmd('0105', 5000);
+        if (isObdOk(coolResp)) {
+          const m = coolResp.replace(/\s/g, '').match(/4105([0-9A-Fa-f]{2})/i);
+          if (m) coolantC = parseInt(m[1], 16) - 40;
+          logs.push({ step: '냉각수 온도 (0105)', ok: coolantC !== null, detail: coolantC !== null ? `${coolantC}°C` : cleanResp(coolResp) });
+        } else {
+          logs.push({ step: '냉각수 온도 (0105)', ok: false, detail: cleanResp(coolResp) });
+        }
+      } catch { /* non-critical */ }
+
+      // ATRV — 12V battery voltage (ELM327 internal, always works when connected)
+      try {
+        const rvResp = await sendCmd('ATRV', 4000);
+        const m = rvResp.match(/(\d+\.\d+)\s*V/i);
+        if (m) batteryV = parseFloat(m[1]);
+        logs.push({ step: '배터리 전압 (ATRV)', ok: batteryV !== null, detail: batteryV !== null ? `${batteryV}V` : cleanResp(rvResp) });
+      } catch { /* non-critical */ }
+    } finally {
+      subscription.remove();
+    }
+
+    const connected = matchedProfileName !== null;
+    const hasData = rpm !== null || speedKmh !== null || coolantC !== null || batteryV !== null;
+
+    // EV mode: speed > 0 but RPM = 0 → ICE engine is off, running on electric motor
+    const evMode = speedKmh !== null && speedKmh > 0 && rpm === 0;
+
+    let summary: string;
+    if (!connected) {
+      summary = '연결 실패';
+    } else if (evMode) {
+      summary = `${matchedProfileName} · EV 모드 주행 중 · ${speedKmh} km/h`;
+    } else if (hasData) {
+      const parts: string[] = [matchedProfileName!];
+      if (rpm !== null) parts.push(`RPM ${rpm}`);
+      if (speedKmh !== null) parts.push(`${speedKmh} km/h`);
+      if (coolantC !== null) parts.push(`냉각수 ${coolantC}°C`);
+      if (batteryV !== null) parts.push(`배터리 ${batteryV}V`);
+      summary = parts.join(' · ');
+    } else {
+      summary = `${matchedProfileName} 연결됨 · OBD 데이터 없음 — 플러그인 하이브리드는 전기 주행 중 RPM=0이 정상입니다. 시동 걸고 이동 중 재시도하세요.`;
+    }
+
+    return {
+      ok: connected,
+      profile: matchedProfileName,
+      logs,
+      rpm,
+      speedKmh,
+      coolantC,
+      batteryV,
+      summary,
+    };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    logs.push({ step: '연결 오류', ok: false, detail });
+    return {
+      ok: false,
+      profile: matchedProfileName,
+      logs,
+      rpm: null,
+      speedKmh: null,
+      coolantC: null,
+      batteryV: null,
+      summary: `연결 실패: ${detail}`,
+    };
+  } finally {
+    try { manager.destroy(); } catch { /* ignore */ }
+  }
+}

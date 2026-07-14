@@ -1,116 +1,158 @@
-// Web simulation — real BLE not available in browser environments.
-// Metro resolves lib/obd-ble.native.ts on iOS/Android instead of this file.
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PermissionsAndroid, Platform } from 'react-native';
 
-export type ObdLiveData = {
-  speedKmh: number | null;
-  rpm: number | null;
-  coolantTempC: number | null;
-  batteryVoltage: number | null;
-  fuelLevelPercent: number | null;
-  engineLoadPercent: number | null;
-  throttlePercent: number | null;
-  intakeAirTempC: number | null;
-  dtcCodes: string[];
-  ignitionOn: boolean;
-  recordedAt: string;
+export type ObdBleDevice = {
+  id: string;
+  name: string;
+  rssi: number | null;
+  serviceUUIDs: string[];
 };
 
-export type ObdDevice = { id: string; name: string; rssi: number | null };
-
-export type ObdConnectionState =
-  | 'idle' | 'scanning' | 'connecting' | 'initializing' | 'connected' | 'error' | 'disconnected';
-
-export type ObdCallbacks = {
-  onStateChange: (state: ObdConnectionState, message?: string) => void;
-  onDeviceFound: (device: ObdDevice) => void;
-  onData: (data: ObdLiveData) => void;
+export type ObdBleScanResult = {
+  ok: boolean;
+  message: string;
+  devices: ObdBleDevice[];
 };
 
-const SIM_DEVICES: ObdDevice[] = [
-  { id: 'SIM-001', name: 'Vgate iCar Pro BLE', rssi: -52 },
-  { id: 'SIM-002', name: 'OBDII BLE Adapter', rssi: -71 },
-];
+const SELECTED_DEVICE_KEY = 'vehicle-obd-ble-selected-device-v1';
+const DEFAULT_SCAN_MS = 8_000;
 
-let cbs: ObdCallbacks | null = null;
-let dataTimer: ReturnType<typeof setInterval> | null = null;
-let scanTimer: ReturnType<typeof setTimeout> | null = null;
-let fuelLevel = 65;
+function deviceName(device: { name?: string | null; localName?: string | null }) {
+  return device.localName || device.name || '이름 없는 BLE 장치';
+}
 
-function makeLiveData(): ObdLiveData {
-  const t = Date.now() / 1000;
-  fuelLevel = Math.max(5, fuelLevel - 0.002);
+function isLikelyObdDevice(device: { name?: string | null; localName?: string | null; serviceUUIDs?: string[] | null }) {
+  const name = deviceName(device).toLowerCase();
+  const serviceText = (device.serviceUUIDs ?? []).join(' ').toLowerCase();
+  return /obd|elm|vlink|v-link|icar|car|ble|uart|ffe0|fff0/.test(`${name} ${serviceText}`);
+}
+
+async function requestAndroidBluetoothPermissions() {
+  if (Platform.OS !== 'android') {
+    return true;
+  }
+
+  const permissions: string[] = [];
+  const version = typeof Platform.Version === 'number' ? Platform.Version : Number(Platform.Version);
+
+  if (version >= 31) {
+    permissions.push('android.permission.BLUETOOTH_SCAN', 'android.permission.BLUETOOTH_CONNECT');
+  } else {
+    permissions.push(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+  }
+
+  const result = await PermissionsAndroid.requestMultiple(permissions as Parameters<typeof PermissionsAndroid.requestMultiple>[0]);
+  return Object.values(result).every((value) => value === PermissionsAndroid.RESULTS.GRANTED);
+}
+
+export async function scanForObdBleDevices(scanMs = DEFAULT_SCAN_MS): Promise<ObdBleScanResult> {
+  if (Platform.OS === 'web') {
+    return { ok: false, message: '웹 데모에서는 Bluetooth 검색을 사용할 수 없습니다.', devices: [] };
+  }
+
+  const hasPermission = await requestAndroidBluetoothPermissions();
+  if (!hasPermission) {
+    return { ok: false, message: 'Bluetooth 권한이 허용되지 않았습니다.', devices: [] };
+  }
+
+  const { BleManager } = await import('react-native-ble-plx');
+  const manager = new BleManager();
+  const found = new Map<string, ObdBleDevice>();
+
+  try {
+    const state = await manager.state();
+    if (state !== 'PoweredOn') {
+      return { ok: false, message: `Bluetooth 상태가 ${state}입니다. 휴대폰 Bluetooth를 켜 주세요.`, devices: [] };
+    }
+
+    await new Promise<void>((resolve) => {
+      const timeoutId = setTimeout(() => {
+        manager.stopDeviceScan();
+        resolve();
+      }, scanMs);
+
+      manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
+        if (error) {
+          clearTimeout(timeoutId);
+          manager.stopDeviceScan();
+          resolve();
+          return;
+        }
+
+        if (!device || !isLikelyObdDevice(device)) {
+          return;
+        }
+
+        found.set(device.id, {
+          id: device.id,
+          name: deviceName(device),
+          rssi: typeof device.rssi === 'number' ? device.rssi : null,
+          serviceUUIDs: device.serviceUUIDs ?? [],
+        });
+      });
+    });
+  } finally {
+    manager.destroy();
+  }
+
+  const devices = Array.from(found.values()).sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999));
   return {
-    speedKmh: Math.max(0, Math.round(50 + 35 * Math.sin(t / 9))),
-    rpm: Math.max(750, Math.round(1500 + 900 * Math.abs(Math.sin(t / 6)))),
-    coolantTempC: Math.round(85 + 6 * Math.sin(t / 22)),
-    batteryVoltage: parseFloat((13.8 + 0.5 * Math.sin(t / 14)).toFixed(1)),
-    fuelLevelPercent: Math.round(fuelLevel),
-    engineLoadPercent: Math.round(30 + 20 * Math.abs(Math.sin(t / 8))),
-    throttlePercent: Math.round(15 + 25 * Math.abs(Math.sin(t / 7))),
-    intakeAirTempC: Math.round(28 + 3 * Math.sin(t / 30)),
-    dtcCodes: [],
-    ignitionOn: true,
-    recordedAt: new Date().toISOString(),
+    ok: true,
+    message:
+      devices.length > 0
+        ? `${devices.length}개 BLE OBD 후보를 찾았습니다.`
+        : 'BLE OBD 후보를 찾지 못했습니다. 구형 ELM327 Classic Bluetooth 모델은 BLE 검색에 표시되지 않을 수 있습니다.',
+    devices,
   };
 }
 
-export const obdBle = {
-  setCallbacks(callbacks: ObdCallbacks) {
-    cbs = callbacks;
-  },
+export async function loadSelectedObdBleDevice(): Promise<ObdBleDevice | null> {
+  const raw = await AsyncStorage.getItem(SELECTED_DEVICE_KEY);
+  if (!raw) {
+    return null;
+  }
 
-  async checkBluetoothState(): Promise<boolean> {
-    return true;
-  },
+  try {
+    const parsed = JSON.parse(raw) as ObdBleDevice;
+    if (!parsed.id || !parsed.name) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
-  startScan() {
-    cbs?.onStateChange('scanning', '시뮬레이션 모드 — 가상 장치를 검색합니다.');
-    let i = 0;
-    const addNext = () => {
-      if (i < SIM_DEVICES.length) {
-        cbs?.onDeviceFound(SIM_DEVICES[i++]);
-        scanTimer = setTimeout(addNext, 900);
-      }
-    };
-    scanTimer = setTimeout(addNext, 700);
-  },
+export async function saveSelectedObdBleDevice(device: ObdBleDevice) {
+  await AsyncStorage.setItem(SELECTED_DEVICE_KEY, JSON.stringify(device));
+}
 
-  stopScan() {
-    if (scanTimer) { clearTimeout(scanTimer); scanTimer = null; }
-    cbs?.onStateChange('idle');
-  },
-
-  async connect(_deviceId: string) {
-    cbs?.onStateChange('connecting');
-    await new Promise((r) => setTimeout(r, 900));
-    cbs?.onStateChange('initializing', 'ELM327 초기화 중...');
-    await new Promise((r) => setTimeout(r, 1300));
-    cbs?.onStateChange('connected', '연결 완료 (시뮬레이션)');
-    cbs?.onData(makeLiveData());
-    dataTimer = setInterval(() => cbs?.onData(makeLiveData()), 1000);
-  },
-
-  async disconnect() {
-    if (dataTimer) { clearInterval(dataTimer); dataTimer = null; }
-    if (scanTimer) { clearTimeout(scanTimer); scanTimer = null; }
-    cbs?.onStateChange('idle');
-  },
-
-  isConnected(): boolean {
-    return dataTimer !== null;
-  },
-
-  async readOdometerKm(): Promise<number | null> {
-    return 45823.5;
-  },
-
-  async readFuelSnapshot(): Promise<number | null> {
-    return Math.round(fuelLevel);
-  },
-
-  async readDtcCodes() {
-    await new Promise((r) => setTimeout(r, 600));
-    const base = makeLiveData();
-    cbs?.onData({ ...base, dtcCodes: [] });
-  },
+export type ObdProbeLog = {
+  step: string;
+  ok: boolean;
+  detail?: string;
 };
+
+export type ObdProbeResult = {
+  ok: boolean;
+  profile: string | null;
+  logs: ObdProbeLog[];
+  rpm: number | null;
+  speedKmh: number | null;
+  coolantC: number | null;
+  batteryV: number | null;
+  summary: string;
+};
+
+export async function probeElm327Connection(_deviceId: string): Promise<ObdProbeResult> {
+  return {
+    ok: false,
+    profile: null,
+    logs: [{ step: 'ELM327 프로브', ok: false, detail: '웹 환경에서는 BLE 연결이 지원되지 않습니다.' }],
+    rpm: null,
+    speedKmh: null,
+    coolantC: null,
+    batteryV: null,
+    summary: '웹 환경 미지원',
+  };
+}

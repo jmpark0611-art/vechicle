@@ -46,6 +46,58 @@ create table if not exists public.gps_points (
 create index if not exists gps_points_trip_id_recorded_at_idx
   on public.gps_points (trip_id, recorded_at desc);
 
+create table if not exists public.maintenance_records (
+  id uuid primary key default gen_random_uuid(),
+  vehicle_id uuid not null references public.vehicles (id) on delete cascade,
+  item_key text not null,
+  completed_km numeric not null,
+  completed_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint maintenance_records_item_key_check check (item_key in ('engineOil', 'oilFilter', 'airFilter')),
+  constraint maintenance_records_completed_km_check check (completed_km >= 0)
+);
+
+create index if not exists maintenance_records_vehicle_item_completed_idx
+  on public.maintenance_records (vehicle_id, item_key, completed_at desc);
+
+create table if not exists public.speed_zones (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  latitude double precision not null,
+  longitude double precision not null,
+  radius_m numeric not null,
+  speed_limit_kmh numeric not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint speed_zones_radius_check check (radius_m > 0),
+  constraint speed_zones_limit_check check (speed_limit_kmh > 0)
+);
+
+create index if not exists speed_zones_name_idx
+  on public.speed_zones (name);
+
+create table if not exists public.obd_logs (
+  id uuid primary key default gen_random_uuid(),
+  vehicle_id uuid not null references public.vehicles (id) on delete cascade,
+  rpm numeric,
+  speed_kmh numeric,
+  coolant_temp_c numeric,
+  battery_voltage numeric,
+  fuel_percent numeric,
+  dtc_count integer,
+  recorded_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint obd_logs_rpm_check check (rpm is null or rpm >= 0),
+  constraint obd_logs_speed_check check (speed_kmh is null or speed_kmh >= 0),
+  constraint obd_logs_fuel_check check (fuel_percent is null or (fuel_percent >= 0 and fuel_percent <= 100)),
+  constraint obd_logs_dtc_check check (dtc_count is null or dtc_count >= 0)
+);
+
+create index if not exists obd_logs_vehicle_recorded_idx
+  on public.obd_logs (vehicle_id, recorded_at desc);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -67,3 +119,101 @@ create trigger trips_set_updated_at
 before update on public.trips
 for each row
 execute function public.set_updated_at();
+
+drop trigger if exists maintenance_records_set_updated_at on public.maintenance_records;
+create trigger maintenance_records_set_updated_at
+before update on public.maintenance_records
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists speed_zones_set_updated_at on public.speed_zones;
+create trigger speed_zones_set_updated_at
+before update on public.speed_zones
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists obd_logs_set_updated_at on public.obd_logs;
+create trigger obd_logs_set_updated_at
+before update on public.obd_logs
+for each row
+execute function public.set_updated_at();
+
+alter table public.maintenance_records enable row level security;
+alter table public.speed_zones enable row level security;
+alter table public.obd_logs enable row level security;
+alter table public.vehicles enable row level security;
+alter table public.trips enable row level security;
+alter table public.gps_points enable row level security;
+
+drop policy if exists vehicles_anon_select on public.vehicles;
+create policy vehicles_anon_select
+  on public.vehicles for select
+  using (true);
+
+drop policy if exists vehicles_anon_insert on public.vehicles;
+create policy vehicles_anon_insert
+  on public.vehicles for insert
+  with check (true);
+
+drop policy if exists vehicles_anon_update on public.vehicles;
+create policy vehicles_anon_update
+  on public.vehicles for update
+  using (true)
+  with check (true);
+
+drop policy if exists trips_anon_select on public.trips;
+create policy trips_anon_select
+  on public.trips for select
+  using (true);
+
+drop policy if exists trips_anon_insert on public.trips;
+create policy trips_anon_insert
+  on public.trips for insert
+  with check (true);
+
+drop policy if exists trips_anon_update on public.trips;
+create policy trips_anon_update
+  on public.trips for update
+  using (true)
+  with check (true);
+
+drop policy if exists gps_points_anon_select on public.gps_points;
+create policy gps_points_anon_select
+  on public.gps_points for select
+  using (true);
+
+drop policy if exists gps_points_anon_insert on public.gps_points;
+create policy gps_points_anon_insert
+  on public.gps_points for insert
+  with check (true);
+
+drop policy if exists maintenance_records_anon_select on public.maintenance_records;
+create policy maintenance_records_anon_select
+  on public.maintenance_records for select
+  using (true);
+
+drop policy if exists maintenance_records_anon_insert on public.maintenance_records;
+create policy maintenance_records_anon_insert
+  on public.maintenance_records for insert
+  with check (true);
+
+drop policy if exists speed_zones_anon_select on public.speed_zones;
+create policy speed_zones_anon_select
+  on public.speed_zones for select
+  using (true);
+
+drop policy if exists speed_zones_anon_all on public.speed_zones;
+create policy speed_zones_anon_all
+  on public.speed_zones for all
+  using (true)
+  with check (true);
+
+drop policy if exists obd_logs_anon_select on public.obd_logs;
+create policy obd_logs_anon_select
+  on public.obd_logs for select
+  using (true);
+
+drop policy if exists obd_logs_anon_insert on public.obd_logs;
+create policy obd_logs_anon_insert
+  on public.obd_logs for insert
+  with check (true);

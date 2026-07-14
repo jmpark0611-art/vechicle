@@ -1,5 +1,88 @@
 # 변경 이력
 
+## 2026-07-14 OBD manual diagnostic records
+
+- Continued on branch `rebuild/clean-sdk54-start` after the known-good APK release `apk-29255828399`.
+- Added `lib/obd-data.ts` for OBD readings stored locally first with optional Supabase sync.
+- Vehicle tab now has an `OBD 수동 진단` panel per vehicle for RPM, speed, coolant temperature, battery voltage, fuel percentage, and DTC count.
+- Added `obd_logs` table, indexes, trigger, and anon select/insert RLS policies to `docs/schema.sql`.
+- Check tab now reports the `obd_logs` table status.
+- This step intentionally adds no BLE/native scanner package. Real OBD Bluetooth connection should be a separate APK-tested step after this UI/data path is stable.
+
+## 2026-07-14 Speed-zone alert preview
+
+- Added distance-based speed-zone alert calculation to `lib/location-data.ts`.
+- Location tab now shows vehicles detected inside registered speed zones.
+- If a GPS point includes speed and it is higher than the zone limit, the card marks it as `초과 의심`.
+- This step adds no new native module or permission; it only computes alerts from existing `gps_points` and `speed_zones` data.
+- Verification passed with `npm.cmd run verify` and Android export.
+
+## 2026-07-14 Experimental OBD BLE scanner search
+
+- Created branch `feature/obd-ble-elm327-probe` from the confirmed stable rebuild branch.
+- Added `react-native-ble-plx` and Expo config plugin settings for Android Bluetooth scan/connect permissions.
+- Added `lib/obd-ble.ts` and `lib/obd-ble.native.ts` with the same exported scan/selection API so Android bundling resolves correctly.
+- Vehicle tab now includes an `OBD BLE 스캐너` panel that scans only after the user presses the search button.
+- The scan step saves a selected BLE OBD candidate locally, but does not yet send ELM327 AT commands.
+- Important: many low-cost ELM327 adapters are Classic Bluetooth, not BLE. Those may pair in Android settings but not appear in BLE scanning.
+- Verification passed with `npm.cmd run verify`, `npx.cmd expo export --platform android`, `npx.cmd expo-doctor`, and `npx.cmd expo prebuild --platform android --no-install --clean`.
+- GitHub Actions APK build succeeded for run `29292928878`.
+- Experimental APK: `https://github.com/jmpark0611-art/vechicle/releases/download/apk-29292928878/app-release.apk`
+- Stable non-BLE APK before this experiment: `https://github.com/jmpark0611-art/vechicle/releases/download/apk-29286648719/app-release.apk`
+
+## 2026-07-13 정비 교체완료 기능
+
+- User confirmed the previous APK `apk-29252766820` as "작동 이상무".
+- Added vehicle maintenance replacement completion on the rebuilt stable branch.
+- Vehicle tab now supports local current odometer entry and replacement-completion buttons for engine oil, oil filter, and air filter.
+- Pressing "교체완료" records the current km locally and recalculates the remaining km until the next replacement cycle.
+- This step adds no GPS, WebView map, OBD/BLE, Reanimated, new Android permissions, or Supabase schema writes.
+
+## 2026-07-13 정비 Supabase 동기화 및 APK workflow 보정
+
+- Investigated the failed APK workflow run after `d42377c`; it failed in `Setup Android SDK` before app code was built.
+- Replaced the external Android SDK setup action with a runner SDK check/license step.
+- Added `maintenance_records` to `docs/schema.sql`.
+- Maintenance completion now attempts Supabase insert and safely falls back to local AsyncStorage when the DB table is not ready.
+- Vehicle tab shows the maintenance sync status.
+- Verification passed with `npm run verify` and Android export.
+
+## 2026-07-13 읽기 전용 위치판
+
+- Added a read-only location data layer for active trips, latest GPS points, and speed zones.
+- Replaced the location tab placeholder with a simple marker board, active vehicle list, and speed-zone list.
+- Added `speed_zones` table schema, indexes, triggers, and RLS policies to `docs/schema.sql`.
+- This step adds no GPS permission, WebView map, OBD/BLE, Reanimated, or new native startup module.
+- Verification passed with `npm run verify` and Android export.
+
+## 2026-07-13 제한속도 구역 등록
+
+- Added speed-zone creation from the location tab.
+- Users can enter zone name, latitude, longitude, radius, and speed limit.
+- The app validates coordinates/radius/speed before saving to Supabase.
+- Missing `speed_zones` DB table is handled with an Alert instead of a crash.
+- Verification passed with `npm run verify` and Android export.
+
+## 2026-07-13 GPS 1회 저장 복구
+
+- Reintroduced `expo-location` for foreground GPS only.
+- Added Android foreground location permissions.
+- Trip start and trip completion now attempt to save one current GPS point to `gps_points`.
+- GPS permission denial, missing DB table, RLS failure, and timeout paths are reported through messages without blocking the trip flow.
+- Verification passed with `npm run verify`, `npx expo-doctor` 18/18, and Android export.
+
+## 2026-07-13 Supabase RLS 스키마 보강
+
+- Added RLS enablement and anon policies for vehicles, trips, and gps_points in `docs/schema.sql`.
+- The schema now covers the rebuilt app's current write paths: trip start, trip completion, GPS point insert, maintenance record insert, and speed-zone insert.
+
+## 2026-07-13 시스템 점검 화면 보강
+
+- Rebuilt the check tab as a clean Korean diagnostics screen.
+- The screen now checks vehicles/trips plus gps_points, maintenance_records, and speed_zones.
+- Missing table and query failures are shown per table to make device testing easier.
+- Verification passed with `npm run verify` and Android export.
+
 ## 2026-07-07 수송부 PIN 재인증 루프 차단
 
 - 수송부 PIN 성공 후 기록 화면이 잠깐 보였다가 사라지는 문제를 수정했다.
@@ -88,3 +171,94 @@
 - 주요 액션 버튼에 접근성 라벨을 붙였다.
 - 차량 화면에 같은 차량의 중복 미종료 운행 요약과 차량별 경고를 추가했다.
 - `npm.cmd run verify`와 `npm.cmd run health`를 기준 검증 명령으로 정리했다.
+## 2026-07-13 Clean rebuild stage 1
+
+- Created branch `rebuild/clean-sdk54-start` for a clean Expo SDK 54 rebuild after repeated installed APK startup crashes.
+- Replaced the app with a minimal, launch-first route structure:
+  - role select
+  - commander PIN
+  - tabs for trip, records, vehicles, map, check
+- Kept UI direction visible with light/navy cards and readable Korean labels, but intentionally stubbed database, GPS, WebView map, and OBD/BLE functionality.
+- Removed direct native startup risk modules from this rebuild branch: Reanimated, Worklets, BLE PLX, WebView, Location, Haptics, Expo Image, Expo Symbols, and Expo Web Browser.
+- Simplified `app.json` to no runtime permissions and `newArchEnabled: false`.
+- Replaced legacy source-check rules with clean rebuild checks.
+- Verification passed: `npm run verify`, `npx expo-doctor`, and Android export.
+- Built APK #96 and confirmed from user device screenshot/report that the app opens successfully.
+- Marked build #96 as the known-good launch baseline. Future work should add features one small APK-testable step at a time.
+
+## Deferred cleanup note
+
+- Do not delete old project files during the early rebuild just because the clean baseline does not currently use them.
+- Existing code and history remain the reference for restoring behavior and UI.
+- Cleanup will be done later after the rebuilt app is stable and feature parity is verified.
+
+## 2026-07-13 Clean rebuild step 1: Supabase read-only data
+
+- Added a read-only Supabase data module for the rebuild branch.
+- Connected `vehicles` and `trips` reads without adding writes, GPS, WebView, OBD/BLE, or new native permissions.
+- Vehicle tab now shows Supabase source, vehicle count, and read-only vehicle cards.
+- Records tab now shows recent trips with vehicle-number mapping.
+- Check tab now runs a read-only Supabase health check.
+- Android export passed after this step.
+
+## 2026-07-13 Clean rebuild step 2: manual trip start/end
+
+- Added GPS-free manual trip start/end on the rebuild branch.
+- Added Supabase write helpers for:
+  - Starting trips with `vehicle_id`, `start_place`, `end_place`, and `status = in_progress`.
+  - Completing trips with `end_place`, `end_time`, and `status = completed`.
+- Updated the trip tab with vehicle selection, manual start/end inputs, active trip list, and manual completion buttons.
+- Kept the stability rule: no GPS, WebView map, OBD/BLE, Reanimated, or new native permissions were added.
+- Verification passed with `npm run verify` and Android export.
+
+## 2026-07-13 Manual trip start_time fix
+
+- Fixed build #99 trip-start failure where Supabase rejected inserts because `trips.start_time` was null.
+- `startManualTrip()` now explicitly sends `start_time` as the current ISO timestamp.
+- Verification passed with `npm run verify` and Android export.
+
+## 2026-07-13 Unique APK release tags
+
+- User still saw the same `start_time` error after installing from the old `build-99` release link.
+- Confirmed the source already had the `start_time` fix.
+- Updated the APK workflow to publish each APK under a unique `apk-${{ github.run_id }}` release tag instead of reusing `build-${{ github.run_number }}`.
+- This prevents old release assets from being mistaken for the latest fixed APK.
+
+## 2026-07-13 apk-29251409071 device success
+
+- User installed the unique release APK `apk-29251409071`.
+- Device test succeeded: app opens and manual trip controls respond.
+- This is the confirmed step-2 baseline for continuing rebuild work.
+
+## 2026-07-13 Clean rebuild step 2b: trip input fields
+
+- Added manual trip fields for operator name, user name, and purpose.
+- The app attempts to save these fields when DB columns exist.
+- If the DB does not have `purpose`, `operator_name`, or `user_name`, the app falls back to the minimal trip insert so trip start remains usable.
+- Records and active trip cards display the extended fields when available.
+- No GPS, WebView map, OBD/BLE, Reanimated, or new native permissions were added.
+- Verification passed with `npm run verify`, `npx expo-doctor`, and Android export.
+- User tested `apk-29252766820` and reported normal operation.
+
+## 2026-07-13 Android APK startup crash dependency pass
+
+- Investigated the installed APK crash reported as Android's "app keeps stopping" dialog immediately after launch.
+- Pulled the latest GitHub branch state through `981401e` and confirmed the local tree was clean before applying fixes.
+- `adb devices -l` found no connected device in this session, so live `logcat` could not be captured.
+- Found SDK 54 native dependency mismatches with `npx expo-doctor`:
+  - `@react-native-async-storage/async-storage` was `3.1.1`; SDK 54 expects `2.2.0`.
+  - `react-native-webview` was `14.0.1`; SDK 54 expects `13.15.0`.
+- Ran `npx expo install @react-native-async-storage/async-storage react-native-webview` to pin SDK-compatible native module versions.
+- Verification after the fix: `npx expo-doctor` passes 18/18 and `npm run verify` passes.
+
+## 2026-07-13 Android APK startup crash BLE native removal
+
+- User confirmed the same startup crash remained after build #94.
+- Confirmed Android JS export succeeds, so the release bundle can be generated.
+- Removed unused native BLE integration from the stability APK path:
+  - Uninstalled `react-native-ble-plx`.
+  - Removed the `react-native-ble-plx` config plugin from `app.json`.
+  - Removed Android Bluetooth permissions from `app.json`.
+- The current `lib/obd-ble.native.ts` remains a pure JS simulation/stub, so no JS import depends on `react-native-ble-plx`.
+- Verification after removal: `npx expo-doctor` passes 18/18, `npm run verify` passes, and Android export passes.
+- Next if this APK still crashes: capture device `adb logcat`; without it the remaining issue is likely another native startup module or Android build configuration problem.
