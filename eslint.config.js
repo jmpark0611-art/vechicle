@@ -7,4 +7,9 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*', '.expo/**'],
   },
+  {
+    rules: {
+      'import/no-unresolved': ['error', { ignore: ['react-native-webview', 'react-native-ble-plx'] }],
+    },
+  },
 ]);
