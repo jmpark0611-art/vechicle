@@ -7,6 +7,7 @@ import { saveCurrentGpsPoint } from '@/lib/gps-data';
 import {
   getVehicleMaintenanceState,
   loadSyncedMaintenanceSnapshot,
+  mergeVehicleCurrentKm,
   setVehicleCurrentKm,
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
@@ -16,6 +17,7 @@ import {
   cancelManualTrip,
   completeManualTrip,
   fetchActiveTrips,
+  fetchLatestVehicleOdometers,
   fetchVehiclesReadOnly,
   startManualTrip,
   type TripSummary,
@@ -141,10 +143,13 @@ export default function TripScreen() {
     setErrorMessage(null);
     try {
       const [nextVehicles, nextActiveTrips] = await Promise.all([fetchVehiclesReadOnly(50), fetchActiveTrips(20)]);
-      const maintenance = await loadSyncedMaintenanceSnapshot(nextVehicles.map((vehicle) => vehicle.id));
+      const vehicleIds = nextVehicles.map((vehicle) => vehicle.id);
+      const maintenance = await loadSyncedMaintenanceSnapshot(vehicleIds);
+      const latestOdometers = await fetchLatestVehicleOdometers(vehicleIds);
+      const nextMaintenanceSnapshot = await mergeVehicleCurrentKm(maintenance.snapshot, latestOdometers);
       setVehicles(nextVehicles);
       setActiveTrips(nextActiveTrips);
-      setMaintenanceSnapshot(maintenance.snapshot);
+      setMaintenanceSnapshot(nextMaintenanceSnapshot);
       setSelectedVehicleId((current) => current ?? nextVehicles[0]?.id ?? null);
       if (nextActiveTrips.length > 0) startGpsTimer();
     } catch (error) {

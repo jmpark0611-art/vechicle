@@ -9,6 +9,7 @@ import {
   getVehicleMaintenanceState,
   loadSyncedMaintenanceSnapshot,
   MAINTENANCE_ITEMS,
+  mergeVehicleCurrentKm,
   setVehicleCurrentKm,
   syncMaintenanceCompletion,
   type MaintenanceItem,
@@ -22,7 +23,7 @@ import {
   type ObdBleDevice,
   type ObdProbeResult,
 } from '@/lib/obd-ble';
-import { createVehicle, fetchVehiclesReadOnly, type VehicleSummary } from '@/lib/readonly-data';
+import { createVehicle, fetchLatestVehicleOdometers, fetchVehiclesReadOnly, type VehicleSummary } from '@/lib/readonly-data';
 
 function formatKm(value: number | null | undefined) {
   if (value === null || value === undefined) return '-';
@@ -74,8 +75,10 @@ export default function VehiclesScreen() {
     setErrorMessage(null);
     try {
       const nextVehicles = await fetchVehiclesReadOnly(200);
-      const syncResult = await loadSyncedMaintenanceSnapshot(nextVehicles.map((vehicle) => vehicle.id));
-      const nextSnapshot = syncResult.snapshot;
+      const vehicleIds = nextVehicles.map((vehicle) => vehicle.id);
+      const syncResult = await loadSyncedMaintenanceSnapshot(vehicleIds);
+      const latestOdometers = await fetchLatestVehicleOdometers(vehicleIds);
+      const nextSnapshot = await mergeVehicleCurrentKm(syncResult.snapshot, latestOdometers);
       setVehicles(nextVehicles);
       setSnapshot(nextSnapshot);
       setSelectedVehicleId((current) => current ?? nextVehicles[0]?.id ?? null);

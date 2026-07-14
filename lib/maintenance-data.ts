@@ -185,6 +185,35 @@ export async function setVehicleCurrentKm(vehicleId: string, currentKm: number):
   return snapshot;
 }
 
+export async function mergeVehicleCurrentKm(
+  snapshot: MaintenanceSnapshot,
+  vehicleKm: Record<string, number>
+): Promise<MaintenanceSnapshot> {
+  const nextSnapshot: MaintenanceSnapshot = { ...snapshot };
+  let changed = false;
+
+  for (const [vehicleId, km] of Object.entries(vehicleKm)) {
+    const nextKm = normalizeKm(km);
+    if (nextKm === null) continue;
+
+    const previous = nextSnapshot[vehicleId] ?? emptyState();
+    if (previous.currentKm !== null && previous.currentKm >= nextKm) continue;
+
+    nextSnapshot[vehicleId] = {
+      ...previous,
+      currentKm: nextKm,
+      updatedAt: new Date().toISOString(),
+    };
+    changed = true;
+  }
+
+  if (changed) {
+    await saveMaintenanceSnapshot(nextSnapshot);
+  }
+
+  return nextSnapshot;
+}
+
 export async function completeMaintenanceItem(
   vehicleId: string,
   itemKey: MaintenanceKey,

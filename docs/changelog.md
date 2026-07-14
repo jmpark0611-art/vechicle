@@ -262,6 +262,15 @@
 - The current `lib/obd-ble.native.ts` remains a pure JS simulation/stub, so no JS import depends on `react-native-ble-plx`.
 - Verification after removal: `npx expo-doctor` passes 18/18, `npm run verify` passes, and Android export passes.
 - Next if this APK still crashes: capture device `adb logcat`; without it the remaining issue is likely another native startup module or Android build configuration problem.
+# 2026-07-15 odometer sync from trips
+
+- Vehicle current km now syncs from the latest trip odometer stored in Supabase.
+- Vehicle tab loads `end_odometer` first, then `start_odometer` as a fallback, and merges the latest larger value into maintenance current km.
+- Trip tab uses the same latest trip odometer merge before computing the automatic start odometer.
+- This fixes cases where APK reinstall or another device lost local AsyncStorage current-km state.
+- Note: standard OBD generally does not expose dashboard total odometer reliably; the app uses recorded trip odometer values as the durable source.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-15 active trip button flow
 
 - Driver trip screen now has a clear active/inactive split.

@@ -172,6 +172,15 @@ npm.cmd run health
 - 진행 중 운행이 이미 있으면 운행 시작 시 새 운행을 만들지 않고 기존 운행을 복구한다.
 - 운행 화면은 최신 GPS 좌표를 ref로 보관해 위치 변경 때마다 대시보드 복구 로직이 불필요하게 재생성되지 않도록 했다.
 - Supabase 요청은 `lib/request.ts`의 `withTimeout`을 거치며, 완료 후 내부 타이머를 정리한다.
+# 2026-07-15 handoff: odometer sync from trips
+
+- Added durable odometer sync because local maintenance `currentKm` can reset after APK reinstall or device changes.
+- `fetchLatestVehicleOdometers(vehicleIds)` reads the latest `end_odometer`, falling back to `start_odometer`, from Supabase `trips`.
+- `mergeVehicleCurrentKm(snapshot, vehicleKm)` merges newer/larger trip odometer values into the maintenance snapshot and saves it locally.
+- Vehicle tab and trip tab now both apply this merge during load.
+- Important product note: ELM327/OBD does not reliably expose dashboard total odometer through a standard PID. For now, durable automatic reflection means app-recorded trip odometer values, not direct cluster odometer reading.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-15 handoff: active trip button flow
 
 - Driver trip screen now branches by active-trip state.

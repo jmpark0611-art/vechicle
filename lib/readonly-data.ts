@@ -19,6 +19,7 @@ export type TripSummary = {
   operatorName: string | null;
   userName: string | null;
   startOdometer: number | null;
+  endOdometer: number | null;
 };
 
 export type ManualTripInput = {
@@ -68,6 +69,7 @@ type TripRow = {
   operator_rank?: string | null;
   user_name?: string | null;
   start_odometer?: number | null;
+  end_odometer?: number | null;
 };
 
 type QueryResult<T> = {
@@ -102,11 +104,12 @@ function mapTrip(row: TripRow, vehicleById: Map<string, string>): TripSummary {
     operatorName: row.operator_name ?? null,
     userName: row.user_name ?? null,
     startOdometer: row.start_odometer ?? null,
+    endOdometer: row.end_odometer ?? null,
   };
 }
 
 const BASIC_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status';
-const EXTENDED_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status,purpose,operator_name,user_name,start_odometer';
+const EXTENDED_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status,purpose,operator_name,user_name,start_odometer,end_odometer';
 
 function tripSelect(includeExtended = true) {
   return includeExtended ? EXTENDED_TRIP_SELECT : BASIC_TRIP_SELECT;
@@ -191,6 +194,43 @@ export async function fetchActiveTrips(limit = 20): Promise<TripSummary[]> {
   const [vehicles, trips] = await Promise.all([fetchVehiclesReadOnly(200), fetchTripRows(limit, true)]);
   const vehicleById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle.vehicleNumber]));
   return trips.map((trip) => mapTrip(trip, vehicleById));
+}
+
+export async function fetchLatestVehicleOdometers(vehicleIds: string[]): Promise<Record<string, number>> {
+  if (vehicleIds.length === 0) {
+    return {};
+  }
+
+  const result = await withRequestTimeout(
+    supabase
+      .from('trips')
+      .select('vehicle_id,start_odometer,end_odometer,start_time,end_time')
+      .in('vehicle_id', vehicleIds)
+      .order('end_time', { ascending: false, nullsFirst: false })
+      .order('start_time', { ascending: false })
+      .limit(500),
+    '차량 계기판 기록'
+  );
+
+  if (result.error) {
+    if (isMissingColumnError(result.error)) {
+      return {};
+    }
+    throw new Error(result.error.message);
+  }
+
+  const latest: Record<string, number> = {};
+  for (const row of (result.data ?? []) as TripRow[]) {
+    if (!row.vehicle_id || latest[row.vehicle_id] !== undefined) continue;
+    const endOdometer = typeof row.end_odometer === 'number' && row.end_odometer > 0 ? row.end_odometer : null;
+    const startOdometer = typeof row.start_odometer === 'number' && row.start_odometer > 0 ? row.start_odometer : null;
+    const odometer = endOdometer ?? startOdometer;
+    if (odometer !== null) {
+      latest[row.vehicle_id] = Math.round(odometer);
+    }
+  }
+
+  return latest;
 }
 
 async function insertTrip(payload: Record<string, string | number | null>) {
