@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
+import { loadSyncedObdSnapshot, type ObdSnapshot } from '@/lib/obd-data';
 import { fetchTripsReadOnly, fetchVehiclesReadOnly, type TripSummary, type VehicleSummary } from '@/lib/readonly-data';
 
 function formatTripTime(value: string | null) {
@@ -25,6 +26,7 @@ export default function RecordsScreen() {
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [obdSnapshot, setObdSnapshot] = useState<ObdSnapshot>({});
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -33,8 +35,10 @@ export default function RecordsScreen() {
     setErrorMessage(null);
     try {
       const [nextTrips, nextVehicles] = await Promise.all([fetchTripsReadOnly(100), fetchVehiclesReadOnly(50)]);
+      const obd = await loadSyncedObdSnapshot(nextVehicles.map((vehicle) => vehicle.id));
       setTrips(nextTrips);
       setVehicles(nextVehicles);
+      setObdSnapshot(obd.snapshot);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '운행 기록을 불러오지 못했습니다.');
     } finally {
@@ -90,6 +94,9 @@ export default function RecordsScreen() {
             {trip.purpose ? <StatusLine label="목적" value={trip.purpose} /> : null}
             {trip.operatorName ? <StatusLine label="운전자" value={trip.operatorName} /> : null}
             {trip.userName ? <StatusLine label="사용자" value={trip.userName} /> : null}
+            {trip.vehicleId && obdSnapshot[trip.vehicleId]?.fuelPercent !== null && obdSnapshot[trip.vehicleId]?.fuelPercent !== undefined ? (
+              <StatusLine label="OBD 연료" value={`${obdSnapshot[trip.vehicleId].fuelPercent}%`} />
+            ) : null}
           </SectionCard>
         ))
       )}

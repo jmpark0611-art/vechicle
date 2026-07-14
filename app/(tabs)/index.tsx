@@ -4,6 +4,7 @@ import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { saveCurrentGpsPoint } from '@/lib/gps-data';
+import { getVehicleMaintenanceState, loadSyncedMaintenanceSnapshot, setVehicleCurrentKm, type MaintenanceSnapshot } from '@/lib/maintenance-data';
 import { saveTripObdLog } from '@/lib/obd-data';
 import { loadSelectedObdBleDevice, obdBle, type ObdLiveData } from '@/lib/obd-ble';
 import {
@@ -31,6 +32,7 @@ export default function TripScreen() {
   const [activeTrips, setActiveTrips] = useState<TripSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [operatorName, setOperatorName] = useState('');
+  const [operatorRank, setOperatorRank] = useState('');
   const [userName, setUserName] = useState('');
   const [purpose, setPurpose] = useState('');
   const [startPlace, setStartPlace] = useState('본부대');
@@ -40,6 +42,7 @@ export default function TripScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [maintenanceSnapshot, setMaintenanceSnapshot] = useState<MaintenanceSnapshot>({});
   const [obdLiveData, setObdLiveData] = useState<ObdLiveData | null>(null);
   const [isObdConnected, setIsObdConnected] = useState(false);
   const [savedBleDeviceId, setSavedBleDeviceId] = useState<string | null>(null);
@@ -123,8 +126,10 @@ export default function TripScreen() {
     setErrorMessage(null);
     try {
       const [nextVehicles, nextActiveTrips] = await Promise.all([fetchVehiclesReadOnly(50), fetchActiveTrips(20)]);
+      const maintenance = await loadSyncedMaintenanceSnapshot(nextVehicles.map((vehicle) => vehicle.id));
       setVehicles(nextVehicles);
       setActiveTrips(nextActiveTrips);
+      setMaintenanceSnapshot(maintenance.snapshot);
       setSelectedVehicleId((current) => current ?? nextVehicles[0]?.id ?? null);
       if (nextActiveTrips.length > 0) startGpsTimer();
     } catch (error) {
@@ -150,14 +155,19 @@ export default function TripScreen() {
 
     setIsSaving(true);
     try {
+      const currentKm = selectedVehicleId
+        ? getVehicleMaintenanceState(maintenanceSnapshot, selectedVehicleId).currentKm
+        : null;
+      const autoStartOdometer = startOdometer.trim() ? Number(startOdometer.trim()) : currentKm ?? undefined;
       const trip = await startManualTrip({
         vehicleId: selectedVehicleId,
         startPlace,
         endPlace,
         purpose,
         operatorName,
+        operatorRank,
         userName,
-        startOdometer: startOdometer.trim() ? Number(startOdometer.trim()) : undefined,
+        startOdometer: autoStartOdometer,
       });
       setActiveTrips((current) => [trip, ...current]);
       setPurpose('');
@@ -219,6 +229,10 @@ export default function TripScreen() {
         await saveTripObdLog(trip.vehicleId, trip.id, obdLiveData);
       }
       await completeManualTrip(trip.id, finalEndPlace, endOdo, startOdo);
+      if (trip.vehicleId && endOdo !== undefined && endOdo > 0) {
+        const nextSnapshot = await setVehicleCurrentKm(trip.vehicleId, endOdo);
+        setMaintenanceSnapshot(nextSnapshot);
+      }
       const gpsResult = await saveCurrentGpsPoint(trip.id);
       setActiveTrips((current) => current.filter((item) => item.id !== trip.id));
       if (activeTrips.length <= 1) {
@@ -249,10 +263,6 @@ export default function TripScreen() {
   return (
     <RebuildScreen
       title="운행"
-      metrics={[
-        { label: '차량', value: `${vehicles.length}대` },
-        { label: '진행 중', value: `${activeTrips.length}건` },
-      ]}
       actionLabel={isSaving ? '저장 중' : '운행 시작'}
       onAction={() => void handleStartTrip()}>
       {isLoading ? (
@@ -270,23 +280,38 @@ export default function TripScreen() {
             />
           </SectionCard>
 
-          <SectionCard title="운행 정보">
+          <SectionCard title="운행자">
             {savedBleDeviceName ? (
               <StatusLine
                 label="OBD"
                 value={isObdConnected ? '연결됨' : `${savedBleDeviceName} · 운행 시작 시 자동 연결`}
               />
             ) : null}
+            <TextInput style={styles.input} value={operatorRank} onChangeText={setOperatorRank} placeholder="계급" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.input} value={operatorName} onChangeText={setOperatorName} placeholder="운전자 성명" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.input} value={userName} onChangeText={setUserName} placeholder="사용자 성명" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.input} value={purpose} onChangeText={setPurpose} placeholder="운행 목적" placeholderTextColor="#94A3B8" />
+          </SectionCard>
+
+          <SectionCard title="경로">
             <TextInput style={styles.input} value={startPlace} onChangeText={setStartPlace} placeholder="출발지" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.input} value={endPlace} onChangeText={setEndPlace} placeholder="목적지" placeholderTextColor="#94A3B8" />
+          </SectionCard>
+
+          <SectionCard title="계기판">
+            <StatusLine
+              label="출발 자동 기준"
+              value={
+                selectedVehicleId
+                  ? `${getVehicleMaintenanceState(maintenanceSnapshot, selectedVehicleId).currentKm?.toLocaleString('ko-KR') ?? '-'} km`
+                  : '-'
+              }
+            />
             <TextInput
               style={styles.input}
               value={startOdometer}
               onChangeText={setStartOdometer}
-              placeholder="출발 계기판 km (선택)"
+              placeholder="출발 계기판 km (비우면 자동)"
               placeholderTextColor="#94A3B8"
               keyboardType="number-pad"
             />

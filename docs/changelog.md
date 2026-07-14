@@ -262,6 +262,19 @@
 - The current `lib/obd-ble.native.ts` remains a pure JS simulation/stub, so no JS import depends on `react-native-ble-plx`.
 - Verification after removal: `npx expo-doctor` passes 18/18, `npm run verify` passes, and Android export passes.
 - Next if this APK still crashes: capture device `adb logcat`; without it the remaining issue is likely another native startup module or Android build configuration problem.
+# 2026-07-14 vehicle workflow refinement
+
+- Map WebView touch handling adjusted so the Leaflet map can be dragged while setting speed zones.
+- Vehicle tab now uses a dropdown-driven single vehicle detail view instead of rendering every vehicle card at once.
+- Added vehicle registration from the vehicle tab.
+- Added fleet-wide maintenance due alerts so approaching replacement cycles are visible without opening every vehicle.
+- Trip screen no longer shows vehicle-count/progress metrics in driver mode.
+- Added operator rank input and split trip input into operator, route, and odometer sections.
+- Trip start uses the selected vehicle's saved current km as the start odometer when the field is left blank.
+- Trip completion updates the selected vehicle's current km when an end odometer is entered.
+- Records screen now displays the latest OBD fuel percentage when available.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-14 map and driver-mode refinement
 
 - Driver mode now shows only the 운행 tab; commander mode keeps 기록, 차량, 위치, 점검.

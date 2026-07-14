@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
+import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import {
   completeMaintenanceItem,
   getRemainingKm,
@@ -21,7 +22,7 @@ import {
   type ObdBleDevice,
   type ObdProbeResult,
 } from '@/lib/obd-ble';
-import { fetchVehiclesReadOnly, type VehicleSummary } from '@/lib/readonly-data';
+import { createVehicle, fetchVehiclesReadOnly, type VehicleSummary } from '@/lib/readonly-data';
 
 function formatKm(value: number | null | undefined) {
   if (value === null || value === undefined) return '-';
@@ -29,7 +30,7 @@ function formatKm(value: number | null | undefined) {
 }
 
 function remainingLabel(remainingKm: number | null) {
-  if (remainingKm === null) return '기준 주행거리 필요';
+  if (remainingKm === null) return '현재 km 필요';
   if (remainingKm <= 0) return `${Math.abs(remainingKm).toLocaleString('ko-KR')}km 초과`;
   return `${remainingKm.toLocaleString('ko-KR')}km 남음`;
 }
@@ -40,8 +41,10 @@ function isDue(remainingKm: number | null) {
 
 export default function VehiclesScreen() {
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<MaintenanceSnapshot>({});
   const [kmInputs, setKmInputs] = useState<Record<string, string>>({});
+  const [newVehicleNumber, setNewVehicleNumber] = useState('');
   const [bleDevices, setBleDevices] = useState<ObdBleDevice[]>([]);
   const [selectedBleDevice, setSelectedBleDevice] = useState<ObdBleDevice | null>(null);
   const [isScanningBle, setIsScanningBle] = useState(false);
@@ -50,26 +53,32 @@ export default function VehiclesScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [bleMessage, setBleMessage] = useState('검색 전');
+  const [bleMessage, setBleMessage] = useState('미연결');
 
-  const dueCount = useMemo(
-    () =>
-      vehicles.reduce((count, vehicle) => {
-        const state = getVehicleMaintenanceState(snapshot, vehicle.id);
-        return count + MAINTENANCE_ITEMS.filter((item) => isDue(getRemainingKm(state, item))).length;
-      }, 0),
-    [snapshot, vehicles]
+  const selectedVehicle = useMemo(
+    () => vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? vehicles[0] ?? null,
+    [selectedVehicleId, vehicles]
   );
+
+  const dueItems = useMemo(() => {
+    return vehicles.flatMap((vehicle) => {
+      const state = getVehicleMaintenanceState(snapshot, vehicle.id);
+      return MAINTENANCE_ITEMS
+        .map((item) => ({ vehicle, item, remainingKm: getRemainingKm(state, item) }))
+        .filter((entry) => isDue(entry.remainingKm));
+    });
+  }, [snapshot, vehicles]);
 
   const loadVehicles = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const nextVehicles = await fetchVehiclesReadOnly(50);
+      const nextVehicles = await fetchVehiclesReadOnly(200);
       const syncResult = await loadSyncedMaintenanceSnapshot(nextVehicles.map((vehicle) => vehicle.id));
       const nextSnapshot = syncResult.snapshot;
       setVehicles(nextVehicles);
       setSnapshot(nextSnapshot);
+      setSelectedVehicleId((current) => current ?? nextVehicles[0]?.id ?? null);
       setKmInputs(
         Object.fromEntries(
           nextVehicles.map((vehicle) => {
@@ -108,12 +117,27 @@ export default function VehiclesScreen() {
     return Math.round(currentKm);
   }
 
+  async function handleAddVehicle() {
+    setIsSaving(true);
+    try {
+      const vehicle = await createVehicle(newVehicleNumber);
+      setNewVehicleNumber('');
+      setSelectedVehicleId(vehicle.id);
+      await loadVehicles();
+      Alert.alert('차량 등록 완료', `${vehicle.vehicleNumber} 차량을 등록했습니다.`);
+    } catch (error) {
+      Alert.alert('차량 등록 실패', error instanceof Error ? error.message : '차량을 등록하지 못했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function handleSaveCurrentKm(vehicle: VehicleSummary) {
     setIsSaving(true);
     try {
       const currentKm = await saveCurrentKm(vehicle);
       if (currentKm !== null) {
-        Alert.alert('저장 완료', `${vehicle.vehicleNumber} 주행거리 ${formatKm(currentKm)} 저장됨`);
+        Alert.alert('저장 완료', `${vehicle.vehicleNumber} 현재 주행거리 ${formatKm(currentKm)} 저장됨`);
       }
     } catch (error) {
       Alert.alert('저장 실패', error instanceof Error ? error.message : '주행거리를 저장하지 못했습니다.');
@@ -130,7 +154,7 @@ export default function VehiclesScreen() {
       const nextSnapshot = await completeMaintenanceItem(vehicle.id, item.key, currentKm);
       setSnapshot(nextSnapshot);
       await syncMaintenanceCompletion(vehicle.id, item.key, currentKm);
-      Alert.alert('교체완료', `${vehicle.vehicleNumber} ${item.label} 교체를 ${formatKm(currentKm)} 기준으로 기록했습니다.`);
+      Alert.alert('교체 완료', `${vehicle.vehicleNumber} ${item.label} 교체를 ${formatKm(currentKm)} 기준으로 기록했습니다.`);
     } catch (error) {
       Alert.alert('교체 기록 실패', error instanceof Error ? error.message : '교체 기록을 저장하지 못했습니다.');
     } finally {
@@ -140,7 +164,7 @@ export default function VehiclesScreen() {
 
   async function handleScanObdBle() {
     setIsScanningBle(true);
-    setBleMessage('검색 중…');
+    setBleMessage('검색 중');
     try {
       const result = await scanForObdBleDevices();
       setBleDevices(result.devices);
@@ -166,13 +190,13 @@ export default function VehiclesScreen() {
     if (!selectedBleDevice) return;
     setIsProbing(true);
     setProbeResult(null);
-    setBleMessage('ELM327 테스트 중…');
+    setBleMessage('ELM327 테스트 중');
     try {
       const result = await probeElm327Connection(selectedBleDevice.id);
       setProbeResult(result);
       setBleMessage(result.summary);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'ELM327 프로브 실패';
+      const message = error instanceof Error ? error.message : 'ELM327 연결 테스트 실패';
       setBleMessage(message);
       Alert.alert('연결 테스트 실패', message);
     } finally {
@@ -180,21 +204,40 @@ export default function VehiclesScreen() {
     }
   }
 
+  const selectedState = selectedVehicle ? getVehicleMaintenanceState(snapshot, selectedVehicle.id) : null;
+
   return (
-    <RebuildScreen
-      title="차량 관리"
-      metrics={[
-        { label: '등록 차량', value: `${vehicles.length}대` },
-        { label: '교체 임박', value: `${dueCount}건` },
-      ]}
-      actionLabel={isSaving ? '저장 중…' : '새로고침'}
-      onAction={() => void loadVehicles()}>
+    <RebuildScreen title="차량" actionLabel={isSaving ? '저장 중' : '새로고침'} onAction={() => void loadVehicles()}>
+      <SectionCard title="차량 등록">
+        <View style={styles.addRow}>
+          <TextInput
+            style={styles.addInput}
+            value={newVehicleNumber}
+            onChangeText={setNewVehicleNumber}
+            placeholder="예: 82바 1043"
+            placeholderTextColor="#94A3B8"
+          />
+          <Pressable style={styles.addBtn} onPress={() => void handleAddVehicle()} disabled={isSaving}>
+            <Text style={styles.addBtnText}>등록</Text>
+          </Pressable>
+        </View>
+      </SectionCard>
+
+      {dueItems.length > 0 ? (
+        <SectionCard title={`교체 알림 ${dueItems.length}건`}>
+          {dueItems.slice(0, 8).map(({ vehicle, item, remainingKm }) => (
+            <StatusLine key={`${vehicle.id}-${item.key}`} label={`${vehicle.vehicleNumber} · ${item.label}`} value={remainingLabel(remainingKm)} />
+          ))}
+        </SectionCard>
+      ) : (
+        <SectionCard title="교체 알림" body="현재 교체시기가 임박한 차량이 없습니다." />
+      )}
 
       <SectionCard title="OBD BLE 장치">
         <StatusLine label="상태" value={bleMessage} />
         {selectedBleDevice ? <StatusLine label="선택 장치" value={selectedBleDevice.name} /> : null}
         <Pressable style={styles.bleScanBtn} onPress={() => void handleScanObdBle()} disabled={isScanningBle || isProbing}>
-          <Text style={styles.bleScanBtnText}>{isScanningBle ? '검색 중…' : 'BLE 스캐너 검색'}</Text>
+          <Text style={styles.bleScanBtnText}>{isScanningBle ? '검색 중' : 'BLE 장치 검색'}</Text>
         </Pressable>
         {bleDevices.map((device) => (
           <Pressable key={device.id} style={styles.bleDeviceBtn} onPress={() => void handleSelectBleDevice(device)}>
@@ -203,65 +246,66 @@ export default function VehiclesScreen() {
               <Text style={styles.bleDeviceMeta}>RSSI {device.rssi ?? '-'}</Text>
             </View>
             <Text style={[styles.bleDeviceAction, selectedBleDevice?.id === device.id && styles.bleDeviceActionSelected]}>
-              {selectedBleDevice?.id === device.id ? '선택됨 ✓' : '선택'}
+              {selectedBleDevice?.id === device.id ? '선택됨' : '선택'}
             </Text>
           </Pressable>
         ))}
-        {selectedBleDevice && (
+        {selectedBleDevice ? (
           <Pressable
             style={[styles.bleProbeBtn, isProbing && styles.bleProbeBtnDisabled]}
             onPress={() => void handleProbeElm327()}
             disabled={isProbing || isScanningBle}>
-            <Text style={styles.bleProbeBtnText}>
-              {isProbing ? 'ELM327 테스트 중…' : `ELM327 연결 테스트`}
-            </Text>
+            <Text style={styles.bleProbeBtnText}>{isProbing ? 'ELM327 테스트 중' : 'ELM327 연결 테스트'}</Text>
           </Pressable>
-        )}
-        {probeResult && (
+        ) : null}
+        {probeResult ? (
           <View style={styles.probeResultCard}>
-            <View style={styles.probeResultHeader}>
-              <Text style={styles.probeResultTitle}>테스트 결과</Text>
-              <View style={[styles.probeResultBadge, probeResult.ok ? styles.probeResultBadgeOk : styles.probeResultBadgeFail]}>
-                <Text style={styles.probeResultBadgeText}>{probeResult.ok ? '성공' : '실패'}</Text>
-              </View>
-            </View>
+            <Text style={styles.probeResultTitle}>테스트 결과: {probeResult.ok ? '성공' : '실패'}</Text>
             {probeResult.profile ? <StatusLine label="프로필" value={probeResult.profile} /> : null}
             {probeResult.rpm !== null ? <StatusLine label="RPM" value={String(probeResult.rpm)} /> : null}
             {probeResult.speedKmh !== null ? <StatusLine label="속도" value={`${probeResult.speedKmh} km/h`} /> : null}
             {probeResult.batteryV !== null ? <StatusLine label="배터리" value={`${probeResult.batteryV}V`} /> : null}
           </View>
-        )}
+        ) : null}
       </SectionCard>
 
       {isLoading ? (
-        <LoadingCard label="차량 목록 불러오는 중" />
+        <LoadingCard label="차량 목록을 불러오는 중" />
       ) : errorMessage ? (
         <SectionCard title="오류" body={errorMessage} />
       ) : vehicles.length === 0 ? (
         <SectionCard title="차량 없음" body="등록된 차량이 없습니다." />
       ) : (
-        vehicles.map((vehicle) => {
-          const state = getVehicleMaintenanceState(snapshot, vehicle.id);
-          return (
-            <SectionCard key={vehicle.id} title={vehicle.vehicleNumber}>
+        <>
+          <SectionCard title="차량 선택">
+            <VehicleDropdown
+              vehicles={vehicles}
+              selectedVehicleId={selectedVehicle?.id ?? null}
+              onSelect={setSelectedVehicleId}
+              placeholder="차량을 선택하세요"
+            />
+          </SectionCard>
+
+          {selectedVehicle && selectedState ? (
+            <SectionCard title={selectedVehicle.vehicleNumber}>
               <View style={styles.kmRow}>
                 <TextInput
                   style={styles.kmInput}
-                  value={kmInputs[vehicle.id] ?? ''}
-                  onChangeText={(value) => setKmInputs((current) => ({ ...current, [vehicle.id]: value }))}
+                  value={kmInputs[selectedVehicle.id] ?? ''}
+                  onChangeText={(value) => setKmInputs((current) => ({ ...current, [selectedVehicle.id]: value }))}
                   placeholder="현재 주행거리 km"
                   placeholderTextColor="#94A3B8"
                   keyboardType="number-pad"
                 />
-                <Pressable style={styles.saveBtn} onPress={() => void handleSaveCurrentKm(vehicle)} disabled={isSaving}>
+                <Pressable style={styles.saveBtn} onPress={() => void handleSaveCurrentKm(selectedVehicle)} disabled={isSaving}>
                   <Text style={styles.saveBtnText}>저장</Text>
                 </Pressable>
               </View>
-              <StatusLine label="현재 기준" value={formatKm(state.currentKm)} />
+              <StatusLine label="현재 기준" value={formatKm(selectedState.currentKm)} />
 
               {MAINTENANCE_ITEMS.map((item) => {
-                const remainingKm = getRemainingKm(state, item);
-                const completedKm = state.completedKm[item.key];
+                const remainingKm = getRemainingKm(selectedState, item);
+                const completedKm = selectedState.completedKm[item.key];
                 const due = isDue(remainingKm);
                 return (
                   <View key={item.key} style={[styles.itemCard, due && styles.itemCardDue]}>
@@ -270,25 +314,44 @@ export default function VehiclesScreen() {
                       <Text style={[styles.remaining, due && styles.remainingDue]}>{remainingLabel(remainingKm)}</Text>
                     </View>
                     <StatusLine label="최근 교체" value={formatKm(completedKm)} />
-                    <StatusLine
-                      label="다음 교체"
-                      value={completedKm === undefined ? '-' : formatKm(completedKm + item.intervalKm)}
-                    />
-                    <Pressable style={styles.completeBtn} onPress={() => void handleComplete(vehicle, item)} disabled={isSaving}>
+                    <StatusLine label="다음 교체" value={completedKm === undefined ? '-' : formatKm(completedKm + item.intervalKm)} />
+                    <Pressable style={styles.completeBtn} onPress={() => void handleComplete(selectedVehicle, item)} disabled={isSaving}>
                       <Text style={styles.completeBtnText}>교체완료</Text>
                     </Pressable>
                   </View>
                 );
               })}
             </SectionCard>
-          );
-        })
+          ) : null}
+        </>
       )}
     </RebuildScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  addRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  addInput: {
+    flex: 1,
+    minHeight: 50,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '800',
+    paddingHorizontal: 14,
+  },
+  addBtn: {
+    minWidth: 72,
+    minHeight: 50,
+    borderRadius: 12,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
   kmRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   kmInput: {
     flex: 1,
@@ -378,15 +441,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     padding: 14,
   },
-  probeResultHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
   probeResultTitle: { color: '#0F172A', fontSize: 14, fontWeight: '900' },
-  probeResultBadge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  probeResultBadgeOk: { backgroundColor: '#D1FAE5' },
-  probeResultBadgeFail: { backgroundColor: '#FEE2E2' },
-  probeResultBadgeText: { fontSize: 12, fontWeight: '900', color: '#0F172A' },
 });

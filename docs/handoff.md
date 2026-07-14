@@ -172,6 +172,24 @@ npm.cmd run health
 - 진행 중 운행이 이미 있으면 운행 시작 시 새 운행을 만들지 않고 기존 운행을 복구한다.
 - 운행 화면은 최신 GPS 좌표를 ref로 보관해 위치 변경 때마다 대시보드 복구 로직이 불필요하게 재생성되지 않도록 했다.
 - Supabase 요청은 `lib/request.ts`의 `withTimeout`을 거치며, 완료 후 내부 타이머를 정리한다.
+# 2026-07-14 handoff: vehicle workflow refinement
+
+- Map drag issue: changed WebView to allow scrolling/nested scrolling and changed Leaflet touch-action to `pan-x pan-y`.
+- Vehicle tab:
+  - Added vehicle registration.
+  - Reworked from all-vehicle scrolling cards to one dropdown-selected vehicle detail.
+  - Added fleet-wide maintenance due alerts.
+- Trip tab:
+  - Removed driver-mode metrics.
+  - Added operator rank input.
+  - Split inputs into operator, route, and odometer sections.
+  - Blank start odometer now uses selected vehicle's saved current km.
+  - End odometer on trip completion updates vehicle current km for maintenance/vehicle tab.
+- Records tab:
+  - Displays latest OBD fuel percentage when available.
+  - True fuel consumption still needs tank capacity or start/end fuel readings to calculate accurately.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-14 handoff: map and driver-mode refinement
 
 - Added after commit `b71d20f`.

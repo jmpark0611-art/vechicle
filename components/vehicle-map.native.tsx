@@ -27,7 +27,8 @@ export function VehicleMap({ html, style, onMapTap, onMapCenter }: Props) {
         source={{ html }}
         style={styles.webview}
         onMessage={handleMessage}
-        scrollEnabled={false}
+        scrollEnabled
+        nestedScrollEnabled
         bounces={false}
         originWhitelist={['*']}
         javaScriptEnabled

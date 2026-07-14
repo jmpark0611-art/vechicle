@@ -84,7 +84,7 @@ export function generateVehicleMapHtml(
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body, #map { width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     body { background: #E8EEF6; }
-    #map, .leaflet-container { touch-action: none; }
+    .leaflet-container { touch-action: pan-x pan-y; }
     .floating-note {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       z-index: 1000; background: #FFFFFF; padding: 16px 18px; border-radius: 14px;

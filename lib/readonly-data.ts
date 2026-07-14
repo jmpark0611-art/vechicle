@@ -27,6 +27,7 @@ export type ManualTripInput = {
   endPlace: string;
   purpose?: string;
   operatorName?: string;
+  operatorRank?: string;
   userName?: string;
   startOdometer?: number;
 };
@@ -64,6 +65,7 @@ type TripRow = {
   status: string | null;
   purpose?: string | null;
   operator_name?: string | null;
+  operator_rank?: string | null;
   user_name?: string | null;
   start_odometer?: number | null;
 };
@@ -129,6 +131,28 @@ export async function fetchVehiclesReadOnly(limit = 20): Promise<VehicleSummary[
   }
 
   return ((result.data ?? []) as VehicleRow[]).map(mapVehicle);
+}
+
+export async function createVehicle(vehicleNumber: string): Promise<VehicleSummary> {
+  const trimmed = vehicleNumber.trim();
+  if (!trimmed) {
+    throw new Error('차량번호를 입력해 주세요.');
+  }
+
+  const result = await withRequestTimeout(
+    supabase
+      .from('vehicles')
+      .insert({ vehicle_number: trimmed })
+      .select('id, vehicle_number, created_at')
+      .single(),
+    '차량 등록'
+  ) as QueryResult<VehicleRow>;
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return mapVehicle(result.data as VehicleRow);
 }
 
 async function fetchTripsWithSelect(limit: number, activeOnly: boolean, includeExtended: boolean) {
@@ -204,6 +228,7 @@ export async function startManualTrip(input: ManualTripInput): Promise<TripSumma
     ...basePayload,
     purpose: input.purpose?.trim() || null,
     operator_name: input.operatorName?.trim() || null,
+    operator_rank: input.operatorRank?.trim() || null,
     user_name: input.userName?.trim() || null,
     start_odometer: input.startOdometer ?? null,
   };
