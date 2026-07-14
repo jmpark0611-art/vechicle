@@ -262,6 +262,15 @@
 - The current `lib/obd-ble.native.ts` remains a pure JS simulation/stub, so no JS import depends on `react-native-ble-plx`.
 - Verification after removal: `npx expo-doctor` passes 18/18, `npm run verify` passes, and Android export passes.
 - Next if this APK still crashes: capture device `adb logcat`; without it the remaining issue is likely another native startup module or Android build configuration problem.
+# 2026-07-15 active trip button flow
+
+- Driver trip screen now has a clear active/inactive split.
+- When a trip is active, the start form is hidden and the screen shows a simple `운행 중` card.
+- Removed the visible `진행 중 운행 N건` title from driver mode.
+- The bottom primary action changes from `운행 시작` to `운행 종료` while a trip is active.
+- Trip cancellation remains available as a secondary button inside the active trip card.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-14 vehicle workflow refinement
 
 - Map WebView touch handling adjusted so the Leaflet map can be dragged while setting speed zones.

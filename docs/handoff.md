@@ -172,6 +172,15 @@ npm.cmd run health
 - 진행 중 운행이 이미 있으면 운행 시작 시 새 운행을 만들지 않고 기존 운행을 복구한다.
 - 운행 화면은 최신 GPS 좌표를 ref로 보관해 위치 변경 때마다 대시보드 복구 로직이 불필요하게 재생성되지 않도록 했다.
 - Supabase 요청은 `lib/request.ts`의 `withTimeout`을 거치며, 완료 후 내부 타이머를 정리한다.
+# 2026-07-15 handoff: active trip button flow
+
+- Driver trip screen now branches by active-trip state.
+- No active trip: show vehicle/operator/route/odometer form and bottom button `운행 시작`.
+- Active trip: hide the start form, show a single `운행 중` card, and bottom button becomes `운행 종료`.
+- Removed the `진행 중 운행 N건` heading from driver mode.
+- Secondary `운행 취소` stays inside the active trip card.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-14 handoff: vehicle workflow refinement
 
 - Map drag issue: changed WebView to allow scrolling/nested scrolling and changed Leaflet touch-action to `pan-x pan-y`.

@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { saveCurrentGpsPoint } from '@/lib/gps-data';
-import { getVehicleMaintenanceState, loadSyncedMaintenanceSnapshot, setVehicleCurrentKm, type MaintenanceSnapshot } from '@/lib/maintenance-data';
+import {
+  getVehicleMaintenanceState,
+  loadSyncedMaintenanceSnapshot,
+  setVehicleCurrentKm,
+  type MaintenanceSnapshot,
+} from '@/lib/maintenance-data';
 import { saveTripObdLog } from '@/lib/obd-data';
 import { loadSelectedObdBleDevice, obdBle, type ObdLiveData } from '@/lib/obd-ble';
 import {
@@ -25,6 +30,11 @@ function formatTime(value: string | null) {
     .getMinutes()
     .toString()
     .padStart(2, '0')}`;
+}
+
+function formatKm(value: number | null | undefined) {
+  if (value === null || value === undefined) return '- km';
+  return `${value.toLocaleString('ko-KR')} km`;
 }
 
 export default function TripScreen() {
@@ -55,6 +65,11 @@ export default function TripScreen() {
 
   activeTripsRef.current = activeTrips;
   obdLiveRef.current = obdLiveData;
+
+  const activeTrip = activeTrips[0] ?? null;
+  const selectedCurrentKm = selectedVehicleId
+    ? getVehicleMaintenanceState(maintenanceSnapshot, selectedVehicleId).currentKm
+    : null;
 
   const stopObdSaveTimer = useCallback(() => {
     if (obdSaveTimerRef.current !== null) {
@@ -155,10 +170,7 @@ export default function TripScreen() {
 
     setIsSaving(true);
     try {
-      const currentKm = selectedVehicleId
-        ? getVehicleMaintenanceState(maintenanceSnapshot, selectedVehicleId).currentKm
-        : null;
-      const autoStartOdometer = startOdometer.trim() ? Number(startOdometer.trim()) : currentKm ?? undefined;
+      const autoStartOdometer = startOdometer.trim() ? Number(startOdometer.trim()) : selectedCurrentKm ?? undefined;
       const trip = await startManualTrip({
         vehicleId: selectedVehicleId,
         startPlace,
@@ -169,7 +181,7 @@ export default function TripScreen() {
         userName,
         startOdometer: autoStartOdometer,
       });
-      setActiveTrips((current) => [trip, ...current]);
+      setActiveTrips([trip]);
       setPurpose('');
       setEndPlace('');
       setStartOdometer('');
@@ -204,11 +216,8 @@ export default function TripScreen() {
           setIsSaving(true);
           try {
             await cancelManualTrip(trip.id);
-            setActiveTrips((current) => {
-              const next = current.filter((item) => item.id !== trip.id);
-              if (next.length === 0) stopGpsTimer();
-              return next;
-            });
+            setActiveTrips([]);
+            stopGpsTimer();
           } catch (error) {
             Alert.alert('취소 실패', error instanceof Error ? error.message : '운행을 취소하지 못했습니다.');
           } finally {
@@ -234,21 +243,27 @@ export default function TripScreen() {
         setMaintenanceSnapshot(nextSnapshot);
       }
       const gpsResult = await saveCurrentGpsPoint(trip.id);
-      setActiveTrips((current) => current.filter((item) => item.id !== trip.id));
-      if (activeTrips.length <= 1) {
-        obdBle.stopPolling();
-        void obdBle.disconnect();
-        stopObdSaveTimer();
-        stopGpsTimer();
-        setIsObdConnected(false);
-        setObdLiveData(null);
-      }
+      setActiveTrips([]);
+      obdBle.stopPolling();
+      void obdBle.disconnect();
+      stopObdSaveTimer();
+      stopGpsTimer();
+      setIsObdConnected(false);
+      setObdLiveData(null);
       Alert.alert('운행 종료', `${trip.vehicleNumber} 운행을 종료했습니다.\n${gpsResult.message}`);
     } catch (error) {
       Alert.alert('운행 종료 실패', error instanceof Error ? error.message : '운행을 종료하지 못했습니다.');
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function handlePrimaryAction() {
+    if (activeTrip) {
+      void handleCompleteTrip(activeTrip);
+      return;
+    }
+    void handleStartTrip();
   }
 
   const evMode = obdLiveData !== null && obdLiveData.speedKmh !== null && obdLiveData.speedKmh > 0 && obdLiveData.rpm === 0;
@@ -263,12 +278,35 @@ export default function TripScreen() {
   return (
     <RebuildScreen
       title="운행"
-      actionLabel={isSaving ? '저장 중' : '운행 시작'}
-      onAction={() => void handleStartTrip()}>
+      actionLabel={isSaving ? '저장 중' : activeTrip ? '운행 종료' : '운행 시작'}
+      onAction={handlePrimaryAction}>
       {isLoading ? (
         <LoadingCard label="데이터를 불러오는 중" />
       ) : errorMessage ? (
         <SectionCard title="오류" body={errorMessage} />
+      ) : activeTrip ? (
+        <SectionCard title="운행 중">
+          <Text style={styles.activeTripTitle}>{activeTrip.vehicleNumber}</Text>
+          <Text style={styles.activeTripRoute}>
+            {activeTrip.startPlace ?? '-'} → {activeTrip.endPlace ?? '-'}
+          </Text>
+          <StatusLine label="시작" value={formatTime(activeTrip.startTime)} />
+          {activeTrip.purpose ? <StatusLine label="목적" value={activeTrip.purpose} /> : null}
+          {activeTrip.operatorName ? <StatusLine label="운전자" value={activeTrip.operatorName} /> : null}
+          {activeTrip.startOdometer !== null ? <StatusLine label="출발 계기판" value={formatKm(activeTrip.startOdometer)} /> : null}
+          {obdLabel ? <StatusLine label="OBD" value={obdLabel} /> : null}
+          <TextInput
+            style={styles.input}
+            value={endOdometers[activeTrip.id] ?? ''}
+            onChangeText={(value) => setEndOdometers((current) => ({ ...current, [activeTrip.id]: value }))}
+            placeholder="도착 계기판 km (선택)"
+            placeholderTextColor="#94A3B8"
+            keyboardType="number-pad"
+          />
+          <Pressable style={styles.cancelBtnWide} onPress={() => void handleCancelTrip(activeTrip)} disabled={isSaving}>
+            <Text style={styles.cancelBtnText}>운행 취소</Text>
+          </Pressable>
+        </SectionCard>
       ) : (
         <>
           <SectionCard title="차량">
@@ -282,10 +320,7 @@ export default function TripScreen() {
 
           <SectionCard title="운행자">
             {savedBleDeviceName ? (
-              <StatusLine
-                label="OBD"
-                value={isObdConnected ? '연결됨' : `${savedBleDeviceName} · 운행 시작 시 자동 연결`}
-              />
+              <StatusLine label="OBD" value={isObdConnected ? '연결됨' : `${savedBleDeviceName} · 운행 시작 시 자동 연결`} />
             ) : null}
             <TextInput style={styles.input} value={operatorRank} onChangeText={setOperatorRank} placeholder="계급" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.input} value={operatorName} onChangeText={setOperatorName} placeholder="운전자 성명" placeholderTextColor="#94A3B8" />
@@ -299,14 +334,7 @@ export default function TripScreen() {
           </SectionCard>
 
           <SectionCard title="계기판">
-            <StatusLine
-              label="출발 자동 기준"
-              value={
-                selectedVehicleId
-                  ? `${getVehicleMaintenanceState(maintenanceSnapshot, selectedVehicleId).currentKm?.toLocaleString('ko-KR') ?? '-'} km`
-                  : '-'
-              }
-            />
+            <StatusLine label="출발 자동 기준" value={formatKm(selectedCurrentKm)} />
             <TextInput
               style={styles.input}
               value={startOdometer}
@@ -316,40 +344,6 @@ export default function TripScreen() {
               keyboardType="number-pad"
             />
           </SectionCard>
-
-          {activeTrips.length > 0 && (
-            <SectionCard title={`진행 중 운행 ${activeTrips.length}건`}>
-              {activeTrips.map((trip, index) => (
-                <View key={trip.id} style={[styles.activeTrip, index === 0 && styles.activeTripFirst]}>
-                  <Text style={styles.activeTripTitle}>{trip.vehicleNumber}</Text>
-                  <Text style={styles.activeTripRoute}>
-                    {trip.startPlace ?? '-'} → {trip.endPlace ?? '-'}
-                  </Text>
-                  <StatusLine label="시작" value={formatTime(trip.startTime)} />
-                  {trip.purpose ? <StatusLine label="목적" value={trip.purpose} /> : null}
-                  {trip.operatorName ? <StatusLine label="운전자" value={trip.operatorName} /> : null}
-                  {trip.startOdometer !== null ? <StatusLine label="출발 계기판" value={`${trip.startOdometer} km`} /> : null}
-                  {obdLabel ? <StatusLine label="OBD" value={obdLabel} /> : null}
-                  <TextInput
-                    style={styles.input}
-                    value={endOdometers[trip.id] ?? ''}
-                    onChangeText={(v) => setEndOdometers((prev) => ({ ...prev, [trip.id]: v }))}
-                    placeholder="도착 계기판 km (선택)"
-                    placeholderTextColor="#94A3B8"
-                    keyboardType="number-pad"
-                  />
-                  <View style={styles.tripBtnRow}>
-                    <Pressable style={styles.completeBtn} onPress={() => void handleCompleteTrip(trip)} disabled={isSaving}>
-                      <Text style={styles.completeBtnText}>운행 종료</Text>
-                    </Pressable>
-                    <Pressable style={styles.cancelBtn} onPress={() => void handleCancelTrip(trip)} disabled={isSaving}>
-                      <Text style={styles.cancelBtnText}>취소</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              ))}
-            </SectionCard>
-          )}
         </>
       )}
     </RebuildScreen>
@@ -369,27 +363,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginTop: 10,
   },
-  activeTrip: { borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 14, marginTop: 14 },
-  activeTripFirst: { borderTopWidth: 0, paddingTop: 4, marginTop: 4 },
-  activeTripTitle: { color: '#0F172A', fontSize: 16, fontWeight: '900' },
-  activeTripRoute: { color: '#64748B', fontSize: 13, fontWeight: '700', marginTop: 4 },
-  tripBtnRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  completeBtn: {
-    flex: 1,
-    minHeight: 46,
-    borderRadius: 12,
-    backgroundColor: '#0F766E',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  completeBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
-  cancelBtn: {
-    minWidth: 72,
+  activeTripTitle: { color: '#0F172A', fontSize: 18, fontWeight: '900' },
+  activeTripRoute: { color: '#64748B', fontSize: 14, fontWeight: '700', marginTop: 6, marginBottom: 2 },
+  cancelBtnWide: {
     minHeight: 46,
     borderRadius: 12,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 12,
   },
   cancelBtnText: { color: '#475569', fontSize: 14, fontWeight: '900' },
 });
