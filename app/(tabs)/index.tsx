@@ -124,6 +124,7 @@ export default function TripScreen() {
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const loadData = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -132,6 +133,10 @@ export default function TripScreen() {
       setVehicles(nextVehicles);
       setActiveTrips(nextActiveTrips);
       setSelectedVehicleId((current) => current ?? nextVehicles[0]?.id ?? null);
+      // Restart GPS timer if there are already active trips (e.g. app restart)
+      if (nextActiveTrips.length > 0) {
+        _startGpsTimer();
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '운행 데이터를 불러오지 못했습니다.');
     } finally {

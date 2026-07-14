@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 
+import { dequeueAllGpsPoints, enqueueGpsPoint } from './gps-queue';
 import { supabase } from './supabase';
 
 export type GpsSaveResult = {
@@ -14,13 +15,10 @@ async function withRequestTimeout<T>(promise: PromiseLike<T>, label: string): Pr
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => reject(new Error(`${label} 응답 시간이 초과되었습니다.`)), REQUEST_TIMEOUT_MS);
   });
-
   try {
     return await Promise.race([promise, timeoutPromise]);
   } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
 
@@ -30,10 +28,25 @@ function isMissingGpsTable(error: { code?: string; message: string } | null) {
 }
 
 function speedMetersPerSecondToKmh(value: number | null) {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-    return null;
-  }
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null;
   return value * 3.6;
+}
+
+async function flushGpsQueue(): Promise<void> {
+  const points = await dequeueAllGpsPoints();
+  if (points.length === 0) return;
+  const rows = points.map((p) => ({
+    trip_id: p.tripId,
+    latitude: p.latitude,
+    longitude: p.longitude,
+    speed_kmh: p.speedKmh,
+    recorded_at: p.recordedAt,
+  }));
+  const result = await supabase.from('gps_points').insert(rows);
+  if (result.error) {
+    // Re-queue on failure so points aren't lost
+    for (const p of points) void enqueueGpsPoint(p);
+  }
 }
 
 export async function saveCurrentGpsPoint(tripId: string): Promise<GpsSaveResult> {
@@ -43,11 +56,12 @@ export async function saveCurrentGpsPoint(tripId: string): Promise<GpsSaveResult
   }
 
   const position = await withRequestTimeout(
-    Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    }),
+    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
     '현재 위치'
   );
+
+  // Try to flush any queued points first
+  void flushGpsQueue();
 
   const result = await withRequestTimeout(
     supabase.from('gps_points').insert({
@@ -68,5 +82,13 @@ export async function saveCurrentGpsPoint(tripId: string): Promise<GpsSaveResult
     return { ok: false, message: 'gps_points 테이블이 아직 DB에 적용되지 않았습니다.' };
   }
 
-  return { ok: false, message: `GPS 저장 실패: ${result.error.message}` };
+  // DB/network error — queue for later retry
+  void enqueueGpsPoint({
+    tripId,
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+    speedKmh: speedMetersPerSecondToKmh(position.coords.speed) ?? 0,
+    recordedAt: new Date(position.timestamp).toISOString(),
+  });
+  return { ok: false, message: `GPS를 오프라인 큐에 저장했습니다. (${result.error.message})` };
 }

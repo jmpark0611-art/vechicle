@@ -51,7 +51,14 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ title: '운행', tabBarIcon: ({ color }) => <TabGlyph label="운" color={color} /> }} />
       <Tabs.Screen name="explore" options={{ title: '기록', tabBarIcon: ({ color }) => <TabGlyph label="기" color={color} /> }} />
       <Tabs.Screen name="vehicles" options={{ title: '차량', tabBarIcon: ({ color }) => <TabGlyph label="차" color={color} /> }} />
-      <Tabs.Screen name="map" options={{ title: '위치', tabBarIcon: ({ color }) => <TabGlyph label="위" color={color} /> }} />
+      <Tabs.Screen
+        name="map"
+        options={{
+          title: '위치',
+          tabBarIcon: ({ color }) => <TabGlyph label="위" color={color} />,
+          href: isCommander ? undefined : null,
+        }}
+      />
       <Tabs.Screen name="check" options={{ title: '점검', tabBarIcon: ({ color }) => <TabGlyph label="점" color={color} /> }} />
       <Tabs.Screen
         name="monthly-log"
