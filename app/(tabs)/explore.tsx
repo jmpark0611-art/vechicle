@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
+import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { fetchTripsReadOnly, fetchVehiclesReadOnly, type TripSummary, type VehicleSummary } from '@/lib/readonly-data';
 
 function formatTripTime(value: string | null) {
@@ -15,9 +15,9 @@ function formatTripTime(value: string | null) {
 }
 
 function statusLabel(status: string) {
-  if (status === 'in_progress') return '운행중';
+  if (status === 'in_progress') return '운행 중';
   if (status === 'completed') return '완료';
-  if (status === 'canceled') return '무효';
+  if (status === 'canceled') return '취소';
   return status;
 }
 
@@ -47,58 +47,43 @@ export default function RecordsScreen() {
   }, [loadData]);
 
   const filtered = useMemo(
-    () => selectedVehicleId ? trips.filter((t) => t.vehicleId === selectedVehicleId) : trips,
-    [trips, selectedVehicleId]
+    () => (selectedVehicleId ? trips.filter((trip) => trip.vehicleId === selectedVehicleId) : trips),
+    [selectedVehicleId, trips]
   );
-
-  const inProgressCount = useMemo(() => filtered.filter((t) => t.status === 'in_progress').length, [filtered]);
-  const completedCount = useMemo(() => filtered.filter((t) => t.status === 'completed').length, [filtered]);
+  const inProgressCount = useMemo(() => filtered.filter((trip) => trip.status === 'in_progress').length, [filtered]);
+  const completedCount = useMemo(() => filtered.filter((trip) => trip.status === 'completed').length, [filtered]);
 
   return (
     <RebuildScreen
-      title="운행 기록"
+      title="기록"
+      subtitle="월장비운행증과 운행 기록을 이 화면에서 함께 확인합니다."
       metrics={[
-        { label: '운행중', value: `${inProgressCount}건` },
+        { label: '운행 중', value: `${inProgressCount}건` },
         { label: '완료', value: `${completedCount}건` },
       ]}
       actionLabel="새로고침"
       onAction={() => void loadData()}>
-
-      {vehicles.length > 0 && (
-        <SectionCard title="차량 필터">
-          <View style={styles.vehicleList}>
-            <Pressable
-              style={[styles.vehiclePill, selectedVehicleId === null && styles.vehiclePillActive]}
-              onPress={() => setSelectedVehicleId(null)}>
-              <Text style={[styles.vehiclePillText, selectedVehicleId === null && styles.vehiclePillTextActive]}>
-                전체
-              </Text>
-            </Pressable>
-            {vehicles.map((vehicle) => (
-              <Pressable
-                key={vehicle.id}
-                style={[styles.vehiclePill, selectedVehicleId === vehicle.id && styles.vehiclePillActive]}
-                onPress={() => setSelectedVehicleId(vehicle.id)}>
-                <Text style={[styles.vehiclePillText, selectedVehicleId === vehicle.id && styles.vehiclePillTextActive]}>
-                  {vehicle.vehicleNumber}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+      {vehicles.length > 0 ? (
+        <SectionCard title="차량">
+          <VehicleDropdown
+            vehicles={vehicles}
+            selectedVehicleId={selectedVehicleId}
+            onSelect={setSelectedVehicleId}
+            includeAll
+            allLabel="전체 차량"
+          />
         </SectionCard>
-      )}
+      ) : null}
 
       {isLoading ? (
-        <LoadingCard label="운행 기록 불러오는 중" />
+        <LoadingCard label="운행 기록을 불러오는 중" />
       ) : errorMessage ? (
         <SectionCard title="오류" body={errorMessage} />
       ) : filtered.length === 0 ? (
         <SectionCard title="기록 없음" body="조건에 맞는 운행 기록이 없습니다." />
       ) : (
         filtered.map((trip) => (
-          <SectionCard
-            key={trip.id}
-            title={`${trip.vehicleNumber} · ${statusLabel(trip.status)}`}>
+          <SectionCard key={trip.id} title={`${trip.vehicleNumber} · ${statusLabel(trip.status)}`}>
             <StatusLine label="경로" value={`${trip.startPlace ?? '-'} → ${trip.endPlace ?? '-'}`} />
             <StatusLine label="출발" value={formatTripTime(trip.startTime)} />
             <StatusLine label="도착" value={formatTripTime(trip.endTime)} />
@@ -111,18 +96,3 @@ export default function RecordsScreen() {
     </RebuildScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  vehicleList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
-  vehiclePill: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  vehiclePillActive: { borderColor: '#2563EB', backgroundColor: '#EFF6FF' },
-  vehiclePillText: { color: '#64748B', fontSize: 13, fontWeight: '800' },
-  vehiclePillTextActive: { color: '#2563EB' },
-});

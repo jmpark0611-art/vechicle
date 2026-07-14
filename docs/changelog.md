@@ -262,3 +262,11 @@
 - The current `lib/obd-ble.native.ts` remains a pure JS simulation/stub, so no JS import depends on `react-native-ble-plx`.
 - Verification after removal: `npx expo-doctor` passes 18/18, `npm run verify` passes, and Android export passes.
 - Next if this APK still crashes: capture device `adb logcat`; without it the remaining issue is likely another native startup module or Android build configuration problem.
+# 2026-07-14 UI simplification pass
+
+- Simplified the bottom tabs with restrained monochrome symbols: 운행, 기록, 차량, 위치, 점검.
+- Hid the separate `monthly-log` tab because the user clarified that 기록 and 월장비운행증 are the same workflow.
+- Added a shared `VehicleDropdown` component and replaced scattered vehicle pill buttons on 운행 and 기록 screens.
+- Rewrote the 운행 and 기록 screen copy back to clean Korean in the touched files.
+- Simplified shared card styling in `components/rebuild-screen.tsx` to reduce the busy rounded-card look.
+- Verification passed with `npm.cmd run verify`.

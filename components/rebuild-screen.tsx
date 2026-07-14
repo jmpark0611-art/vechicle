@@ -26,7 +26,7 @@ export function RebuildScreen({ title, subtitle, metrics = [], actionLabel, onAc
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
-      {metrics.length > 0 && (
+      {metrics.length > 0 ? (
         <View style={styles.metricGrid}>
           {metrics.map((metric) => (
             <View key={metric.label} style={styles.metricCard}>
@@ -35,15 +35,15 @@ export function RebuildScreen({ title, subtitle, metrics = [], actionLabel, onAc
             </View>
           ))}
         </View>
-      )}
+      ) : null}
 
       {children}
 
-      {actionLabel && (
+      {actionLabel ? (
         <Pressable style={styles.primaryBtn} onPress={onAction}>
           <Text style={styles.primaryBtnText}>{actionLabel}</Text>
         </Pressable>
-      )}
+      ) : null}
     </ScrollView>
   );
 }
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     flexBasis: '47%',
     flexGrow: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     paddingHorizontal: 14,
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   metricValue: { color: '#0F172A', fontSize: 20, fontWeight: '900' },
   sectionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     padding: 18,
@@ -122,16 +122,16 @@ const styles = StyleSheet.create({
   loadingText: { color: '#64748B', fontSize: 13, fontWeight: '800', textAlign: 'center', marginTop: 12 },
   primaryBtn: {
     minHeight: 56,
-    borderRadius: 16,
+    borderRadius: 14,
     backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
     shadowColor: '#2563EB',
-    shadowOpacity: 0.24,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   primaryBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
 });

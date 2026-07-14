@@ -172,3 +172,19 @@ npm.cmd run health
 - 진행 중 운행이 이미 있으면 운행 시작 시 새 운행을 만들지 않고 기존 운행을 복구한다.
 - 운행 화면은 최신 GPS 좌표를 ref로 보관해 위치 변경 때마다 대시보드 복구 로직이 불필요하게 재생성되지 않도록 했다.
 - Supabase 요청은 `lib/request.ts`의 `withTimeout`을 거치며, 완료 후 내부 타이머를 정리한다.
+# 2026-07-14 handoff: simplified UI direction
+
+- Current branch for this pass: `claude/env-permissions-session-restart-154onb`.
+- User feedback: UI/UX felt too complex and old-fashioned. Keep screens simple, readable, and avoid decorative/tacky emoji.
+- User clarified that `기록` and `월장비운행증` are the same workflow. Do not keep them as two competing tabs.
+- Implemented:
+  - `monthly-log` is hidden from the bottom tab bar.
+  - Bottom tabs now use simple monochrome symbols: `▶`, `≡`, `▣`, `⌖`, `✓`.
+  - Added `components/vehicle-dropdown.tsx` for shared vehicle selection.
+  - 운행 and 기록 screens now use the shared dropdown instead of wrapping vehicle pill buttons.
+  - Touched screen copy was restored to clean Korean.
+  - `npm.cmd run verify` passed.
+- Next recommended work:
+  - Apply the same `VehicleDropdown` pattern anywhere else that asks for a vehicle selection.
+  - Keep the tab count small; prefer improving the existing 기록 screen over reintroducing 월장비운행증 as a separate tab.
+  - Device-test APK after GitHub Actions finishes, especially tab navigation and trip start/end.

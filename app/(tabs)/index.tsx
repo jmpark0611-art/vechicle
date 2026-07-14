@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
+import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { saveCurrentGpsPoint } from '@/lib/gps-data';
 import { saveTripObdLog } from '@/lib/obd-data';
-import { obdBle, loadSelectedObdBleDevice, type ObdLiveData } from '@/lib/obd-ble';
+import { loadSelectedObdBleDevice, obdBle, type ObdLiveData } from '@/lib/obd-ble';
 import {
   cancelManualTrip,
   completeManualTrip,
@@ -39,8 +40,6 @@ export default function TripScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // OBD state (background, no dedicated UI panel)
   const [obdLiveData, setObdLiveData] = useState<ObdLiveData | null>(null);
   const [isObdConnected, setIsObdConnected] = useState(false);
   const [savedBleDeviceId, setSavedBleDeviceId] = useState<string | null>(null);
@@ -54,6 +53,40 @@ export default function TripScreen() {
   activeTripsRef.current = activeTrips;
   obdLiveRef.current = obdLiveData;
 
+  const stopObdSaveTimer = useCallback(() => {
+    if (obdSaveTimerRef.current !== null) {
+      clearInterval(obdSaveTimerRef.current);
+      obdSaveTimerRef.current = null;
+    }
+  }, []);
+
+  const stopGpsTimer = useCallback(() => {
+    if (gpsTimerRef.current !== null) {
+      clearInterval(gpsTimerRef.current);
+      gpsTimerRef.current = null;
+    }
+  }, []);
+
+  const startObdSaveTimer = useCallback(() => {
+    stopObdSaveTimer();
+    obdSaveTimerRef.current = setInterval(() => {
+      const live = obdLiveRef.current;
+      if (!live || activeTripsRef.current.length === 0) return;
+      for (const trip of activeTripsRef.current) {
+        if (trip.vehicleId) void saveTripObdLog(trip.vehicleId, trip.id, live);
+      }
+    }, 30_000);
+  }, [stopObdSaveTimer]);
+
+  const startGpsTimer = useCallback(() => {
+    stopGpsTimer();
+    gpsTimerRef.current = setInterval(() => {
+      for (const trip of activeTripsRef.current) {
+        void saveCurrentGpsPoint(trip.id);
+      }
+    }, 60_000);
+  }, [stopGpsTimer]);
+
   useEffect(() => {
     obdBle.setCallbacks({
       onData: (data: ObdLiveData) => {
@@ -64,17 +97,17 @@ export default function TripScreen() {
       onDisconnect: () => {
         setObdLiveData(null);
         setIsObdConnected(false);
-        _stopObdSaveTimer();
+        stopObdSaveTimer();
       },
     });
 
     return () => {
       obdBle.stopPolling();
       void obdBle.disconnect();
-      _stopObdSaveTimer();
-      _stopGpsTimer();
+      stopObdSaveTimer();
+      stopGpsTimer();
     };
-  }, []);
+  }, [stopGpsTimer, stopObdSaveTimer]);
 
   useEffect(() => {
     void loadSelectedObdBleDevice().then((device) => {
@@ -85,46 +118,6 @@ export default function TripScreen() {
     });
   }, []);
 
-  function _startObdSaveTimer() {
-    _stopObdSaveTimer();
-    obdSaveTimerRef.current = setInterval(() => {
-      const trips = activeTripsRef.current;
-      const live = obdLiveRef.current;
-      if (!live || trips.length === 0) return;
-      for (const trip of trips) {
-        if (trip.vehicleId) {
-          void saveTripObdLog(trip.vehicleId, trip.id, live);
-        }
-      }
-    }, 30_000);
-  }
-
-  function _stopObdSaveTimer() {
-    if (obdSaveTimerRef.current !== null) {
-      clearInterval(obdSaveTimerRef.current);
-      obdSaveTimerRef.current = null;
-    }
-  }
-
-  function _startGpsTimer() {
-    _stopGpsTimer();
-    gpsTimerRef.current = setInterval(() => {
-      const trips = activeTripsRef.current;
-      if (trips.length === 0) return;
-      for (const trip of trips) {
-        void saveCurrentGpsPoint(trip.id);
-      }
-    }, 60_000);
-  }
-
-  function _stopGpsTimer() {
-    if (gpsTimerRef.current !== null) {
-      clearInterval(gpsTimerRef.current);
-      gpsTimerRef.current = null;
-    }
-  }
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const loadData = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -133,16 +126,13 @@ export default function TripScreen() {
       setVehicles(nextVehicles);
       setActiveTrips(nextActiveTrips);
       setSelectedVehicleId((current) => current ?? nextVehicles[0]?.id ?? null);
-      // Restart GPS timer if there are already active trips (e.g. app restart)
-      if (nextActiveTrips.length > 0) {
-        _startGpsTimer();
-      }
+      if (nextActiveTrips.length > 0) startGpsTimer();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '운행 데이터를 불러오지 못했습니다.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [startGpsTimer]);
 
   useEffect(() => {
     void loadData();
@@ -173,18 +163,19 @@ export default function TripScreen() {
       setPurpose('');
       setEndPlace('');
       setStartOdometer('');
-      // Auto-connect OBD if device is saved
+
       if (savedBleDeviceId && !isObdConnected) {
         void obdBle.connect(savedBleDeviceId).then((result) => {
           if (result.ok) {
             setIsObdConnected(true);
             obdBle.startPolling(2000);
-            _startObdSaveTimer();
+            startObdSaveTimer();
           }
         });
       }
+
       const gpsResult = await saveCurrentGpsPoint(trip.id);
-      _startGpsTimer();
+      startGpsTimer();
       Alert.alert('운행 시작', `${trip.vehicleNumber} 운행을 시작했습니다.\n${gpsResult.message}`);
     } catch (error) {
       Alert.alert('운행 시작 실패', error instanceof Error ? error.message : '운행을 시작하지 못했습니다.');
@@ -194,7 +185,7 @@ export default function TripScreen() {
   }
 
   async function handleCancelTrip(trip: TripSummary) {
-    Alert.alert('운행 취소', `${trip.vehicleNumber} 운행을 취소하시겠습니까?`, [
+    Alert.alert('운행 취소', `${trip.vehicleNumber} 운행을 취소할까요?`, [
       { text: '아니요', style: 'cancel' },
       {
         text: '취소',
@@ -205,7 +196,7 @@ export default function TripScreen() {
             await cancelManualTrip(trip.id);
             setActiveTrips((current) => {
               const next = current.filter((item) => item.id !== trip.id);
-              if (next.length === 0) _stopGpsTimer();
+              if (next.length === 0) stopGpsTimer();
               return next;
             });
           } catch (error) {
@@ -233,8 +224,8 @@ export default function TripScreen() {
       if (activeTrips.length <= 1) {
         obdBle.stopPolling();
         void obdBle.disconnect();
-        _stopObdSaveTimer();
-        _stopGpsTimer();
+        stopObdSaveTimer();
+        stopGpsTimer();
         setIsObdConnected(false);
         setObdLiveData(null);
       }
@@ -252,7 +243,7 @@ export default function TripScreen() {
       ? `EV · ${obdLiveData?.speedKmh ?? '-'} km/h`
       : `RPM ${obdLiveData?.rpm ?? '-'} · ${obdLiveData?.speedKmh ?? '-'} km/h`
     : savedBleDeviceName
-      ? `${savedBleDeviceName} — 운행 시작 시 자동 연결`
+      ? `${savedBleDeviceName} · 운행 시작 시 자동 연결`
       : null;
 
   return (
@@ -262,28 +253,21 @@ export default function TripScreen() {
         { label: '차량', value: `${vehicles.length}대` },
         { label: '진행 중', value: `${activeTrips.length}건` },
       ]}
-      actionLabel={isSaving ? '저장 중…' : '운행 시작'}
+      actionLabel={isSaving ? '저장 중' : '운행 시작'}
       onAction={() => void handleStartTrip()}>
-
       {isLoading ? (
-        <LoadingCard label="데이터 불러오는 중" />
+        <LoadingCard label="데이터를 불러오는 중" />
       ) : errorMessage ? (
         <SectionCard title="오류" body={errorMessage} />
       ) : (
         <>
-          <SectionCard title="차량 선택">
-            <View style={styles.vehicleList}>
-              {vehicles.map((vehicle) => (
-                <Pressable
-                  key={vehicle.id}
-                  style={[styles.vehiclePill, selectedVehicleId === vehicle.id && styles.vehiclePillActive]}
-                  onPress={() => setSelectedVehicleId(vehicle.id)}>
-                  <Text style={[styles.vehiclePillText, selectedVehicleId === vehicle.id && styles.vehiclePillTextActive]}>
-                    {vehicle.vehicleNumber}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+          <SectionCard title="차량">
+            <VehicleDropdown
+              vehicles={vehicles}
+              selectedVehicleId={selectedVehicleId}
+              onSelect={setSelectedVehicleId}
+              placeholder="차량을 선택하세요"
+            />
           </SectionCard>
 
           <SectionCard title="운행 정보">
@@ -313,9 +297,7 @@ export default function TripScreen() {
                   <StatusLine label="시작" value={formatTime(trip.startTime)} />
                   {trip.purpose ? <StatusLine label="목적" value={trip.purpose} /> : null}
                   {trip.operatorName ? <StatusLine label="운전자" value={trip.operatorName} /> : null}
-                  {trip.startOdometer !== null && (
-                    <StatusLine label="출발 계기판" value={`${trip.startOdometer} km`} />
-                  )}
+                  {trip.startOdometer !== null ? <StatusLine label="출발 계기판" value={`${trip.startOdometer} km`} /> : null}
                   {obdLabel ? <StatusLine label="OBD" value={obdLabel} /> : null}
                   <TextInput
                     style={styles.input}
@@ -344,18 +326,6 @@ export default function TripScreen() {
 }
 
 const styles = StyleSheet.create({
-  vehicleList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  vehiclePill: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-  vehiclePillActive: { borderColor: '#2563EB', backgroundColor: '#EFF6FF' },
-  vehiclePillText: { color: '#64748B', fontSize: 13, fontWeight: '800' },
-  vehiclePillTextActive: { color: '#2563EB' },
   input: {
     minHeight: 50,
     borderRadius: 12,
@@ -390,5 +360,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelBtnText: { color: '#64748B', fontSize: 14, fontWeight: '900' },
+  cancelBtnText: { color: '#475569', fontSize: 14, fontWeight: '900' },
 });
