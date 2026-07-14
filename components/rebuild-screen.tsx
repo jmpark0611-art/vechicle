@@ -9,7 +9,7 @@ type Metric = {
 
 type RebuildScreenProps = PropsWithChildren<{
   title: string;
-  subtitle: string;
+  subtitle?: string;
   metrics?: Metric[];
   actionLabel?: string;
   onAction?: () => void;
@@ -23,9 +23,8 @@ export function RebuildScreen({ title, subtitle, metrics = [], actionLabel, onAc
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 96 }]}
       showsVerticalScrollIndicator={false}>
-      <Text style={styles.date}>2026년 7월 13일</Text>
       <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
       {metrics.length > 0 && (
         <View style={styles.metricGrid}>
@@ -49,11 +48,11 @@ export function RebuildScreen({ title, subtitle, metrics = [], actionLabel, onAc
   );
 }
 
-export function SectionCard({ title, body, children }: PropsWithChildren<{ title: string; body: string }>) {
+export function SectionCard({ title, body, children }: PropsWithChildren<{ title: string; body?: string }>) {
   return (
     <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionBody}>{body}</Text>
+      {body ? <Text style={styles.sectionBody}>{body}</Text> : null}
       {children}
     </View>
   );
@@ -82,32 +81,32 @@ export function LoadingCard({ label = '불러오는 중' }: { label?: string }) 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F8FAFC' },
   content: { paddingHorizontal: 24 },
-  date: { color: '#64748B', fontSize: 13, fontWeight: '800', marginBottom: 4 },
   title: { color: '#0F172A', fontSize: 28, fontWeight: '900', letterSpacing: 0 },
-  subtitle: { color: '#64748B', fontSize: 14, fontWeight: '700', marginTop: 8, marginBottom: 20, lineHeight: 21 },
-  metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 18 },
+  subtitle: { color: '#64748B', fontSize: 14, fontWeight: '700', marginTop: 6, marginBottom: 16, lineHeight: 20 },
+  metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16, marginBottom: 16 },
   metricCard: {
     flexBasis: '47%',
     flexGrow: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 16,
-    minHeight: 92,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 68,
   },
-  metricLabel: { color: '#64748B', fontSize: 12, fontWeight: '800', marginBottom: 8 },
-  metricValue: { color: '#0F172A', fontSize: 22, fontWeight: '900' },
+  metricLabel: { color: '#64748B', fontSize: 11, fontWeight: '800', marginBottom: 6 },
+  metricValue: { color: '#0F172A', fontSize: 20, fontWeight: '900' },
   sectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     padding: 18,
-    marginBottom: 14,
+    marginBottom: 12,
   },
-  sectionTitle: { color: '#0F172A', fontSize: 17, fontWeight: '900', marginBottom: 8 },
-  sectionBody: { color: '#64748B', fontSize: 14, fontWeight: '600', lineHeight: 21 },
+  sectionTitle: { color: '#0F172A', fontSize: 15, fontWeight: '900' },
+  sectionBody: { color: '#64748B', fontSize: 13, fontWeight: '600', lineHeight: 19, marginTop: 6 },
   statusLine: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -115,8 +114,8 @@ const styles = StyleSheet.create({
     gap: 12,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    paddingTop: 12,
-    marginTop: 12,
+    paddingTop: 10,
+    marginTop: 10,
   },
   statusLabel: { color: '#64748B', fontSize: 12, fontWeight: '800' },
   statusValue: { color: '#0F172A', fontSize: 13, fontWeight: '900', flexShrink: 1, textAlign: 'right' },

@@ -25,13 +25,10 @@ async function withRequestTimeout<T>(promise: PromiseLike<T>, label: string): Pr
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => reject(new Error(`${label} 응답 시간이 초과되었습니다.`)), REQUEST_TIMEOUT_MS);
   });
-
   try {
     return await Promise.race([promise, timeoutPromise]);
   } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
 
@@ -45,23 +42,11 @@ async function countTable(label: string, table: string): Promise<TableCheck> {
     supabase.from(table).select('id', { count: 'exact', head: true }),
     `${label} 점검`
   );
-
   if (result.error) {
-    return {
-      label,
-      table,
-      status: isMissingTable(result.error) ? 'missing' : 'error',
-      value: result.error.message,
-    };
+    return { label, table, status: isMissingTable(result.error) ? 'missing' : 'error', value: result.error.message };
   }
-
   const count = result.count ?? 0;
-  return {
-    label,
-    table,
-    status: count > 0 ? 'ok' : 'empty',
-    value: `${count.toLocaleString('ko-KR')}건`,
-  };
+  return { label, table, status: count > 0 ? 'ok' : 'empty', value: `${count.toLocaleString('ko-KR')}건` };
 }
 
 function statusText(status: TableCheck['status']) {
@@ -86,7 +71,7 @@ export default function CheckScreen() {
         fetchTripsReadOnly(5),
         countTable('GPS 위치', 'gps_points'),
         countTable('정비 기록', 'maintenance_records'),
-        countTable('제한속도 구역', 'speed_zones'),
+        countTable('속도구역', 'speed_zones'),
         countTable('OBD 기록', 'obd_logs'),
       ]);
       setResult({
@@ -111,46 +96,34 @@ export default function CheckScreen() {
   return (
     <RebuildScreen
       title="시스템 점검"
-      subtitle="앱, Supabase 연결, GPS/정비/제한속도 테이블 상태를 한 화면에서 확인합니다."
       metrics={[
         { label: 'Expo SDK', value: sdkVersion },
-        { label: 'Supabase', value: errorMessage ? '오류' : '연결' },
-        { label: '차량 샘플', value: `${result?.vehicles ?? 0}건` },
         { label: '점검 오류', value: `${failedChecks}건` },
       ]}
-      actionLabel="점검 다시 실행"
+      actionLabel="다시 점검"
       onAction={() => void runReadCheck()}>
-      <SectionCard title="현재 기준" body="클린 리빌드 브랜치에서 기능을 작은 단위로 복구하고 있습니다.">
-        <StatusLine label="브랜치" value="rebuild/clean-sdk54-start" />
-      </SectionCard>
 
-      <SectionCard title="Supabase 설정" body="환경변수 또는 fallback 설정으로 연결된 Supabase 정보를 표시합니다.">
-        <StatusLine label="출처" value={getSupabaseReadSource()} />
+      <SectionCard title="Supabase">
+        <StatusLine label="연결" value={getSupabaseReadSource()} />
+        {result ? (
+          <>
+            <StatusLine label="차량" value={`${result.vehicles}건`} />
+            <StatusLine label="운행" value={`${result.trips}건`} />
+          </>
+        ) : null}
       </SectionCard>
 
       {isLoading ? (
-        <LoadingCard label="Supabase 점검 중" />
+        <LoadingCard label="점검 중" />
       ) : errorMessage ? (
         <SectionCard title="점검 오류" body={errorMessage} />
       ) : (
-        <>
-          <SectionCard title="기본 테이블" body="차량과 운행 기록 읽기 경로를 확인했습니다.">
-            <StatusLine label="차량" value={`${result?.vehicles ?? 0}건`} />
-            <StatusLine label="운행" value={`${result?.trips ?? 0}건`} />
-          </SectionCard>
-
-          <SectionCard title="기능 테이블" body="GPS 저장, 정비 기록, 제한속도 구역, OBD 기록 기능에 필요한 테이블 상태입니다.">
-            {result?.tableChecks.map((item) => (
-              <StatusLine key={item.table} label={item.label} value={`${statusText(item.status)} · ${item.value}`} />
-            ))}
-          </SectionCard>
-        </>
+        <SectionCard title="기능 테이블">
+          {result?.tableChecks.map((item) => (
+            <StatusLine key={item.table} label={item.label} value={`${statusText(item.status)} · ${item.value}`} />
+          ))}
+        </SectionCard>
       )}
-
-      <SectionCard
-        title="실기기 확인"
-        body="APK 설치 후 운행 시작, GPS 권한 허용, 운행 종료, 차량 정비 교체완료, 제한속도 구역 저장 순서로 확인하면 됩니다."
-      />
     </RebuildScreen>
   );
 }
