@@ -26,6 +26,8 @@ export type ObdProbeResult = {
   logs: ObdProbeLog[];
   rpm: number | null;
   speedKmh: number | null;
+  coolantC: number | null;
+  batteryV: number | null;
   summary: string;
 };
 
@@ -199,6 +201,8 @@ export async function probeElm327Connection(deviceId: string): Promise<ObdProbeR
       logs: [{ step: 'Bluetooth 권한', ok: false, detail: '권한이 허용되지 않았습니다.' }],
       rpm: null,
       speedKmh: null,
+      coolantC: null,
+      batteryV: null,
       summary: 'Bluetooth 권한 필요',
     };
   }
@@ -215,6 +219,8 @@ export async function probeElm327Connection(deviceId: string): Promise<ObdProbeR
         logs: [{ step: 'Bluetooth 상태', ok: false, detail: `${btState} — Bluetooth를 켜 주세요` }],
         rpm: null,
         speedKmh: null,
+        coolantC: null,
+        batteryV: null,
         summary: 'Bluetooth 꺼짐',
       };
     }
@@ -304,7 +310,7 @@ export async function probeElm327Connection(deviceId: string): Promise<ObdProbeR
         ok: false,
         detail: '알려진 프로필과 자동탐색 모두 실패했습니다. 서비스 UUID를 개발자에게 공유해 주세요.',
       });
-      return { ok: false, profile: null, logs, rpm: null, speedKmh: null, summary: '호환 BLE 프로필 없음' };
+      return { ok: false, profile: null, logs, rpm: null, speedKmh: null, coolantC: null, batteryV: null, summary: '호환 BLE 프로필 없음' };
     }
 
     // Buffer incoming notify chunks; resolve when ELM327 prompt '>' arrives
@@ -351,17 +357,31 @@ export async function probeElm327Connection(deviceId: string): Promise<ObdProbeR
       });
     }
 
+    // Helper to clean up ELM327 response text for display
+    function cleanResp(r: string): string {
+      return r.replace(/\r\n|\r|\n/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 60);
+    }
+
+    // Returns true if response indicates OBD supported the PID (not NODATA / ERROR / ?)
+    function isObdOk(r: string): boolean {
+      const up = r.toUpperCase();
+      return !up.includes('NODATA') && !up.includes('ERROR') && !up.includes('?') && !up.includes('UNABLE');
+    }
+
+    let coolantC: number | null = null;
+    let batteryV: number | null = null;
+
     try {
-      // ATZ — reset ELM327 (slow, allow 5 s)
-      const atzResp = await sendCmd('ATZ', 5000);
+      // ATZ — reset ELM327 (allow 6 s; PHEV ECUs are slower)
+      const atzResp = await sendCmd('ATZ', 6000);
       logs.push({
         step: 'ATZ (리셋)',
         ok: atzResp.includes('>'),
-        detail: atzResp.replace(/\r\n/g, ' ').trim().slice(0, 60),
+        detail: cleanResp(atzResp),
       });
 
       // Echo off
-      const ate0Resp = await sendCmd('ATE0');
+      const ate0Resp = await sendCmd('ATE0', 4000);
       logs.push({
         step: 'ATE0 (에코 끔)',
         ok: ate0Resp.includes('OK') || ate0Resp.includes('>'),
@@ -369,60 +389,119 @@ export async function probeElm327Connection(deviceId: string): Promise<ObdProbeR
       });
 
       // Linefeeds off, spaces off
-      await sendCmd('ATL0');
-      await sendCmd('ATS0');
+      await sendCmd('ATL0', 3000);
+      await sendCmd('ATS0', 3000);
       logs.push({ step: 'ATL0/ATS0 (포맷)', ok: true });
 
-      // Auto OBD protocol
-      const atspResp = await sendCmd('ATSP0');
+      // Adaptive timing level 2 — helps PHEV/hybrid ECUs that respond slowly
+      await sendCmd('ATAT2', 3000);
+      logs.push({ step: 'ATAT2 (적응형 타이밍)', ok: true });
+
+      // Auto OBD protocol (SEARCHING... is normal on PHEVs — allow 10 s)
+      const atspResp = await sendCmd('ATSP0', 10000);
       logs.push({
         step: 'ATSP0 (자동 프로토콜)',
         ok: atspResp.includes('OK') || atspResp.includes('>'),
-        detail: atspResp.trim().slice(0, 40),
+        detail: cleanResp(atspResp),
       });
 
-      // PID 010C — RPM
+      // Log the detected protocol so we know which bus was found
       try {
-        const rpmResp = await sendCmd('010C', 6000);
-        rpm = parseRpm(rpmResp);
-        logs.push({
-          step: 'RPM (010C)',
-          ok: rpm !== null,
-          detail: `${rpmResp.replace(/\r/g, ' ').trim().slice(0, 40)} → ${rpm !== null ? `${rpm} RPM` : '파싱 실패'}`,
-        });
+        const dpnResp = await sendCmd('ATDPN', 3000);
+        logs.push({ step: 'ATDPN (감지 프로토콜)', ok: true, detail: cleanResp(dpnResp) });
+      } catch { /* non-critical */ }
+
+      // PID 010C — RPM (allow 8 s for PHEV first PID query)
+      try {
+        const rpmResp = await sendCmd('010C', 8000);
+        if (isObdOk(rpmResp)) {
+          rpm = parseRpm(rpmResp);
+          logs.push({
+            step: 'RPM (010C)',
+            ok: rpm !== null,
+            detail: `${cleanResp(rpmResp)} → ${rpm !== null ? `${rpm} RPM` : '파싱 실패'}`,
+          });
+        } else {
+          // NODATA on RPM is expected in EV mode (engine off)
+          const up = rpmResp.toUpperCase();
+          const reason = up.includes('NODATA') ? 'NODATA — EV 모드(엔진 꺼짐) 또는 ECU 미응답' : cleanResp(rpmResp);
+          logs.push({ step: 'RPM (010C)', ok: false, detail: reason });
+        }
       } catch (e) {
         logs.push({ step: 'RPM (010C)', ok: false, detail: e instanceof Error ? e.message : '오류' });
       }
 
       // PID 010D — speed
       try {
-        const speedResp = await sendCmd('010D', 6000);
-        speedKmh = parseSpeed(speedResp);
-        logs.push({
-          step: '속도 (010D)',
-          ok: speedKmh !== null,
-          detail: `${speedResp.replace(/\r/g, ' ').trim().slice(0, 40)} → ${speedKmh !== null ? `${speedKmh} km/h` : '파싱 실패'}`,
-        });
+        const speedResp = await sendCmd('010D', 8000);
+        if (isObdOk(speedResp)) {
+          speedKmh = parseSpeed(speedResp);
+          logs.push({
+            step: '속도 (010D)',
+            ok: speedKmh !== null,
+            detail: `${cleanResp(speedResp)} → ${speedKmh !== null ? `${speedKmh} km/h` : '파싱 실패'}`,
+          });
+        } else {
+          logs.push({ step: '속도 (010D)', ok: false, detail: cleanResp(speedResp) });
+        }
       } catch (e) {
         logs.push({ step: '속도 (010D)', ok: false, detail: e instanceof Error ? e.message : '오류' });
       }
+
+      // PID 0105 — coolant temperature
+      try {
+        const coolResp = await sendCmd('0105', 5000);
+        if (isObdOk(coolResp)) {
+          const m = coolResp.replace(/\s/g, '').match(/4105([0-9A-Fa-f]{2})/i);
+          if (m) coolantC = parseInt(m[1], 16) - 40;
+          logs.push({ step: '냉각수 온도 (0105)', ok: coolantC !== null, detail: coolantC !== null ? `${coolantC}°C` : cleanResp(coolResp) });
+        } else {
+          logs.push({ step: '냉각수 온도 (0105)', ok: false, detail: cleanResp(coolResp) });
+        }
+      } catch { /* non-critical */ }
+
+      // ATRV — 12V battery voltage (ELM327 internal, always works when connected)
+      try {
+        const rvResp = await sendCmd('ATRV', 4000);
+        const m = rvResp.match(/(\d+\.\d+)\s*V/i);
+        if (m) batteryV = parseFloat(m[1]);
+        logs.push({ step: '배터리 전압 (ATRV)', ok: batteryV !== null, detail: batteryV !== null ? `${batteryV}V` : cleanResp(rvResp) });
+      } catch { /* non-critical */ }
     } finally {
       subscription.remove();
     }
 
-    const success = rpm !== null || speedKmh !== null || matchedProfileName !== null;
-    const hasData = rpm !== null || speedKmh !== null;
+    const connected = matchedProfileName !== null;
+    const hasData = rpm !== null || speedKmh !== null || coolantC !== null || batteryV !== null;
+
+    // EV mode: speed > 0 but RPM = 0 → ICE engine is off, running on electric motor
+    const evMode = speedKmh !== null && speedKmh > 0 && rpm === 0;
+
+    let summary: string;
+    if (!connected) {
+      summary = '연결 실패';
+    } else if (evMode) {
+      summary = `${matchedProfileName} · EV 모드 주행 중 · ${speedKmh} km/h`;
+    } else if (hasData) {
+      const parts: string[] = [matchedProfileName!];
+      if (rpm !== null) parts.push(`RPM ${rpm}`);
+      if (speedKmh !== null) parts.push(`${speedKmh} km/h`);
+      if (coolantC !== null) parts.push(`냉각수 ${coolantC}°C`);
+      if (batteryV !== null) parts.push(`배터리 ${batteryV}V`);
+      summary = parts.join(' · ');
+    } else {
+      summary = `${matchedProfileName} 연결됨 · OBD 데이터 없음 — 플러그인 하이브리드는 전기 주행 중 RPM=0이 정상입니다. 시동 걸고 이동 중 재시도하세요.`;
+    }
+
     return {
-      ok: success,
+      ok: connected,
       profile: matchedProfileName,
       logs,
       rpm,
       speedKmh,
-      summary: hasData
-        ? `${matchedProfileName} · RPM ${rpm ?? '-'} · ${speedKmh ?? '-'} km/h`
-        : matchedProfileName
-          ? `${matchedProfileName} 연결됨 · OBD 데이터 없음 (엔진 시동 후 재시도)`
-          : '연결 실패',
+      coolantC,
+      batteryV,
+      summary,
     };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -433,6 +512,8 @@ export async function probeElm327Connection(deviceId: string): Promise<ObdProbeR
       logs,
       rpm: null,
       speedKmh: null,
+      coolantC: null,
+      batteryV: null,
       summary: `연결 실패: ${detail}`,
     };
   } finally {

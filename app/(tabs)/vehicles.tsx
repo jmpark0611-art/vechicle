@@ -306,7 +306,7 @@ export default function VehiclesScreen() {
             {probeResult.profile && (
               <Text style={styles.probeProfileText}>프로필: {probeResult.profile}</Text>
             )}
-            {(probeResult.rpm !== null || probeResult.speedKmh !== null) && (
+            {(probeResult.rpm !== null || probeResult.speedKmh !== null || probeResult.coolantC !== null || probeResult.batteryV !== null) && (
               <View style={styles.probeDataRow}>
                 {probeResult.rpm !== null && (
                   <View style={styles.probeDataChip}>
@@ -318,6 +318,18 @@ export default function VehiclesScreen() {
                   <View style={styles.probeDataChip}>
                     <Text style={styles.probeDataLabel}>속도</Text>
                     <Text style={styles.probeDataValue}>{probeResult.speedKmh} km/h</Text>
+                  </View>
+                )}
+                {probeResult.coolantC !== null && (
+                  <View style={styles.probeDataChip}>
+                    <Text style={styles.probeDataLabel}>냉각수</Text>
+                    <Text style={styles.probeDataValue}>{probeResult.coolantC}°C</Text>
+                  </View>
+                )}
+                {probeResult.batteryV !== null && (
+                  <View style={styles.probeDataChip}>
+                    <Text style={styles.probeDataLabel}>배터리</Text>
+                    <Text style={styles.probeDataValue}>{probeResult.batteryV}V</Text>
                   </View>
                 )}
               </View>

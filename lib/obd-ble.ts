@@ -139,6 +139,8 @@ export type ObdProbeResult = {
   logs: ObdProbeLog[];
   rpm: number | null;
   speedKmh: number | null;
+  coolantC: number | null;
+  batteryV: number | null;
   summary: string;
 };
 
@@ -149,6 +151,8 @@ export async function probeElm327Connection(_deviceId: string): Promise<ObdProbe
     logs: [{ step: 'ELM327 프로브', ok: false, detail: '웹 환경에서는 BLE 연결이 지원되지 않습니다.' }],
     rpm: null,
     speedKmh: null,
+    coolantC: null,
+    batteryV: null,
     summary: '웹 환경 미지원',
   };
 }
