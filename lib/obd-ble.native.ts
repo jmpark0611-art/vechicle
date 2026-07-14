@@ -34,14 +34,13 @@ const DEFAULT_SCAN_MS = 8_000;
 
 // Known BLE OBD serial profiles (service / notify / write characteristic prefixes)
 const OBD_BLE_PROFILES = [
-  { name: 'HM-10 / Vgate iCar BLE (FFE0)', servicePrefix: 'FFE0', notifyPrefix: 'FFE1', writePrefix: 'FFE1' },
-  { name: 'Generic OBD BLE (FFF0)',         servicePrefix: 'FFF0', notifyPrefix: 'FFF1', writePrefix: 'FFF2' },
-  {
-    name: 'Nordic UART Service',
-    servicePrefix: '6E400001',
-    notifyPrefix:  '6E400003',
-    writePrefix:   '6E400002',
-  },
+  { name: 'HM-10 / Vgate iCar BLE (FFE0)', servicePrefix: 'FFE0',     notifyPrefix: 'FFE1',     writePrefix: 'FFE1' },
+  { name: 'Generic OBD BLE (FFF0)',         servicePrefix: 'FFF0',     notifyPrefix: 'FFF1',     writePrefix: 'FFF2' },
+  { name: 'Nordic UART Service',            servicePrefix: '6E400001', notifyPrefix: '6E400003', writePrefix: '6E400002' },
+  // IOS-Vlink / Veepeak BLE — service 18F0, chars 2AF0(write) + 2AF1(notify)
+  { name: 'IOS-Vlink / Veepeak (18F0)',     servicePrefix: '18F0',     notifyPrefix: '2AF1',     writePrefix: '2AF0' },
+  // Vlink custom service starting with E7810A71
+  { name: 'Vlink Custom (E7810A71)',         servicePrefix: 'E7810A71', notifyPrefix: 'BEF8D6C9', writePrefix: 'BEF8D6C9' },
 ];
 
 function uuidMatches(uuid: string, prefix: string): boolean {
@@ -261,11 +260,49 @@ export async function probeElm327Connection(deviceId: string): Promise<ObdProbeR
       }
     }
 
+    // Auto-discover fallback: scan every non-standard service for a notifiable + writable characteristic pair
+    if (!notifyChar || !writeChar) {
+      const STANDARD_PREFIXES = ['1800', '1801', '1802', '1803', '1804', '1805', '1806', '1807',
+                                  '1808', '1809', '180A', '180B', '180C', '180D', '180E', '180F'];
+      const nonStdServices = services.filter(
+        (s) => !STANDARD_PREFIXES.some((p) => uuidMatches(s.uuid, p))
+      );
+
+      for (const svc of nonStdServices) {
+        const chars = await svc.characteristics();
+        const allUUIDs = chars.map((c) => c.uuid.toUpperCase().slice(0, 8)).join(' / ');
+        logs.push({ step: `자동탐색 서비스 ${svc.uuid.toUpperCase().slice(0, 8)}`, ok: true, detail: allUUIDs });
+
+        // Prefer a single char that is both notifiable and writable (common in cheap adapters)
+        const dual = chars.find(
+          (c) => c.isNotifiable && (c.isWritableWithResponse || c.isWritableWithoutResponse)
+        );
+        if (dual) {
+          matchedProfileName = `자동탐색 — ${svc.uuid.toUpperCase().slice(0, 8)} / ${dual.uuid.toUpperCase().slice(0, 8)}`;
+          notifyChar = dual;
+          writeChar = dual;
+          logs.push({ step: 'BLE 프로필 자동탐색', ok: true, detail: matchedProfileName });
+          break;
+        }
+
+        // Try separate notify + write characteristics
+        const notify = chars.find((c) => c.isNotifiable);
+        const write = chars.find((c) => c.isWritableWithResponse || c.isWritableWithoutResponse);
+        if (notify && write) {
+          matchedProfileName = `자동탐색 — ${svc.uuid.toUpperCase().slice(0, 8)}`;
+          notifyChar = notify;
+          writeChar = write;
+          logs.push({ step: 'BLE 프로필 자동탐색', ok: true, detail: matchedProfileName });
+          break;
+        }
+      }
+    }
+
     if (!notifyChar || !writeChar) {
       logs.push({
         step: 'BLE 프로필 매칭',
         ok: false,
-        detail: '알려진 OBD BLE 프로필(FFE0/FFF0/Nordic UART)을 찾지 못했습니다.',
+        detail: '알려진 프로필과 자동탐색 모두 실패했습니다. 서비스 UUID를 개발자에게 공유해 주세요.',
       });
       return { ok: false, profile: null, logs, rpm: null, speedKmh: null, summary: '호환 BLE 프로필 없음' };
     }
