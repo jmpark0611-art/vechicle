@@ -67,10 +67,7 @@ export default function MonthlyLogScreen() {
   return (
     <RebuildScreen
       title="월 장비운행증"
-      subtitle="차량과 월을 선택하면 해당 월의 운행 내역을 표시합니다."
       metrics={[
-        { label: '선택 차량', value: selectedVehicle?.vehicleNumber ?? '-' },
-        { label: '선택 월', value: `${year}년 ${month}월` },
         { label: '운행 건수', value: `${trips.length}건` },
         { label: '총 거리', value: totalKm > 0 ? `${Math.round(totalKm)}km` : '-' },
       ]}
@@ -79,7 +76,7 @@ export default function MonthlyLogScreen() {
         if (selectedVehicle) void loadTrips(selectedVehicle.id, year, month);
       }}>
 
-      <SectionCard title="조회 조건" body="차량과 월을 선택한 후 운행증을 조회합니다.">
+      <SectionCard title="조회 조건">
         <View style={styles.pickerRow}>
           <Pressable style={styles.pickerBtn} onPress={() => setVehiclePickerVisible(true)}>
             <Text style={styles.pickerBtnLabel}>차량</Text>

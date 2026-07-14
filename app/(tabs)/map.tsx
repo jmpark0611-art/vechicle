@@ -108,19 +108,12 @@ export default function MapScreen() {
   return (
     <RebuildScreen
       title="실시간 위치"
-      subtitle="진행 중 운행의 최근 GPS 포인트와 수송부 제한속도 구역을 안전한 읽기 전용 화면으로 표시합니다."
       metrics={[
         { label: '운행 차량', value: `${snapshot.positions.length}대` },
         { label: '제한구역', value: `${snapshot.zones.length}곳` },
-        { label: '구역 경고', value: `${snapshot.alerts.length}건` },
-        { label: '동기화', value: errorMessage ? '오류' : '대기' },
       ]}
-      actionLabel="위치 새로고침"
+      actionLabel="새로고침"
       onAction={() => void loadLocation()}>
-      <SectionCard title="위치 동기화" body={errorMessage ?? snapshot.message}>
-        <StatusLine label="차량" value={`${snapshot.positions.length}대 운행 중`} />
-        <StatusLine label="제한구역" value={`${snapshot.zones.length}곳`} />
-      </SectionCard>
 
       {isLoading ? (
         <LoadingCard label="위치 데이터를 불러오는 중" />
@@ -134,7 +127,7 @@ export default function MapScreen() {
             onMapTap={zoneAddMode ? (lat, lng) => { setZoneLat(lat.toFixed(6)); setZoneLng(lng.toFixed(6)); setZoneAddMode(false); } : undefined}
           />
 
-          <SectionCard title="제한속도 경고" body="최근 GPS가 제한속도 구역 반경 안에 들어온 차량을 표시합니다. 속도값이 제한보다 높으면 초과 의심으로 표시합니다.">
+          <SectionCard title="제한속도 경고">
             {snapshot.alerts.length === 0 ? (
               <StatusLine label="상태" value="감지된 차량 없음" />
             ) : (
@@ -157,7 +150,7 @@ export default function MapScreen() {
             )}
           </SectionCard>
 
-          <SectionCard title="운행 중 차량" body="각 차량의 마지막 GPS 저장 시각과 좌표를 표시합니다.">
+          <SectionCard title="운행 중 차량">
             {snapshot.positions.length === 0 ? (
               <StatusLine label="상태" value="최근 GPS 없음" />
             ) : (
@@ -179,7 +172,7 @@ export default function MapScreen() {
             )}
           </SectionCard>
 
-          <SectionCard title="제한속도 구역" body="수송부에서 지정한 구역을 읽기 전용으로 표시합니다.">
+          <SectionCard title="제한속도 구역">
             {snapshot.zones.length === 0 ? (
               <StatusLine label="상태" value="등록 구역 없음" />
             ) : (
@@ -193,7 +186,7 @@ export default function MapScreen() {
             )}
           </SectionCard>
 
-          <SectionCard title="제한속도 구역 등록" body="수송부 모드에서 사용할 제한속도 구역을 좌표 기준으로 등록합니다.">
+          <SectionCard title="속도구역 등록">
             <TextInput
               style={styles.input}
               value={zoneName}

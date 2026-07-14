@@ -6,6 +6,7 @@ import { saveCurrentGpsPoint } from '@/lib/gps-data';
 import { saveTripObdLog } from '@/lib/obd-data';
 import { obdBle, loadSelectedObdBleDevice, type ObdLiveData } from '@/lib/obd-ble';
 import {
+  cancelManualTrip,
   completeManualTrip,
   fetchActiveTrips,
   fetchVehiclesReadOnly,
@@ -166,6 +167,27 @@ export default function TripScreen() {
     }
   }
 
+  async function handleCancelTrip(trip: TripSummary) {
+    Alert.alert('운행 취소', `${trip.vehicleNumber} 운행을 취소하시겠습니까?`, [
+      { text: '아니요', style: 'cancel' },
+      {
+        text: '취소',
+        style: 'destructive',
+        onPress: async () => {
+          setIsSaving(true);
+          try {
+            await cancelManualTrip(trip.id);
+            setActiveTrips((current) => current.filter((item) => item.id !== trip.id));
+          } catch (error) {
+            Alert.alert('취소 실패', error instanceof Error ? error.message : '운행을 취소하지 못했습니다.');
+          } finally {
+            setIsSaving(false);
+          }
+        },
+      },
+    ]);
+  }
+
   async function handleCompleteTrip(trip: TripSummary) {
     const finalEndPlace = endPlace.trim() || trip.endPlace || '목적지 미입력';
     const endOdo = endOdometers[trip.id]?.trim() ? Number(endOdometers[trip.id].trim()) : undefined;
@@ -272,9 +294,14 @@ export default function TripScreen() {
                     placeholderTextColor="#94A3B8"
                     keyboardType="number-pad"
                   />
-                  <Pressable style={styles.completeBtn} onPress={() => void handleCompleteTrip(trip)} disabled={isSaving}>
-                    <Text style={styles.completeBtnText}>운행 종료</Text>
-                  </Pressable>
+                  <View style={styles.tripBtnRow}>
+                    <Pressable style={styles.completeBtn} onPress={() => void handleCompleteTrip(trip)} disabled={isSaving}>
+                      <Text style={styles.completeBtnText}>운행 종료</Text>
+                    </Pressable>
+                    <Pressable style={styles.cancelBtn} onPress={() => void handleCancelTrip(trip)} disabled={isSaving}>
+                      <Text style={styles.cancelBtnText}>취소</Text>
+                    </Pressable>
+                  </View>
                 </View>
               ))}
             </SectionCard>
@@ -314,13 +341,23 @@ const styles = StyleSheet.create({
   activeTripFirst: { borderTopWidth: 0, paddingTop: 4, marginTop: 4 },
   activeTripTitle: { color: '#0F172A', fontSize: 16, fontWeight: '900' },
   activeTripRoute: { color: '#64748B', fontSize: 13, fontWeight: '700', marginTop: 4 },
+  tripBtnRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   completeBtn: {
+    flex: 1,
     minHeight: 46,
     borderRadius: 12,
     backgroundColor: '#0F766E',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
   },
   completeBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  cancelBtn: {
+    minWidth: 72,
+    minHeight: 46,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtnText: { color: '#64748B', fontSize: 14, fontWeight: '900' },
 });

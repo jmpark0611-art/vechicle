@@ -322,3 +322,13 @@ export async function completeManualTrip(
     throw new Error(result.error.message);
   }
 }
+
+export async function cancelManualTrip(tripId: string): Promise<void> {
+  const result = await withRequestTimeout(
+    supabase.from('trips').update({ status: 'canceled', end_time: new Date().toISOString() }).eq('id', tripId),
+    '운행 취소'
+  );
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+}
