@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import type { ObdLiveData } from './obd-ble';
 import { supabase } from './supabase';
 
 export type ObdReading = {
@@ -251,4 +252,23 @@ export async function saveObdReading(reading: ObdReading): Promise<{ snapshot: O
   }
 
   return { snapshot: nextSnapshot, message: `로컬 저장 완료, DB 저장 실패: ${result.error.message}` };
+}
+
+
+// Save a BLE-polled OBD snapshot tied to an active trip.
+// Non-fatal: silently ignores DB errors so a failed save never interrupts driving.
+export async function saveTripObdLog(vehicleId: string, tripId: string, data: ObdLiveData): Promise<void> {
+  try {
+    await supabase.from('obd_logs').insert({
+      vehicle_id: vehicleId,
+      trip_id: tripId,
+      speed_kmh: data.speedKmh,
+      rpm: data.rpm,
+      coolant_temp_c: data.coolantC,
+      battery_voltage: data.batteryV,
+      fuel_level_percent: data.fuelPercent,
+      ignition_status: data.rpm !== null && data.rpm > 0 ? 'on' : 'off',
+      recorded_at: new Date().toISOString(),
+    });
+  } catch { /* ignore — driving must not be interrupted by save failures */ }
 }

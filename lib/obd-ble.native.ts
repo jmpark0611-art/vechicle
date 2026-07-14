@@ -520,3 +520,236 @@ export async function probeElm327Connection(deviceId: string): Promise<ObdProbeR
     try { manager.destroy(); } catch { /* ignore */ }
   }
 }
+
+// ── Continuous polling singleton ──────────────────────────────────────────────
+
+export type ObdLiveData = {
+  rpm: number | null;
+  speedKmh: number | null;
+  coolantC: number | null;
+  batteryV: number | null;
+  fuelPercent: number | null;
+  profile: string | null;
+};
+
+type ObdCallbacks = {
+  onData: (data: ObdLiveData) => void;
+  onStatus: (msg: string) => void;
+  onDisconnect: () => void;
+};
+
+// Duck-typed subset of react-native-ble-plx Characteristic used internally
+type CharRef = {
+  isWritableWithResponse: boolean;
+  isWritableWithoutResponse: boolean;
+  monitor(cb: (err: Error | null, c: { value: string | null } | null) => void): { remove(): void };
+  writeWithResponse(v: string): Promise<unknown>;
+  writeWithoutResponse(v: string): Promise<unknown>;
+};
+
+const EMPTY_LIVE: ObdLiveData = { rpm: null, speedKmh: null, coolantC: null, batteryV: null, fuelPercent: null, profile: null };
+
+class ObdBleConnection {
+  private _mgr: import('react-native-ble-plx').BleManager | null = null;
+  private _sub: { remove(): void } | null = null;
+  private _timer: ReturnType<typeof setInterval> | null = null;
+  private _busy = false;
+  private _slowIdx = 0;
+  private _cbs: ObdCallbacks | null = null;
+  private _rxBuf = '';
+  private _rxRes: ((s: string) => void) | null = null;
+  private _notifyChar: CharRef | null = null;
+  private _writeChar: CharRef | null = null;
+  _live: ObdLiveData = { ...EMPTY_LIVE };
+
+  get isConnected(): boolean { return this._notifyChar !== null; }
+  get live(): ObdLiveData { return { ...this._live }; }
+
+  setCallbacks(cbs: ObdCallbacks) { this._cbs = cbs; }
+
+  async connect(deviceId: string): Promise<{ ok: boolean; profile: string | null; message: string }> {
+    await this._teardown();
+    this._live = { ...EMPTY_LIVE };
+
+    const { BleManager } = await import('react-native-ble-plx');
+    this._mgr = new BleManager();
+
+    try {
+      if ((await this._mgr.state()) !== 'PoweredOn') {
+        await this._teardown();
+        return { ok: false, profile: null, message: 'Bluetooth를 켜 주세요' };
+      }
+
+      const device = await this._mgr.connectToDevice(deviceId, { autoConnect: false });
+      await device.discoverAllServicesAndCharacteristics();
+      const services = await device.services();
+
+      // Profile matching (same logic as probeElm327Connection)
+      let matchedProfile: string | null = null;
+      let notifyChar: CharRef | null = null;
+      let writeChar: CharRef | null = null;
+
+      outer: for (const prof of OBD_BLE_PROFILES) {
+        const svc = services.find((s) => uuidMatches(s.uuid, prof.servicePrefix));
+        if (!svc) continue;
+        const chars = await svc.characteristics();
+        const n = chars.find((c) => uuidMatches(c.uuid, prof.notifyPrefix) && c.isNotifiable);
+        const w = chars.find((c) => uuidMatches(c.uuid, prof.writePrefix) && (c.isWritableWithResponse || c.isWritableWithoutResponse));
+        if (n && w) { matchedProfile = prof.name; notifyChar = n as unknown as CharRef; writeChar = w as unknown as CharRef; break outer; }
+      }
+
+      if (!notifyChar || !writeChar) {
+        const SKIP = ['1800','1801','1802','1803','1804','1805','1806','1807','1808','1809','180A','180B','180C','180D','180E','180F'];
+        for (const svc of services.filter((s) => !SKIP.some((p) => uuidMatches(s.uuid, p)))) {
+          const chars = await svc.characteristics();
+          const dual = chars.find((c) => c.isNotifiable && (c.isWritableWithResponse || c.isWritableWithoutResponse));
+          if (dual) { notifyChar = dual as unknown as CharRef; writeChar = dual as unknown as CharRef; matchedProfile = `자동탐색 ${svc.uuid.toUpperCase().slice(0, 8)}`; break; }
+          const n = chars.find((c) => c.isNotifiable);
+          const w = chars.find((c) => c.isWritableWithResponse || c.isWritableWithoutResponse);
+          if (n && w) { notifyChar = n as unknown as CharRef; writeChar = w as unknown as CharRef; matchedProfile = `자동탐색 ${svc.uuid.toUpperCase().slice(0, 8)}`; break; }
+        }
+      }
+
+      if (!notifyChar || !writeChar) {
+        await this._teardown();
+        return { ok: false, profile: null, message: '호환 BLE 프로필 없음' };
+      }
+
+      this._notifyChar = notifyChar;
+      this._writeChar = writeChar;
+
+      // Set up notify buffer
+      this._sub = this._notifyChar.monitor((error, char) => {
+        if (error) {
+          this._cbs?.onStatus('OBD BLE 알림 오류');
+          void this._handleDisconnect();
+          return;
+        }
+        if (char?.value) {
+          this._rxBuf += decodeB64(char.value);
+          if (this._rxBuf.includes('>') && this._rxRes) {
+            const response = this._rxBuf;
+            this._rxBuf = '';
+            const res = this._rxRes;
+            this._rxRes = null;
+            res(response);
+          }
+        }
+      });
+
+      // AT init sequence
+      await this._cmd('ATZ', 6000);
+      await this._cmd('ATE0', 3000);
+      await this._cmd('ATL0', 3000);
+      await this._cmd('ATS0', 3000);
+      await this._cmd('ATAT2', 3000);
+      await this._cmd('ATSP0', 10000);
+
+      this._live = { ...EMPTY_LIVE, profile: matchedProfile };
+      return { ok: true, profile: matchedProfile, message: `${matchedProfile} 연결됨` };
+    } catch (error) {
+      await this._teardown();
+      return { ok: false, profile: null, message: error instanceof Error ? error.message : '연결 실패' };
+    }
+  }
+
+  startPolling(intervalMs = 2000) {
+    this.stopPolling();
+    this._slowIdx = 0;
+    this._timer = setInterval(() => { void this._poll(); }, intervalMs);
+  }
+
+  stopPolling() {
+    if (this._timer !== null) { clearInterval(this._timer); this._timer = null; }
+  }
+
+  async disconnect() {
+    this.stopPolling();
+    await this._teardown();
+    this._live = { ...EMPTY_LIVE };
+  }
+
+  private async _poll() {
+    if (!this.isConnected || this._busy) return;
+    this._busy = true;
+    try {
+      // Fast PIDs every cycle
+      const speedResp = await this._cmd('010D', 3000);
+      const rpmResp = await this._cmd('010C', 3000);
+      this._live.speedKmh = parseSpeed(speedResp);
+      this._live.rpm = parseRpm(rpmResp);
+
+      // Slow PIDs every 5 cycles (~10 s at 2 s interval)
+      if (this._slowIdx % 5 === 0) {
+        try {
+          const coolResp = await this._cmd('0105', 3000);
+          const m = coolResp.replace(/\s/g, '').match(/4105([0-9A-Fa-f]{2})/i);
+          if (m) this._live.coolantC = parseInt(m[1], 16) - 40;
+        } catch { /* non-critical */ }
+
+        try {
+          const fuelResp = await this._cmd('012F', 3000);
+          const m = fuelResp.replace(/\s/g, '').match(/412F([0-9A-Fa-f]{2})/i);
+          if (m) this._live.fuelPercent = Math.round(parseInt(m[1], 16) * 100 / 255);
+        } catch { /* non-critical */ }
+
+        try {
+          const rvResp = await this._cmd('ATRV', 3000);
+          const m = rvResp.match(/(\d+\.\d+)\s*V/i);
+          if (m) this._live.batteryV = parseFloat(m[1]);
+        } catch { /* non-critical */ }
+      }
+
+      this._slowIdx++;
+      this._cbs?.onData({ ...this._live });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : '폴링 오류';
+      this._cbs?.onStatus(`OBD 연결 끊김: ${msg}`);
+      await this._handleDisconnect();
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  private async _handleDisconnect() {
+    this.stopPolling();
+    await this._teardown();
+    this._live = { ...EMPTY_LIVE };
+    this._cbs?.onDisconnect();
+  }
+
+  private async _cmd(cmd: string, timeoutMs: number): Promise<string> {
+    this._rxBuf = '';
+    return new Promise<string>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this._rxRes = null;
+        reject(new Error(`${cmd} 응답 시간 초과`));
+      }, timeoutMs);
+
+      this._rxRes = (response) => { clearTimeout(timer); resolve(response); };
+
+      const encoded = encodeB64(cmd + '\r');
+      const writeChar = this._writeChar!;
+      const writeOp = writeChar.isWritableWithResponse
+        ? writeChar.writeWithResponse(encoded)
+        : writeChar.writeWithoutResponse(encoded);
+
+      writeOp.then(undefined, (err: Error) => {
+        clearTimeout(timer);
+        this._rxRes = null;
+        reject(err);
+      });
+    });
+  }
+
+  private async _teardown() {
+    this._rxRes = null;
+    this._rxBuf = '';
+    if (this._sub) { this._sub.remove(); this._sub = null; }
+    this._notifyChar = null;
+    this._writeChar = null;
+    if (this._mgr) { try { this._mgr.destroy(); } catch { /* ignore */ } this._mgr = null; }
+  }
+}
+
+export const obdBle = new ObdBleConnection();

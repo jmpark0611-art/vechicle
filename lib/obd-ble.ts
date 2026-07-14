@@ -156,3 +156,32 @@ export async function probeElm327Connection(_deviceId: string): Promise<ObdProbe
     summary: '웹 환경 미지원',
   };
 }
+
+export type ObdLiveData = {
+  rpm: number | null;
+  speedKmh: number | null;
+  coolantC: number | null;
+  batteryV: number | null;
+  fuelPercent: number | null;
+  profile: string | null;
+};
+
+const EMPTY_LIVE: ObdLiveData = { rpm: null, speedKmh: null, coolantC: null, batteryV: null, fuelPercent: null, profile: null };
+
+type ObdCallbacksStub = {
+  onData: (data: ObdLiveData) => void;
+  onStatus: (msg: string) => void;
+  onDisconnect: () => void;
+};
+
+class ObdBleConnectionStub {
+  get isConnected(): boolean { return false; }
+  get live(): ObdLiveData { return { ...EMPTY_LIVE }; }
+  setCallbacks(_cbs: ObdCallbacksStub) {}
+  async connect(_deviceId: string) { return { ok: false, profile: null as string | null, message: '웹 환경 미지원' }; }
+  startPolling(_intervalMs?: number) {}
+  stopPolling() {}
+  async disconnect() {}
+}
+
+export const obdBle = new ObdBleConnectionStub();
