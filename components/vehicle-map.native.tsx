@@ -6,17 +6,26 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   onMapTap?: (lat: number, lng: number) => void;
   onMapCenter?: (lat: number, lng: number) => void;
+  onPolygonChange?: (points: { latitude: number; longitude: number }[]) => void;
 };
 
-export function VehicleMap({ html, style, onMapTap, onMapCenter }: Props) {
+export function VehicleMap({ html, style, onMapTap, onMapCenter, onPolygonChange }: Props) {
   function handleMessage(event: WebViewMessageEvent) {
     try {
-      const msg = JSON.parse(event.nativeEvent.data) as { type: string; lat: number; lng: number };
+      const msg = JSON.parse(event.nativeEvent.data) as {
+        type: string;
+        lat?: number;
+        lng?: number;
+        points?: { latitude: number; longitude: number }[];
+      };
       if (msg.type === 'mapTap' && onMapTap) {
-        onMapTap(msg.lat, msg.lng);
+        if (typeof msg.lat === 'number' && typeof msg.lng === 'number') onMapTap(msg.lat, msg.lng);
       }
       if (msg.type === 'mapCenter' && onMapCenter) {
-        onMapCenter(msg.lat, msg.lng);
+        if (typeof msg.lat === 'number' && typeof msg.lng === 'number') onMapCenter(msg.lat, msg.lng);
+      }
+      if (msg.type === 'polygonChange' && onPolygonChange && Array.isArray(msg.points)) {
+        onPolygonChange(msg.points);
       }
     } catch { /* ignore malformed messages */ }
   }

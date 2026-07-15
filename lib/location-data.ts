@@ -328,14 +328,14 @@ export async function createSpeedZone(input: CreateSpeedZoneInput): Promise<{ ok
   );
 
   if (!result.error) return { ok: true, message: '제한속도 구역을 저장했습니다.' };
-  if (isMissingTable(result.error)) {
-    return { ok: false, message: 'speed_zones 테이블이 아직 DB에 적용되지 않았습니다.' };
-  }
   if (isMissingPolygonColumns(result.error)) {
     return {
       ok: false,
       message: '면적 구역용 DB 컬럼이 아직 적용되지 않았습니다. docs/schema.sql의 speed_zones 마이그레이션을 Supabase에 적용해 주세요.',
     };
+  }
+  if (isMissingTable(result.error)) {
+    return { ok: false, message: 'speed_zones 테이블이 아직 DB에 적용되지 않았습니다.' };
   }
 
   return { ok: false, message: result.error.message };

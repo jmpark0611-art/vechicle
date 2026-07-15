@@ -1,5 +1,7 @@
 import type { SpeedZone, VehiclePosition, ZonePoint } from './location-data';
 
+type SelectionMode = 'circle' | 'polygon';
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, '&amp;')
@@ -17,7 +19,8 @@ export function generateVehicleMapHtml(
   vehicles: VehiclePosition[],
   zones: SpeedZone[] = [],
   zoneAddMode = false,
-  polygonDraft: ZonePoint[] = []
+  polygonDraft: ZonePoint[] = [],
+  selectionMode: SelectionMode = 'polygon'
 ): string {
   const center = vehicles.length > 0
     ? `[${vehicles[0].latitude}, ${vehicles[0].longitude}]`
@@ -26,14 +29,18 @@ export function generateVehicleMapHtml(
     : polygonDraft.length > 0
     ? `[${polygonDraft[0].latitude}, ${polygonDraft[0].longitude}]`
     : '[36.5, 127.9]';
-  const zoom = vehicles.length > 0 || zones.length > 0 || polygonDraft.length > 0 ? 14 : 7;
+  const zoom = vehicles.length > 0 || zones.length > 0 || polygonDraft.length > 0 ? 15 : 7;
 
   const emptyStateHtml = vehicles.length === 0 && !zoneAddMode
-    ? `<div id="empty-state" class="floating-note"><strong>운행 중 차량 없음</strong><span>지도를 움직여 제한속도 구역을 등록할 수 있습니다.</span></div>`
+    ? `<div id="empty-state" class="floating-note"><strong>운행 중 차량 없음</strong><span>구역 설정은 큰 지도에서 더 편하게 할 수 있습니다.</span></div>`
     : '';
 
   const addModeHtml = zoneAddMode
-    ? `<div id="add-hint" class="add-hint">지도를 탭하면 꼭짓점이 추가됩니다. 원형 구역은 중심 좌표 버튼을 사용하세요.</div>
+    ? `<div id="add-hint" class="add-hint">${
+        selectionMode === 'polygon'
+          ? '면적 설정: 지도를 한 번씩 탭해 경계점을 추가하세요. 두 번 탭하면 지도가 확대될 수 있어요.'
+          : '원형 설정: 지도를 움직인 뒤 중심 좌표 사용을 누르세요.'
+      }</div>
        <div class="center-pin"></div>
        <button id="use-center" type="button">중심 좌표 사용</button>`
     : '';
@@ -57,10 +64,7 @@ export function generateVehicleMapHtml(
         fillOpacity: 0.32,
         weight: 3
       }).addTo(map)
-      .bindPopup('<div class="popup"><b>${name}</b><span>면적 구역</span><span>제한속도: ${zone.speedLimitKmh}km/h</span></div>');
-      L.circleMarker([${zone.latitude}, ${zone.longitude}], {
-        radius: 5, color: '#0F766E', fillColor: '#0F766E', fillOpacity: 1, weight: 0
-      }).addTo(map);`;
+      .bindPopup('<div class="popup"><b>${name}</b><span>면적 구역</span><span>제한속도: ${zone.speedLimitKmh}km/h</span></div>');`;
     }
     return `L.circle([${zone.latitude}, ${zone.longitude}], {
       radius: ${zone.radiusM},
@@ -69,38 +73,57 @@ export function generateVehicleMapHtml(
       fillOpacity: 0.25,
       weight: 2
     }).addTo(map)
-    .bindPopup('<div class="popup"><b>${name}</b><span>원형 구역</span><span>제한속도: ${zone.speedLimitKmh}km/h</span><span>반경: ${Math.round(zone.radiusM)}m</span></div>');
-    L.circleMarker([${zone.latitude}, ${zone.longitude}], {
-      radius: 5, color: '#DC2626', fillColor: '#DC2626', fillOpacity: 1, weight: 0
-    }).addTo(map);`;
+    .bindPopup('<div class="popup"><b>${name}</b><span>원형 구역</span><span>제한속도: ${zone.speedLimitKmh}km/h</span><span>반경: ${Math.round(zone.radiusM)}m</span></div>');`;
   }).join('\n');
 
-  const draftJs = polygonDraft.length > 0
-    ? `
-      var draftPoints = ${pointArray(polygonDraft)};
-      L.polyline(draftPoints, { color: '#2563EB', weight: 3, dashArray: '6,6' }).addTo(map);
-      if (draftPoints.length >= 3) {
-        L.polygon(draftPoints, { color: '#2563EB', fillColor: '#DBEAFE', fillOpacity: 0.24, weight: 2 }).addTo(map);
-      }
-      draftPoints.forEach(function(point, index) {
-        L.circleMarker(point, { radius: 6, color: '#2563EB', fillColor: '#FFFFFF', fillOpacity: 1, weight: 3 })
-          .addTo(map)
-          .bindTooltip(String(index + 1), { permanent: true, direction: 'center', className: 'vertex-label' });
-      });
-    `
-    : '';
+  const draftPointsJson = JSON.stringify(polygonDraft.map((point) => ({ latitude: point.latitude, longitude: point.longitude })));
 
   const postMessageJs = `
+    function postRaw(msg) {
+      var text = JSON.stringify(msg);
+      if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(text); }
+      else { window.parent.postMessage(text, '*'); }
+    }
     function postToApp(type, latlng) {
-      var msg = JSON.stringify({ type: type, lat: latlng.lat, lng: latlng.lng });
-      if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(msg); }
-      else { window.parent.postMessage(msg, '*'); }
+      postRaw({ type: type, lat: latlng.lat, lng: latlng.lng });
+    }
+    function postPolygon(points) {
+      postRaw({ type: 'polygonChange', points: points });
     }
   `;
 
   const selectionJs = zoneAddMode
     ? `
-      map.on('click', function(e) { postToApp('mapTap', e.latlng); });
+      var selectionMode = '${selectionMode}';
+      var draftPoints = ${draftPointsJson};
+      var draftLayer = L.layerGroup().addTo(map);
+
+      function drawDraft() {
+        draftLayer.clearLayers();
+        var latLngs = draftPoints.map(function(point) { return [point.latitude, point.longitude]; });
+        if (latLngs.length >= 2) {
+          L.polyline(latLngs, { color: '#2563EB', weight: 3, dashArray: '6,6' }).addTo(draftLayer);
+        }
+        if (latLngs.length >= 3) {
+          L.polygon(latLngs, { color: '#2563EB', fillColor: '#DBEAFE', fillOpacity: 0.24, weight: 2 }).addTo(draftLayer);
+        }
+        latLngs.forEach(function(point, index) {
+          L.circleMarker(point, { radius: 8, color: '#2563EB', fillColor: '#FFFFFF', fillOpacity: 1, weight: 3 })
+            .addTo(draftLayer)
+            .bindTooltip(String(index + 1), { permanent: true, direction: 'center', className: 'vertex-label' });
+        });
+      }
+      drawDraft();
+
+      map.on('click', function(e) {
+        if (selectionMode === 'polygon') {
+          draftPoints.push({ latitude: e.latlng.lat, longitude: e.latlng.lng });
+          drawDraft();
+          postPolygon(draftPoints);
+        } else {
+          postToApp('mapTap', e.latlng);
+        }
+      });
       document.getElementById('use-center').addEventListener('click', function() {
         postToApp('mapCenter', map.getCenter());
       });
@@ -161,7 +184,7 @@ export function generateVehicleMapHtml(
   ${emptyStateHtml}
   ${addModeHtml}
   <script>
-    var map = L.map('map', { zoomControl: true, tap: true }).setView(${center}, ${zoom});
+    var map = L.map('map', { zoomControl: true, tap: false, doubleClickZoom: false }).setView(${center}, ${zoom});
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap',
       maxZoom: 19
@@ -175,7 +198,6 @@ export function generateVehicleMapHtml(
     });
     ${markersJs}
     ${zonesJs}
-    ${draftJs}
     ${postMessageJs}
     ${selectionJs}
   </script>

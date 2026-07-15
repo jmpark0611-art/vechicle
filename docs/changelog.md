@@ -10,6 +10,15 @@
 - `lib/location-data.ts` falls back to the old speed_zones select when the DB has not yet received polygon columns, so the screen does not crash on older schemas.
 - Verification passed with `npm.cmd run verify`.
 
+## 2026-07-15 large map zone picker
+
+- Speed-zone editing now opens a full-screen map modal for easier area selection on mobile.
+- The small location map is preview-only; polygon/circle selection is done in the large map.
+- Polygon points are now drawn inside the Leaflet WebView without reloading the map on every tap, reducing unexpected zoom/position jumps.
+- Leaflet double-click zoom is disabled while selecting zones to avoid accidental zoom changes during point placement.
+- Save error wording now distinguishes missing polygon DB columns from a missing `speed_zones` table.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-14 OBD manual diagnostic records
 
 - Continued on branch `rebuild/clean-sdk54-start` after the known-good APK release `apk-29255828399`.

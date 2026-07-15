@@ -12,6 +12,12 @@
   - `docs/schema.sql`: `speed_zones.zone_kind` and `speed_zones.polygon_points` migration.
 - Important DB step before polygon saving works in production: apply the updated `docs/schema.sql` speed_zones migration in Supabase SQL Editor. Without it, old circle zones still load, but polygon save shows a DB-column-needed alert.
 - Verification: `npm.cmd run verify` passed.
+- Follow-up fix in the same area:
+  - Zone selection now opens a full-screen modal map.
+  - The preview map is no longer used for point placement.
+  - Leaflet draft points are managed inside the WebView while tapping, so the map should not reload/zoom out after every point.
+  - Double-click zoom is disabled during zone selection to reduce accidental zooming.
+  - Save error wording now clearly says when the Supabase polygon columns are missing.
 
 ## 2026-07-14 current branch status
 

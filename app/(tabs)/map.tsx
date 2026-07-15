@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleMap } from '@/components/vehicle-map';
@@ -28,13 +28,25 @@ export default function MapScreen() {
   const [zoneLng, setZoneLng] = useState('');
   const [zoneRadius, setZoneRadius] = useState('100');
   const [zoneLimit, setZoneLimit] = useState('30');
-  const [zoneAddMode, setZoneAddMode] = useState(false);
   const [zoneDraftMode, setZoneDraftMode] = useState<ZoneDraftMode>('polygon');
   const [polygonPoints, setPolygonPoints] = useState<ZonePoint[]>([]);
+  const polygonPointsRef = useRef<ZonePoint[]>([]);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [mapDraftRevision, setMapDraftRevision] = useState(0);
 
-  const mapHtml = useMemo(
-    () => generateVehicleMapHtml(snapshot.positions, snapshot.zones, zoneAddMode, polygonPoints),
-    [snapshot.positions, snapshot.zones, zoneAddMode, polygonPoints]
+  const previewMapHtml = useMemo(
+    () => generateVehicleMapHtml(snapshot.positions, snapshot.zones, false),
+    [snapshot.positions, snapshot.zones]
+  );
+
+  const pickerDraft = useMemo(() => {
+    void mapDraftRevision;
+    return polygonPointsRef.current;
+  }, [mapDraftRevision]);
+
+  const pickerMapHtml = useMemo(
+    () => generateVehicleMapHtml(snapshot.positions, snapshot.zones, true, pickerDraft, zoneDraftMode),
+    [snapshot.positions, snapshot.zones, zoneDraftMode, pickerDraft]
   );
 
   const loadLocation = useCallback(async () => {
@@ -54,23 +66,25 @@ export default function MapScreen() {
   }, [loadLocation]);
 
   function applyMapPoint(lat: number, lng: number) {
-    if (zoneDraftMode === 'polygon') {
-      setPolygonPoints((current) => [...current, { latitude: lat, longitude: lng }]);
-      return;
-    }
     setZoneLat(lat.toFixed(6));
     setZoneLng(lng.toFixed(6));
   }
 
-  function applyCenterPoint(lat: number, lng: number) {
-    setZoneLat(lat.toFixed(6));
-    setZoneLng(lng.toFixed(6));
+  function updatePolygonPoints(points: ZonePoint[]) {
+    polygonPointsRef.current = points;
+    setPolygonPoints(points);
   }
 
   function resetDraft() {
     setZoneLat('');
     setZoneLng('');
-    setPolygonPoints([]);
+    updatePolygonPoints([]);
+    setMapDraftRevision((current) => current + 1);
+  }
+
+  function undoPolygonPoint() {
+    updatePolygonPoints(polygonPointsRef.current.slice(0, -1));
+    setMapDraftRevision((current) => current + 1);
   }
 
   async function handleCreateZone() {
@@ -90,16 +104,16 @@ export default function MapScreen() {
 
     if (zoneDraftMode === 'polygon') {
       if (polygonPoints.length < 3) {
-        Alert.alert('면적 설정 필요', '지도에서 꼭짓점을 3개 이상 찍어 구역 면적을 만들어 주세요.');
+        Alert.alert('면적 설정 필요', '큰 지도에서 꼭짓점을 3개 이상 찍어 구역 면적을 만들어 주세요.');
         return;
       }
     } else {
       if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-        Alert.alert('위도 확인', '위도는 -90부터 90 사이 숫자로 입력해 주세요.');
+        Alert.alert('위도 확인', '큰 지도에서 중심 좌표를 선택해 주세요.');
         return;
       }
       if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-        Alert.alert('경도 확인', '경도는 -180부터 180 사이 숫자로 입력해 주세요.');
+        Alert.alert('경도 확인', '큰 지도에서 중심 좌표를 선택해 주세요.');
         return;
       }
       if (!Number.isFinite(radiusM) || radiusM <= 0) {
@@ -123,6 +137,7 @@ export default function MapScreen() {
       if (result.ok) {
         setZoneName('');
         resetDraft();
+        setIsPickerOpen(false);
         await loadLocation();
       }
     } catch (error) {
@@ -147,24 +162,18 @@ export default function MapScreen() {
         <SectionCard title="위치 데이터 오류" body={errorMessage} />
       ) : (
         <>
-          <VehicleMap
-            html={mapHtml}
-            style={styles.map}
-            onMapTap={zoneAddMode ? applyMapPoint : undefined}
-            onMapCenter={zoneAddMode ? applyCenterPoint : undefined}
-          />
+          <VehicleMap html={previewMapHtml} style={styles.map} />
 
           <SectionCard
             title="속도구역 등록"
-            body={zoneDraftMode === 'polygon'
-              ? '지도에서 구역 경계를 따라 꼭짓점을 찍어 면적으로 저장합니다.'
-              : '지도 중심 좌표와 반경으로 원형 구역을 저장합니다.'}>
+            body="큰 지도에서 구역을 설정합니다. 면적 구역은 3개 이상 경계점을 찍어 저장합니다.">
             <View style={styles.segment}>
               <Pressable
                 style={[styles.segmentButton, zoneDraftMode === 'polygon' && styles.segmentButtonActive]}
                 onPress={() => {
                   setZoneDraftMode('polygon');
-                  setZoneAddMode(true);
+                  updatePolygonPoints([]);
+                  setMapDraftRevision((current) => current + 1);
                 }}>
                 <Text style={[styles.segmentText, zoneDraftMode === 'polygon' && styles.segmentTextActive]}>면적</Text>
               </Pressable>
@@ -172,8 +181,8 @@ export default function MapScreen() {
                 style={[styles.segmentButton, zoneDraftMode === 'circle' && styles.segmentButtonActive]}
                 onPress={() => {
                   setZoneDraftMode('circle');
-                  setZoneAddMode(true);
-                  setPolygonPoints([]);
+                  updatePolygonPoints([]);
+                  setMapDraftRevision((current) => current + 1);
                 }}>
                 <Text style={[styles.segmentText, zoneDraftMode === 'circle' && styles.segmentTextActive]}>원형</Text>
               </Pressable>
@@ -187,27 +196,22 @@ export default function MapScreen() {
               placeholderTextColor="#94A3B8"
             />
 
-            <Pressable
-              style={[styles.mapPickBtn, zoneAddMode && styles.mapPickBtnActive]}
-              onPress={() => setZoneAddMode((current) => !current)}>
-              <Text style={styles.mapPickBtnText}>{zoneAddMode ? '지도 선택 중지' : '지도에서 구역 선택'}</Text>
+            <Pressable style={styles.mapPickBtn} onPress={() => setIsPickerOpen(true)}>
+              <Text style={styles.mapPickBtnText}>큰 지도에서 구역 설정</Text>
             </Pressable>
 
             {zoneDraftMode === 'polygon' ? (
               <>
                 <View style={styles.draftToolbar}>
                   <Text style={styles.draftCount}>꼭짓점 {polygonPoints.length}개</Text>
-                  <Pressable
-                    style={styles.smallButton}
-                    onPress={() => setPolygonPoints((current) => current.slice(0, -1))}
-                    disabled={polygonPoints.length === 0}>
+                  <Pressable style={styles.smallButton} onPress={undoPolygonPoint} disabled={polygonPoints.length === 0}>
                     <Text style={styles.smallButtonText}>되돌리기</Text>
                   </Pressable>
-                  <Pressable style={styles.smallButton} onPress={() => setPolygonPoints([])}>
+                  <Pressable style={styles.smallButton} onPress={resetDraft}>
                     <Text style={styles.smallButtonText}>초기화</Text>
                   </Pressable>
                 </View>
-                <Text style={styles.helpText}>3개 이상 찍으면 저장할 수 있습니다. 마지막 점은 자동으로 처음 점과 연결됩니다.</Text>
+                <Text style={styles.helpText}>점은 큰 지도에서 찍습니다. 마지막 점은 자동으로 처음 점과 연결됩니다.</Text>
               </>
             ) : (
               <>
@@ -307,6 +311,54 @@ export default function MapScreen() {
               ))
             )}
           </SectionCard>
+
+          <Modal visible={isPickerOpen} animationType="slide" onRequestClose={() => setIsPickerOpen(false)}>
+            <View style={styles.modalRoot}>
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>구역 설정</Text>
+                  <Text style={styles.modalSubtitle}>
+                    {zoneDraftMode === 'polygon'
+                      ? `면적 모드 · 꼭짓점 ${polygonPoints.length}개`
+                      : zoneLat && zoneLng
+                      ? `${zoneLat}, ${zoneLng}`
+                      : '원형 모드 · 중심 좌표 선택'}
+                  </Text>
+                </View>
+                <Pressable style={styles.closeButton} onPress={() => setIsPickerOpen(false)}>
+                  <Text style={styles.closeButtonText}>닫기</Text>
+                </Pressable>
+              </View>
+
+              <VehicleMap
+                html={pickerMapHtml}
+                style={styles.fullMap}
+                onMapTap={zoneDraftMode === 'circle' ? applyMapPoint : undefined}
+                onMapCenter={applyMapPoint}
+                onPolygonChange={updatePolygonPoints}
+              />
+
+              <View style={styles.modalFooter}>
+                {zoneDraftMode === 'polygon' ? (
+                  <>
+                    <Pressable style={styles.footerButton} onPress={undoPolygonPoint} disabled={polygonPoints.length === 0}>
+                      <Text style={styles.footerButtonText}>되돌리기</Text>
+                    </Pressable>
+                    <Pressable style={styles.footerButton} onPress={resetDraft}>
+                      <Text style={styles.footerButtonText}>초기화</Text>
+                    </Pressable>
+                    <Pressable style={styles.footerPrimary} onPress={() => setIsPickerOpen(false)}>
+                      <Text style={styles.footerPrimaryText}>적용</Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <Pressable style={styles.footerPrimaryWide} onPress={() => setIsPickerOpen(false)}>
+                    <Text style={styles.footerPrimaryText}>좌표 적용</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          </Modal>
         </>
       )}
     </RebuildScreen>
@@ -315,7 +367,7 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
   map: {
-    height: 380,
+    height: 260,
     borderRadius: 8,
     marginBottom: 14,
   },
@@ -398,17 +450,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   mapPickBtn: {
-    minHeight: 44,
+    minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
-  },
-  mapPickBtnActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#1D4ED8',
   },
   mapPickBtnText: { color: '#2563EB', fontSize: 14, fontWeight: '900' },
   draftToolbar: {
@@ -437,4 +485,62 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   saveZoneBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  modalRoot: { flex: 1, backgroundColor: '#F8FAFC' },
+  modalHeader: {
+    minHeight: 86,
+    paddingTop: 18,
+    paddingHorizontal: 18,
+    paddingBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  modalTitle: { color: '#0F172A', fontSize: 22, fontWeight: '900' },
+  modalSubtitle: { color: '#64748B', fontSize: 13, fontWeight: '800', marginTop: 4 },
+  closeButton: {
+    minHeight: 40,
+    borderRadius: 12,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  closeButtonText: { color: '#2563EB', fontSize: 13, fontWeight: '900' },
+  fullMap: { flex: 1, borderRadius: 0 },
+  modalFooter: {
+    minHeight: 78,
+    flexDirection: 'row',
+    gap: 10,
+    padding: 14,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  footerButton: {
+    flex: 1,
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerButtonText: { color: '#334155', fontSize: 14, fontWeight: '900' },
+  footerPrimary: {
+    flex: 1.2,
+    borderRadius: 14,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerPrimaryWide: {
+    flex: 1,
+    borderRadius: 14,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerPrimaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
 });

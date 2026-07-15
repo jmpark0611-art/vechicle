@@ -6,21 +6,34 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   onMapTap?: (lat: number, lng: number) => void;
   onMapCenter?: (lat: number, lng: number) => void;
+  onPolygonChange?: (points: { latitude: number; longitude: number }[]) => void;
 };
 
-export function VehicleMap({ html, style, onMapTap, onMapCenter }: Props) {
+export function VehicleMap({ html, style, onMapTap, onMapCenter, onPolygonChange }: Props) {
   useEffect(() => {
-    if (!onMapTap && !onMapCenter) return;
+    if (!onMapTap && !onMapCenter && !onPolygonChange) return;
     function handleMsg(e: MessageEvent) {
       try {
-        const msg = JSON.parse(String(e.data)) as { type: string; lat: number; lng: number };
-        if (msg.type === 'mapTap' && onMapTap) onMapTap(msg.lat, msg.lng);
-        if (msg.type === 'mapCenter' && onMapCenter) onMapCenter(msg.lat, msg.lng);
+        const msg = JSON.parse(String(e.data)) as {
+          type: string;
+          lat?: number;
+          lng?: number;
+          points?: { latitude: number; longitude: number }[];
+        };
+        if (msg.type === 'mapTap' && onMapTap && typeof msg.lat === 'number' && typeof msg.lng === 'number') {
+          onMapTap(msg.lat, msg.lng);
+        }
+        if (msg.type === 'mapCenter' && onMapCenter && typeof msg.lat === 'number' && typeof msg.lng === 'number') {
+          onMapCenter(msg.lat, msg.lng);
+        }
+        if (msg.type === 'polygonChange' && onPolygonChange && Array.isArray(msg.points)) {
+          onPolygonChange(msg.points);
+        }
       } catch { /* ignore */ }
     }
     window.addEventListener('message', handleMsg);
     return () => window.removeEventListener('message', handleMsg);
-  }, [onMapTap, onMapCenter]);
+  }, [onMapTap, onMapCenter, onPolygonChange]);
 
   return createElement(
     View,
