@@ -23,6 +23,7 @@ import {
   type TripSummary,
   type VehicleSummary,
 } from '@/lib/readonly-data';
+import { clearTripRunningNotification, showTripRunningNotification } from '@/lib/trip-notifications';
 
 function formatTime(value: string | null) {
   if (!value) return '-';
@@ -219,6 +220,7 @@ export default function TripScreen() {
       }
 
       const gpsResult = await saveCurrentGpsPoint(trip.id);
+      await showTripRunningNotification(trip.vehicleNumber, `${trip.startPlace ?? startPlace} → ${trip.endPlace ?? endPlace}`);
       startGpsTimer();
       Alert.alert('운행 시작', `${trip.vehicleNumber} 운행을 시작했습니다.\n${gpsResult.message}`);
     } catch (error) {
@@ -233,6 +235,8 @@ export default function TripScreen() {
     try {
       await cancelManualTrip(trip.id);
       setActiveTrips([]);
+      setEndOdometers({});
+      await clearTripRunningNotification();
       stopGpsTimer();
     } catch (error) {
       Alert.alert('취소 실패', error instanceof Error ? error.message : '운행을 취소하지 못했습니다.');
@@ -252,14 +256,18 @@ export default function TripScreen() {
       if (trip.vehicleId && endOdo !== undefined) {
         const nextSnapshot = await setVehicleCurrentKm(trip.vehicleId, endOdo);
         setMaintenanceSnapshot(nextSnapshot);
-        setStartOdometer(String(Math.round(endOdo)));
       }
       const gpsResult = await saveCurrentGpsPoint(trip.id);
       setActiveTrips([]);
+      setPurpose('');
+      setEndPlace('');
+      setStartOdometer('');
+      setEndOdometers({});
       obdBle.stopPolling();
       void obdBle.disconnect();
       stopObdSaveTimer();
       stopGpsTimer();
+      await clearTripRunningNotification();
       setIsObdConnected(false);
       setObdLiveData(null);
       Alert.alert('운행 종료', `${trip.vehicleNumber} 운행을 종료했습니다.\n${gpsResult.message}`);

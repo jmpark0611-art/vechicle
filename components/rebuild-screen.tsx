@@ -21,10 +21,15 @@ export function RebuildScreen({ title, subtitle, metrics = [], actionLabel, onAc
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 96 }]}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 72 }]}
       showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      <View style={styles.header}>
+        <View style={styles.headerMark} />
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.title}>{title}</Text>
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        </View>
+      </View>
 
       {metrics.length > 0 ? (
         <View style={styles.metricGrid}>
@@ -81,8 +86,26 @@ export function LoadingCard({ label = '불러오는 중' }: { label?: string }) 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F7F3FF' },
   content: { paddingHorizontal: 20 },
-  title: { color: '#24304F', fontSize: 22, fontWeight: '900', letterSpacing: 0, marginBottom: 2 },
-  subtitle: { color: '#7180A3', fontSize: 13, fontWeight: '700', marginTop: 4, marginBottom: 14, lineHeight: 19 },
+  header: {
+    minHeight: 62,
+    borderRadius: 22,
+    backgroundColor: '#FFFDFB',
+    borderWidth: 1,
+    borderColor: '#E8EAF7',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 14,
+    shadowColor: '#A7B0D8',
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
+  headerMark: { width: 8, height: 32, borderRadius: 999, backgroundColor: '#8EA7FF', marginRight: 12 },
+  headerTextWrap: { flex: 1 },
+  title: { color: '#24304F', fontSize: 21, fontWeight: '900', letterSpacing: 0 },
+  subtitle: { color: '#7180A3', fontSize: 12, fontWeight: '700', marginTop: 2, lineHeight: 17 },
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16, marginBottom: 16 },
   metricCard: {
     flexBasis: '47%',

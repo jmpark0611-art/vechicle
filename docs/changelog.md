@@ -1,5 +1,15 @@
 # 변경 이력
 
+## 2026-07-16 trip header and running notification
+
+- Reworked the common screen header into a softer pastel card so tab titles no longer appear as plain oversized text.
+- Reduced the common bottom padding to cut the empty space above the tab bar.
+- App startup now returns to the mode-selection screen instead of silently reusing the previously stored mode.
+- Added `expo-notifications` and a safe notification helper for trip-running status.
+- Trip start now shows a phone notification marked `운행 중`; trip completion/cancel clears it.
+- Trip completion/cancel now clears transient input fields so the next trip starts from blank inputs.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-15 commander diagnosis flow
 
 - Diagnosis tab now places a `단말기 연결` button next to vehicle selection for commander-mode spot checks.

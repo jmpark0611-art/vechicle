@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-16 trip UX update:
+  - `expo-notifications` was added. Trip start schedules a sticky-looking local notification (`운행 중`), and trip completion/cancel dismisses it.
+  - `app/_layout.tsx` now routes to `/role-select` on app startup so the mode-selection screen appears first again.
+  - `components/rebuild-screen.tsx` now uses a pastel header card and smaller bottom padding to reduce the blank space above the tab bar.
+  - Trip completion/cancel clears end-place, odometer, purpose, and temporary end-odometer inputs.
+  - `npm.cmd run verify` passed.
 - Latest commander diagnosis/records update:
   - Diagnosis tab has a `단말기 연결` button beside vehicle selection. It reuses the saved BLE OBD device if present, otherwise scans and stores the first OBD candidate.
   - Live OBD frames update the selected vehicle's diagnosis cards and save a synced OBD reading every 30 seconds while connected.

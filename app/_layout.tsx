@@ -2,19 +2,13 @@ import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
-import { getStoredRole } from '@/lib/role';
-
 export const unstable_settings = {
   initialRouteName: 'role-select',
 };
 
 export default function RootLayout() {
   useEffect(() => {
-    void getStoredRole().then((role) => {
-      if (!role) {
-        router.replace('/role-select');
-      }
-    });
+    router.replace('/role-select');
   }, []);
 
   return (
