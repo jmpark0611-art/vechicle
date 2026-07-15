@@ -1,5 +1,15 @@
 # 변경 이력
 
+## 2026-07-15 polygon speed zones
+
+- Location tab speed-zone registration now supports two modes: polygon area zones and legacy circular zones.
+- Polygon mode lets the user tap the Leaflet/OpenStreetMap map to add 3+ vertices, undo the last point, clear the draft, preview the area, and save it.
+- Existing circle zones remain supported with center coordinate and radius.
+- Speed-zone alert calculation now checks whether a vehicle GPS point is inside a polygon area before applying the speed limit.
+- `docs/schema.sql` adds `speed_zones.zone_kind` and `speed_zones.polygon_points` for Supabase migration.
+- `lib/location-data.ts` falls back to the old speed_zones select when the DB has not yet received polygon columns, so the screen does not crash on older schemas.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-14 OBD manual diagnostic records
 
 - Continued on branch `rebuild/clean-sdk54-start` after the known-good APK release `apk-29255828399`.

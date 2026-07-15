@@ -5,20 +5,22 @@ type Props = {
   html: string;
   style?: StyleProp<ViewStyle>;
   onMapTap?: (lat: number, lng: number) => void;
+  onMapCenter?: (lat: number, lng: number) => void;
 };
 
-export function VehicleMap({ html, style, onMapTap }: Props) {
+export function VehicleMap({ html, style, onMapTap, onMapCenter }: Props) {
   useEffect(() => {
-    if (!onMapTap) return;
+    if (!onMapTap && !onMapCenter) return;
     function handleMsg(e: MessageEvent) {
       try {
         const msg = JSON.parse(String(e.data)) as { type: string; lat: number; lng: number };
-        if (msg.type === 'mapTap') onMapTap!(msg.lat, msg.lng);
+        if (msg.type === 'mapTap' && onMapTap) onMapTap(msg.lat, msg.lng);
+        if (msg.type === 'mapCenter' && onMapCenter) onMapCenter(msg.lat, msg.lng);
       } catch { /* ignore */ }
     }
     window.addEventListener('message', handleMsg);
     return () => window.removeEventListener('message', handleMsg);
-  }, [onMapTap]);
+  }, [onMapTap, onMapCenter]);
 
   return createElement(
     View,

@@ -86,14 +86,53 @@ create table if not exists public.speed_zones (
   longitude double precision not null,
   radius_m numeric not null,
   speed_limit_kmh numeric not null,
+  zone_kind text not null default 'circle',
+  polygon_points jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint speed_zones_radius_check check (radius_m > 0),
-  constraint speed_zones_limit_check check (speed_limit_kmh > 0)
+  constraint speed_zones_limit_check check (speed_limit_kmh > 0),
+  constraint speed_zones_kind_check check (zone_kind in ('circle', 'polygon')),
+  constraint speed_zones_polygon_check check (
+    zone_kind = 'circle'
+    or (jsonb_typeof(polygon_points) = 'array' and jsonb_array_length(polygon_points) >= 3)
+  )
 );
+
+alter table public.speed_zones add column if not exists zone_kind text not null default 'circle';
+alter table public.speed_zones add column if not exists polygon_points jsonb;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'speed_zones_kind_check'
+      and conrelid = 'public.speed_zones'::regclass
+  ) then
+    alter table public.speed_zones
+      add constraint speed_zones_kind_check check (zone_kind in ('circle', 'polygon'));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'speed_zones_polygon_check'
+      and conrelid = 'public.speed_zones'::regclass
+  ) then
+    alter table public.speed_zones
+      add constraint speed_zones_polygon_check check (
+        zone_kind = 'circle'
+        or (jsonb_typeof(polygon_points) = 'array' and jsonb_array_length(polygon_points) >= 3)
+      );
+  end if;
+end $$;
 
 create index if not exists speed_zones_name_idx
   on public.speed_zones (name);
+
+create index if not exists speed_zones_zone_kind_idx
+  on public.speed_zones (zone_kind);
 
 create table if not exists public.obd_logs (
   id uuid primary key default gen_random_uuid(),

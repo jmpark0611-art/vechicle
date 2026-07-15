@@ -3,8 +3,10 @@ import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleMap } from '@/components/vehicle-map';
-import { createSpeedZone, fetchLocationSnapshot, type LocationSnapshot } from '@/lib/location-data';
+import { createSpeedZone, fetchLocationSnapshot, type LocationSnapshot, type ZonePoint } from '@/lib/location-data';
 import { generateVehicleMapHtml } from '@/lib/map-html';
+
+type ZoneDraftMode = 'circle' | 'polygon';
 
 function formatTime(value: string) {
   const date = new Date(value);
@@ -27,10 +29,12 @@ export default function MapScreen() {
   const [zoneRadius, setZoneRadius] = useState('100');
   const [zoneLimit, setZoneLimit] = useState('30');
   const [zoneAddMode, setZoneAddMode] = useState(false);
+  const [zoneDraftMode, setZoneDraftMode] = useState<ZoneDraftMode>('polygon');
+  const [polygonPoints, setPolygonPoints] = useState<ZonePoint[]>([]);
 
   const mapHtml = useMemo(
-    () => generateVehicleMapHtml(snapshot.positions, snapshot.zones, zoneAddMode),
-    [snapshot.positions, snapshot.zones, zoneAddMode]
+    () => generateVehicleMapHtml(snapshot.positions, snapshot.zones, zoneAddMode, polygonPoints),
+    [snapshot.positions, snapshot.zones, zoneAddMode, polygonPoints]
   );
 
   const loadLocation = useCallback(async () => {
@@ -50,9 +54,23 @@ export default function MapScreen() {
   }, [loadLocation]);
 
   function applyMapPoint(lat: number, lng: number) {
+    if (zoneDraftMode === 'polygon') {
+      setPolygonPoints((current) => [...current, { latitude: lat, longitude: lng }]);
+      return;
+    }
     setZoneLat(lat.toFixed(6));
     setZoneLng(lng.toFixed(6));
-    setZoneAddMode(false);
+  }
+
+  function applyCenterPoint(lat: number, lng: number) {
+    setZoneLat(lat.toFixed(6));
+    setZoneLng(lng.toFixed(6));
+  }
+
+  function resetDraft() {
+    setZoneLat('');
+    setZoneLng('');
+    setPolygonPoints([]);
   }
 
   async function handleCreateZone() {
@@ -65,31 +83,46 @@ export default function MapScreen() {
       Alert.alert('구역명 필요', '제한속도 구역 이름을 입력해 주세요.');
       return;
     }
-    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-      Alert.alert('위도 확인', '위도는 -90부터 90 사이 숫자로 입력해 주세요.');
-      return;
-    }
-    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-      Alert.alert('경도 확인', '경도는 -180부터 180 사이 숫자로 입력해 주세요.');
-      return;
-    }
-    if (!Number.isFinite(radiusM) || radiusM <= 0) {
-      Alert.alert('반경 확인', '반경은 0보다 큰 숫자로 입력해 주세요.');
-      return;
-    }
     if (!Number.isFinite(speedLimitKmh) || speedLimitKmh <= 0) {
       Alert.alert('제한속도 확인', '제한속도는 0보다 큰 숫자로 입력해 주세요.');
       return;
     }
 
+    if (zoneDraftMode === 'polygon') {
+      if (polygonPoints.length < 3) {
+        Alert.alert('면적 설정 필요', '지도에서 꼭짓점을 3개 이상 찍어 구역 면적을 만들어 주세요.');
+        return;
+      }
+    } else {
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+        Alert.alert('위도 확인', '위도는 -90부터 90 사이 숫자로 입력해 주세요.');
+        return;
+      }
+      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        Alert.alert('경도 확인', '경도는 -180부터 180 사이 숫자로 입력해 주세요.');
+        return;
+      }
+      if (!Number.isFinite(radiusM) || radiusM <= 0) {
+        Alert.alert('반경 확인', '반경은 0보다 큰 숫자로 입력해 주세요.');
+        return;
+      }
+    }
+
     setIsSavingZone(true);
     try {
-      const result = await createSpeedZone({ name: zoneName, latitude, longitude, radiusM, speedLimitKmh });
+      const result = await createSpeedZone({
+        name: zoneName,
+        latitude: Number.isFinite(latitude) ? latitude : 0,
+        longitude: Number.isFinite(longitude) ? longitude : 0,
+        radiusM: Number.isFinite(radiusM) ? radiusM : 1,
+        speedLimitKmh,
+        zoneKind: zoneDraftMode,
+        polygonPoints,
+      });
       Alert.alert(result.ok ? '구역 저장' : '구역 저장 실패', result.message);
       if (result.ok) {
         setZoneName('');
-        setZoneLat('');
-        setZoneLng('');
+        resetDraft();
         await loadLocation();
       }
     } catch (error) {
@@ -118,12 +151,34 @@ export default function MapScreen() {
             html={mapHtml}
             style={styles.map}
             onMapTap={zoneAddMode ? applyMapPoint : undefined}
-            onMapCenter={zoneAddMode ? applyMapPoint : undefined}
+            onMapCenter={zoneAddMode ? applyCenterPoint : undefined}
           />
 
           <SectionCard
             title="속도구역 등록"
-            body={zoneAddMode ? '지도를 움직여 원하는 위치를 가운데에 맞춘 뒤 중심 좌표를 사용하세요.' : undefined}>
+            body={zoneDraftMode === 'polygon'
+              ? '지도에서 구역 경계를 따라 꼭짓점을 찍어 면적으로 저장합니다.'
+              : '지도 중심 좌표와 반경으로 원형 구역을 저장합니다.'}>
+            <View style={styles.segment}>
+              <Pressable
+                style={[styles.segmentButton, zoneDraftMode === 'polygon' && styles.segmentButtonActive]}
+                onPress={() => {
+                  setZoneDraftMode('polygon');
+                  setZoneAddMode(true);
+                }}>
+                <Text style={[styles.segmentText, zoneDraftMode === 'polygon' && styles.segmentTextActive]}>면적</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.segmentButton, zoneDraftMode === 'circle' && styles.segmentButtonActive]}
+                onPress={() => {
+                  setZoneDraftMode('circle');
+                  setZoneAddMode(true);
+                  setPolygonPoints([]);
+                }}>
+                <Text style={[styles.segmentText, zoneDraftMode === 'circle' && styles.segmentTextActive]}>원형</Text>
+              </Pressable>
+            </View>
+
             <TextInput
               style={styles.input}
               value={zoneName}
@@ -131,47 +186,69 @@ export default function MapScreen() {
               placeholder="예: 본부대 정문"
               placeholderTextColor="#94A3B8"
             />
+
             <Pressable
               style={[styles.mapPickBtn, zoneAddMode && styles.mapPickBtnActive]}
               onPress={() => setZoneAddMode((current) => !current)}>
-              <Text style={styles.mapPickBtnText}>{zoneAddMode ? '지도 선택 취소' : '지도에서 위치 선택'}</Text>
+              <Text style={styles.mapPickBtnText}>{zoneAddMode ? '지도 선택 중지' : '지도에서 구역 선택'}</Text>
             </Pressable>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.inputHalf}
-                value={zoneLat}
-                onChangeText={setZoneLat}
-                placeholder="위도"
-                placeholderTextColor="#94A3B8"
-                keyboardType="decimal-pad"
-              />
-              <TextInput
-                style={styles.inputHalf}
-                value={zoneLng}
-                onChangeText={setZoneLng}
-                placeholder="경도"
-                placeholderTextColor="#94A3B8"
-                keyboardType="decimal-pad"
-              />
-            </View>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.inputHalf}
-                value={zoneRadius}
-                onChangeText={setZoneRadius}
-                placeholder="반경 m"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-              />
-              <TextInput
-                style={styles.inputHalf}
-                value={zoneLimit}
-                onChangeText={setZoneLimit}
-                placeholder="제한 km/h"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-              />
-            </View>
+
+            {zoneDraftMode === 'polygon' ? (
+              <>
+                <View style={styles.draftToolbar}>
+                  <Text style={styles.draftCount}>꼭짓점 {polygonPoints.length}개</Text>
+                  <Pressable
+                    style={styles.smallButton}
+                    onPress={() => setPolygonPoints((current) => current.slice(0, -1))}
+                    disabled={polygonPoints.length === 0}>
+                    <Text style={styles.smallButtonText}>되돌리기</Text>
+                  </Pressable>
+                  <Pressable style={styles.smallButton} onPress={() => setPolygonPoints([])}>
+                    <Text style={styles.smallButtonText}>초기화</Text>
+                  </Pressable>
+                </View>
+                <Text style={styles.helpText}>3개 이상 찍으면 저장할 수 있습니다. 마지막 점은 자동으로 처음 점과 연결됩니다.</Text>
+              </>
+            ) : (
+              <>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    style={styles.inputHalf}
+                    value={zoneLat}
+                    onChangeText={setZoneLat}
+                    placeholder="위도"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="decimal-pad"
+                  />
+                  <TextInput
+                    style={styles.inputHalf}
+                    value={zoneLng}
+                    onChangeText={setZoneLng}
+                    placeholder="경도"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  value={zoneRadius}
+                  onChangeText={setZoneRadius}
+                  placeholder="반경 m"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="number-pad"
+                />
+              </>
+            )}
+
+            <TextInput
+              style={styles.input}
+              value={zoneLimit}
+              onChangeText={setZoneLimit}
+              placeholder="제한 km/h"
+              placeholderTextColor="#94A3B8"
+              keyboardType="number-pad"
+            />
+
             <Pressable style={styles.saveZoneBtn} onPress={() => void handleCreateZone()} disabled={isSavingZone}>
               <Text style={styles.saveZoneBtnText}>{isSavingZone ? '저장 중' : '구역 저장'}</Text>
             </Pressable>
@@ -190,7 +267,7 @@ export default function MapScreen() {
                     </Text>
                   </View>
                   <Text style={styles.listBody}>{alert.zoneName}</Text>
-                  <StatusLine label="거리" value={`${Math.round(alert.distanceM)}m`} />
+                  <StatusLine label="중심거리" value={`${Math.round(alert.distanceM)}m`} />
                   <StatusLine
                     label="속도"
                     value={`${alert.speedKmh === null ? '-' : `${Math.round(alert.speedKmh)}km/h`} / 제한 ${Math.round(alert.speedLimitKmh)}km/h`}
@@ -223,8 +300,9 @@ export default function MapScreen() {
               snapshot.zones.map((zone) => (
                 <View key={zone.id} style={styles.listItem}>
                   <Text style={styles.listTitle}>{zone.name}</Text>
+                  <StatusLine label="방식" value={zone.zoneKind === 'polygon' ? `면적 ${zone.polygonPoints.length}점` : '원형'} />
                   <StatusLine label="제한속도" value={`${Math.round(zone.speedLimitKmh)}km/h`} />
-                  <StatusLine label="반경" value={`${Math.round(zone.radiusM)}m`} />
+                  {zone.zoneKind === 'circle' ? <StatusLine label="반경" value={`${Math.round(zone.radiusM)}m`} /> : null}
                 </View>
               ))
             )}
@@ -237,7 +315,7 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
   map: {
-    height: 360,
+    height: 380,
     borderRadius: 8,
     marginBottom: 14,
   },
@@ -269,6 +347,31 @@ const styles = StyleSheet.create({
   },
   listTitle: { color: '#0F172A', fontSize: 16, fontWeight: '900' },
   listBody: { color: '#64748B', fontSize: 13, fontWeight: '700', lineHeight: 19, marginTop: 4 },
+  segment: {
+    flexDirection: 'row',
+    gap: 8,
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
+    padding: 4,
+    marginTop: 12,
+  },
+  segmentButton: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentButtonActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  segmentText: { color: '#64748B', fontSize: 14, fontWeight: '900' },
+  segmentTextActive: { color: '#2563EB' },
   input: {
     minHeight: 52,
     borderRadius: 12,
@@ -308,6 +411,23 @@ const styles = StyleSheet.create({
     borderColor: '#1D4ED8',
   },
   mapPickBtnText: { color: '#2563EB', fontSize: 14, fontWeight: '900' },
+  draftToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  draftCount: { flex: 1, color: '#0F172A', fontSize: 14, fontWeight: '900' },
+  smallButton: {
+    minHeight: 36,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  smallButtonText: { color: '#334155', fontSize: 12, fontWeight: '900' },
+  helpText: { color: '#64748B', fontSize: 12, fontWeight: '700', lineHeight: 18, marginTop: 8 },
   saveZoneBtn: {
     minHeight: 48,
     borderRadius: 12,

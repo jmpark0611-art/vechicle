@@ -1,4 +1,4 @@
-import type { SpeedZone, VehiclePosition } from './location-data';
+import type { SpeedZone, VehiclePosition, ZonePoint } from './location-data';
 
 function escapeHtml(value: string) {
   return value
@@ -9,24 +9,31 @@ function escapeHtml(value: string) {
     .replace(/'/g, '&#39;');
 }
 
+function pointArray(points: ZonePoint[]) {
+  return JSON.stringify(points.map((point) => [point.latitude, point.longitude]));
+}
+
 export function generateVehicleMapHtml(
   vehicles: VehiclePosition[],
   zones: SpeedZone[] = [],
-  zoneAddMode = false
+  zoneAddMode = false,
+  polygonDraft: ZonePoint[] = []
 ): string {
   const center = vehicles.length > 0
     ? `[${vehicles[0].latitude}, ${vehicles[0].longitude}]`
     : zones.length > 0
     ? `[${zones[0].latitude}, ${zones[0].longitude}]`
+    : polygonDraft.length > 0
+    ? `[${polygonDraft[0].latitude}, ${polygonDraft[0].longitude}]`
     : '[36.5, 127.9]';
-  const zoom = vehicles.length > 0 || zones.length > 0 ? 14 : 7;
+  const zoom = vehicles.length > 0 || zones.length > 0 || polygonDraft.length > 0 ? 14 : 7;
 
   const emptyStateHtml = vehicles.length === 0 && !zoneAddMode
     ? `<div id="empty-state" class="floating-note"><strong>운행 중 차량 없음</strong><span>지도를 움직여 제한속도 구역을 등록할 수 있습니다.</span></div>`
     : '';
 
   const addModeHtml = zoneAddMode
-    ? `<div id="add-hint" class="add-hint">지도를 움직인 뒤 아래 버튼으로 중심 좌표를 넣거나, 지도를 탭하세요.</div>
+    ? `<div id="add-hint" class="add-hint">지도를 탭하면 꼭짓점이 추가됩니다. 원형 구역은 중심 좌표 버튼을 사용하세요.</div>
        <div class="center-pin"></div>
        <button id="use-center" type="button">중심 좌표 사용</button>`
     : '';
@@ -43,6 +50,18 @@ export function generateVehicleMapHtml(
 
   const zonesJs = zones.map((zone) => {
     const name = escapeHtml(zone.name);
+    if (zone.zoneKind === 'polygon' && zone.polygonPoints.length >= 3) {
+      return `L.polygon(${pointArray(zone.polygonPoints)}, {
+        color: '#0F766E',
+        fillColor: '#CCFBF1',
+        fillOpacity: 0.32,
+        weight: 3
+      }).addTo(map)
+      .bindPopup('<div class="popup"><b>${name}</b><span>면적 구역</span><span>제한속도: ${zone.speedLimitKmh}km/h</span></div>');
+      L.circleMarker([${zone.latitude}, ${zone.longitude}], {
+        radius: 5, color: '#0F766E', fillColor: '#0F766E', fillOpacity: 1, weight: 0
+      }).addTo(map);`;
+    }
     return `L.circle([${zone.latitude}, ${zone.longitude}], {
       radius: ${zone.radiusM},
       color: '#DC2626',
@@ -50,11 +69,26 @@ export function generateVehicleMapHtml(
       fillOpacity: 0.25,
       weight: 2
     }).addTo(map)
-    .bindPopup('<div class="popup"><b>${name}</b><span>제한속도: ${zone.speedLimitKmh}km/h</span><span>반경: ${zone.radiusM}m</span></div>');
+    .bindPopup('<div class="popup"><b>${name}</b><span>원형 구역</span><span>제한속도: ${zone.speedLimitKmh}km/h</span><span>반경: ${Math.round(zone.radiusM)}m</span></div>');
     L.circleMarker([${zone.latitude}, ${zone.longitude}], {
       radius: 5, color: '#DC2626', fillColor: '#DC2626', fillOpacity: 1, weight: 0
     }).addTo(map);`;
   }).join('\n');
+
+  const draftJs = polygonDraft.length > 0
+    ? `
+      var draftPoints = ${pointArray(polygonDraft)};
+      L.polyline(draftPoints, { color: '#2563EB', weight: 3, dashArray: '6,6' }).addTo(map);
+      if (draftPoints.length >= 3) {
+        L.polygon(draftPoints, { color: '#2563EB', fillColor: '#DBEAFE', fillOpacity: 0.24, weight: 2 }).addTo(map);
+      }
+      draftPoints.forEach(function(point, index) {
+        L.circleMarker(point, { radius: 6, color: '#2563EB', fillColor: '#FFFFFF', fillOpacity: 1, weight: 3 })
+          .addTo(map)
+          .bindTooltip(String(index + 1), { permanent: true, direction: 'center', className: 'vertex-label' });
+      });
+    `
+    : '';
 
   const postMessageJs = `
     function postToApp(type, latlng) {
@@ -113,6 +147,10 @@ export function generateVehicleMapHtml(
       border: 0; background: #2563EB; color: #fff; padding: 12px 18px; border-radius: 999px;
       font-size: 13px; font-weight: 900; box-shadow: 0 12px 26px rgba(37,99,235,0.28);
     }
+    .vertex-label {
+      background: #2563EB; border: 0; border-radius: 999px; color: #fff; font-size: 11px; font-weight: 900;
+      box-shadow: none;
+    }
     .popup { min-width: 150px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: #475569; }
     .popup b { color: #0F172A; font-size: 14px; }
     .popup .blue { color: #2563EB; font-weight: 800; }
@@ -137,6 +175,7 @@ export function generateVehicleMapHtml(
     });
     ${markersJs}
     ${zonesJs}
+    ${draftJs}
     ${postMessageJs}
     ${selectionJs}
   </script>

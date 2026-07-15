@@ -1,5 +1,18 @@
 # 인수인계 메모
 
+## 2026-07-15 latest handoff
+
+- Current branch: `claude/env-permissions-session-restart-154onb`.
+- Latest task: convert speed-limit zone setup from point-only to area-capable.
+- Implemented:
+  - `app/(tabs)/map.tsx`: polygon/circle mode selector, map vertex tapping, undo, clear, polygon preview, and save validation.
+  - `lib/map-html.ts`: Leaflet/OpenStreetMap rendering for polygon zones, circle zones, active vehicles, and polygon draft vertices.
+  - `lib/location-data.ts`: polygon zone persistence, old-schema fallback, point-in-polygon alert checks, and clean Korean errors.
+  - `components/vehicle-map.web.tsx`: web parity for `mapCenter` messages.
+  - `docs/schema.sql`: `speed_zones.zone_kind` and `speed_zones.polygon_points` migration.
+- Important DB step before polygon saving works in production: apply the updated `docs/schema.sql` speed_zones migration in Supabase SQL Editor. Without it, old circle zones still load, but polygon save shows a DB-column-needed alert.
+- Verification: `npm.cmd run verify` passed.
+
 ## 2026-07-14 current branch status
 
 - Active branch: `rebuild/clean-sdk54-start`
