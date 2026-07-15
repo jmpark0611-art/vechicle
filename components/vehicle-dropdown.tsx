@@ -17,7 +17,7 @@ export function VehicleDropdown({
   selectedVehicleId,
   onSelect,
   includeAll = false,
-  allLabel = '전체 차량',
+  allLabel = '전체',
   placeholder = '차량 선택',
 }: VehicleDropdownProps) {
   const [open, setOpen] = useState(false);
@@ -35,16 +35,10 @@ export function VehicleDropdown({
   return (
     <View style={styles.wrap}>
       <Pressable style={styles.control} onPress={() => setOpen((current) => !current)}>
-        <View style={styles.iconBox}>
-          <Text style={styles.icon}>▣</Text>
-        </View>
-        <View style={styles.textBox}>
-          <Text style={styles.label}>차량</Text>
-          <Text style={styles.value} numberOfLines={1}>
-            {label}
-          </Text>
-        </View>
-        <Text style={styles.chevron}>{open ? '⌃' : '⌄'}</Text>
+        <Text style={styles.value} numberOfLines={1}>
+          {label}
+        </Text>
+        <Text style={styles.chevron}>{open ? '▲' : '▼'}</Text>
       </Pressable>
 
       {open ? (
@@ -73,10 +67,10 @@ export function VehicleDropdown({
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginTop: 12 },
+  wrap: { marginTop: 8 },
   control: {
-    minHeight: 58,
-    borderRadius: 16,
+    minHeight: 50,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
@@ -85,28 +79,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: '#EAF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  icon: { color: '#2563EB', fontSize: 16, fontWeight: '900' },
-  textBox: { flex: 1, minWidth: 0 },
-  label: { color: '#64748B', fontSize: 11, fontWeight: '800', marginBottom: 2 },
-  value: { color: '#0F172A', fontSize: 16, fontWeight: '900' },
-  chevron: { color: '#64748B', fontSize: 18, fontWeight: '900' },
+  value: { color: '#0F172A', fontSize: 15, fontWeight: '900', flex: 1 },
+  chevron: { color: '#64748B', fontSize: 12, fontWeight: '900' },
   menu: {
     marginTop: 8,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
-  option: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  option: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
   optionActive: { backgroundColor: '#EFF6FF' },
   optionText: { color: '#334155', fontSize: 14, fontWeight: '800' },
   optionTextActive: { color: '#2563EB' },

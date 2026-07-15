@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, Share, StyleSheet, Text } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
@@ -22,6 +23,13 @@ function statusLabel(status: string) {
   return status;
 }
 
+function tripDistance(trip: TripSummary) {
+  if (trip.startOdometer !== null && trip.endOdometer !== null && trip.endOdometer >= trip.startOdometer) {
+    return `${Math.round(trip.endOdometer - trip.startOdometer).toLocaleString('ko-KR')}km`;
+  }
+  return '-';
+}
+
 export default function RecordsScreen() {
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
@@ -34,7 +42,7 @@ export default function RecordsScreen() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const [nextTrips, nextVehicles] = await Promise.all([fetchTripsReadOnly(100), fetchVehiclesReadOnly(50)]);
+      const [nextTrips, nextVehicles] = await Promise.all([fetchTripsReadOnly(100), fetchVehiclesReadOnly(200)]);
       const obd = await loadSyncedObdSnapshot(nextVehicles.map((vehicle) => vehicle.id));
       setTrips(nextTrips);
       setVehicles(nextVehicles);
@@ -54,27 +62,57 @@ export default function RecordsScreen() {
     () => (selectedVehicleId ? trips.filter((trip) => trip.vehicleId === selectedVehicleId) : trips),
     [selectedVehicleId, trips]
   );
-  const inProgressCount = useMemo(() => filtered.filter((trip) => trip.status === 'in_progress').length, [filtered]);
   const completedCount = useMemo(() => filtered.filter((trip) => trip.status === 'completed').length, [filtered]);
+
+  async function exportMonthlyLog() {
+    if (filtered.length === 0) {
+      Alert.alert('내보낼 기록 없음', '선택한 조건의 운행 기록이 없습니다.');
+      return;
+    }
+    const rows = [
+      '차량번호,상태,출발,도착,출발지,목적지,운전자,사용자,운행거리,OBD연료',
+      ...filtered.map((trip) => {
+        const fuel = trip.vehicleId && obdSnapshot[trip.vehicleId]?.fuelPercent !== null && obdSnapshot[trip.vehicleId]?.fuelPercent !== undefined
+          ? `${obdSnapshot[trip.vehicleId].fuelPercent}%`
+          : '';
+        return [
+          trip.vehicleNumber,
+          statusLabel(trip.status),
+          formatTripTime(trip.startTime),
+          formatTripTime(trip.endTime),
+          trip.startPlace ?? '',
+          trip.endPlace ?? '',
+          trip.operatorName ?? '',
+          trip.userName ?? '',
+          tripDistance(trip),
+          fuel,
+        ].map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',');
+      }),
+    ];
+    await Share.share({
+      title: '월장비운행증',
+      message: rows.join('\n'),
+    });
+  }
 
   return (
     <RebuildScreen
       title="기록"
-      subtitle="월장비운행증과 운행 기록을 이 화면에서 함께 확인합니다."
-      metrics={[
-        { label: '운행 중', value: `${inProgressCount}건` },
-        { label: '완료', value: `${completedCount}건` },
-      ]}
+      metrics={[{ label: '완료', value: `${completedCount}건` }]}
       actionLabel="새로고침"
       onAction={() => void loadData()}>
+      <Pressable style={styles.exportBtn} onPress={() => void exportMonthlyLog()}>
+        <Text style={styles.exportBtnText}>월장비운행증 내보내기</Text>
+      </Pressable>
+
       {vehicles.length > 0 ? (
-        <SectionCard title="차량">
+        <SectionCard title="차량 선택">
           <VehicleDropdown
             vehicles={vehicles}
             selectedVehicleId={selectedVehicleId}
             onSelect={setSelectedVehicleId}
             includeAll
-            allLabel="전체 차량"
+            allLabel="전체"
           />
         </SectionCard>
       ) : null}
@@ -91,15 +129,25 @@ export default function RecordsScreen() {
             <StatusLine label="경로" value={`${trip.startPlace ?? '-'} → ${trip.endPlace ?? '-'}`} />
             <StatusLine label="출발" value={formatTripTime(trip.startTime)} />
             <StatusLine label="도착" value={formatTripTime(trip.endTime)} />
-            {trip.purpose ? <StatusLine label="목적" value={trip.purpose} /> : null}
+            <StatusLine label="거리" value={tripDistance(trip)} />
             {trip.operatorName ? <StatusLine label="운전자" value={trip.operatorName} /> : null}
             {trip.userName ? <StatusLine label="사용자" value={trip.userName} /> : null}
-            {trip.vehicleId && obdSnapshot[trip.vehicleId]?.fuelPercent !== null && obdSnapshot[trip.vehicleId]?.fuelPercent !== undefined ? (
-              <StatusLine label="OBD 연료" value={`${obdSnapshot[trip.vehicleId].fuelPercent}%`} />
-            ) : null}
           </SectionCard>
         ))
       )}
     </RebuildScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  exportBtn: {
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: '#0F766E',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  exportBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
+});

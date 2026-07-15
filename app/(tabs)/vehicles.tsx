@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
@@ -15,14 +15,6 @@ import {
   type MaintenanceItem,
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
-import {
-  loadSelectedObdBleDevice,
-  probeElm327Connection,
-  saveSelectedObdBleDevice,
-  scanForObdBleDevices,
-  type ObdBleDevice,
-  type ObdProbeResult,
-} from '@/lib/obd-ble';
 import { createVehicle, fetchLatestVehicleOdometers, fetchVehiclesReadOnly, type VehicleSummary } from '@/lib/readonly-data';
 
 function formatKm(value: number | null | undefined) {
@@ -45,16 +37,13 @@ export default function VehiclesScreen() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<MaintenanceSnapshot>({});
   const [kmInputs, setKmInputs] = useState<Record<string, string>>({});
-  const [newVehicleNumber, setNewVehicleNumber] = useState('');
-  const [bleDevices, setBleDevices] = useState<ObdBleDevice[]>([]);
-  const [selectedBleDevice, setSelectedBleDevice] = useState<ObdBleDevice | null>(null);
-  const [isScanningBle, setIsScanningBle] = useState(false);
-  const [isProbing, setIsProbing] = useState(false);
-  const [probeResult, setProbeResult] = useState<ObdProbeResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [bleMessage, setBleMessage] = useState('미연결');
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [newVehicleNumber, setNewVehicleNumber] = useState('');
+  const [newVehicleType, setNewVehicleType] = useState('');
+  const [newVehicleKm, setNewVehicleKm] = useState('');
 
   const selectedVehicle = useMemo(
     () => vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? vehicles[0] ?? null,
@@ -101,17 +90,10 @@ export default function VehiclesScreen() {
     void loadVehicles();
   }, [loadVehicles]);
 
-  useEffect(() => {
-    void loadSelectedObdBleDevice().then((device) => {
-      setSelectedBleDevice(device);
-      if (device) setBleMessage(`${device.name} 선택됨`);
-    });
-  }, []);
-
   async function saveCurrentKm(vehicle: VehicleSummary) {
     const currentKm = Number(kmInputs[vehicle.id]?.replace(/,/g, '').trim());
     if (!Number.isFinite(currentKm) || currentKm < 0) {
-      Alert.alert('주행거리 확인', '현재 주행거리를 숫자로 입력해 주세요.');
+      Alert.alert('주행거리 확인', '현재 계기판 주행거리를 숫자로 입력해 주세요.');
       return null;
     }
     const nextSnapshot = await setVehicleCurrentKm(vehicle.id, currentKm);
@@ -120,14 +102,32 @@ export default function VehiclesScreen() {
     return Math.round(currentKm);
   }
 
-  async function handleAddVehicle() {
+  async function handleRegisterVehicle() {
+    const vehicleNumber = newVehicleNumber.trim();
+    const initialKm = newVehicleKm.trim() ? Number(newVehicleKm.replace(/,/g, '').trim()) : null;
+    if (!vehicleNumber) {
+      Alert.alert('차량번호 필요', '차량번호를 입력해 주세요.');
+      return;
+    }
+    if (initialKm !== null && (!Number.isFinite(initialKm) || initialKm < 0)) {
+      Alert.alert('주행거리 확인', '계기판 주행거리는 0 이상 숫자로 입력해 주세요.');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const vehicle = await createVehicle(newVehicleNumber);
+      const vehicle = await createVehicle(vehicleNumber);
+      if (initialKm !== null) {
+        const nextSnapshot = await setVehicleCurrentKm(vehicle.id, initialKm);
+        setSnapshot(nextSnapshot);
+      }
       setNewVehicleNumber('');
+      setNewVehicleType('');
+      setNewVehicleKm('');
       setSelectedVehicleId(vehicle.id);
+      setIsRegisterOpen(false);
       await loadVehicles();
-      Alert.alert('차량 등록 완료', `${vehicle.vehicleNumber} 차량을 등록했습니다.`);
+      Alert.alert('차량 등록 완료', `${vehicle.vehicleNumber}${newVehicleType.trim() ? ` · ${newVehicleType.trim()}` : ''}`);
     } catch (error) {
       Alert.alert('차량 등록 실패', error instanceof Error ? error.message : '차량을 등록하지 못했습니다.');
     } finally {
@@ -139,9 +139,7 @@ export default function VehiclesScreen() {
     setIsSaving(true);
     try {
       const currentKm = await saveCurrentKm(vehicle);
-      if (currentKm !== null) {
-        Alert.alert('저장 완료', `${vehicle.vehicleNumber} 현재 주행거리 ${formatKm(currentKm)} 저장됨`);
-      }
+      if (currentKm !== null) Alert.alert('저장 완료', `${vehicle.vehicleNumber} 현재 ${formatKm(currentKm)}`);
     } catch (error) {
       Alert.alert('저장 실패', error instanceof Error ? error.message : '주행거리를 저장하지 못했습니다.');
     } finally {
@@ -157,7 +155,7 @@ export default function VehiclesScreen() {
       const nextSnapshot = await completeMaintenanceItem(vehicle.id, item.key, currentKm);
       setSnapshot(nextSnapshot);
       await syncMaintenanceCompletion(vehicle.id, item.key, currentKm);
-      Alert.alert('교체 완료', `${vehicle.vehicleNumber} ${item.label} 교체를 ${formatKm(currentKm)} 기준으로 기록했습니다.`);
+      Alert.alert('교체 완료', `${vehicle.vehicleNumber} ${item.label} 기준 ${formatKm(currentKm)}`);
     } catch (error) {
       Alert.alert('교체 기록 실패', error instanceof Error ? error.message : '교체 기록을 저장하지 못했습니다.');
     } finally {
@@ -165,112 +163,23 @@ export default function VehiclesScreen() {
     }
   }
 
-  async function handleScanObdBle() {
-    setIsScanningBle(true);
-    setBleMessage('검색 중');
-    try {
-      const result = await scanForObdBleDevices();
-      setBleDevices(result.devices);
-      setBleMessage(result.message);
-      if (!result.ok) Alert.alert('OBD 검색', result.message);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'OBD BLE 검색에 실패했습니다.';
-      setBleMessage(message);
-      Alert.alert('OBD 검색 실패', message);
-    } finally {
-      setIsScanningBle(false);
-    }
-  }
-
-  async function handleSelectBleDevice(device: ObdBleDevice) {
-    await saveSelectedObdBleDevice(device);
-    setSelectedBleDevice(device);
-    setProbeResult(null);
-    setBleMessage(`${device.name} 선택됨`);
-  }
-
-  async function handleProbeElm327() {
-    if (!selectedBleDevice) return;
-    setIsProbing(true);
-    setProbeResult(null);
-    setBleMessage('ELM327 테스트 중');
-    try {
-      const result = await probeElm327Connection(selectedBleDevice.id);
-      setProbeResult(result);
-      setBleMessage(result.summary);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'ELM327 연결 테스트 실패';
-      setBleMessage(message);
-      Alert.alert('연결 테스트 실패', message);
-    } finally {
-      setIsProbing(false);
-    }
-  }
-
   const selectedState = selectedVehicle ? getVehicleMaintenanceState(snapshot, selectedVehicle.id) : null;
 
   return (
-    <RebuildScreen title="차량" actionLabel={isSaving ? '저장 중' : '새로고침'} onAction={() => void loadVehicles()}>
-      <SectionCard title="차량 등록">
-        <View style={styles.addRow}>
-          <TextInput
-            style={styles.addInput}
-            value={newVehicleNumber}
-            onChangeText={setNewVehicleNumber}
-            placeholder="예: 82바 1043"
-            placeholderTextColor="#94A3B8"
-          />
-          <Pressable style={styles.addBtn} onPress={() => void handleAddVehicle()} disabled={isSaving}>
-            <Text style={styles.addBtnText}>등록</Text>
-          </Pressable>
-        </View>
-      </SectionCard>
+    <RebuildScreen title="차량" actionLabel="새로고침" onAction={() => void loadVehicles()}>
+      <Pressable style={styles.registerOpenBtn} onPress={() => setIsRegisterOpen(true)}>
+        <Text style={styles.registerOpenText}>차량 등록</Text>
+      </Pressable>
 
       {dueItems.length > 0 ? (
         <SectionCard title={`교체 알림 ${dueItems.length}건`}>
-          {dueItems.slice(0, 8).map(({ vehicle, item, remainingKm }) => (
+          {dueItems.slice(0, 10).map(({ vehicle, item, remainingKm }) => (
             <StatusLine key={`${vehicle.id}-${item.key}`} label={`${vehicle.vehicleNumber} · ${item.label}`} value={remainingLabel(remainingKm)} />
           ))}
         </SectionCard>
       ) : (
-        <SectionCard title="교체 알림" body="현재 교체시기가 임박한 차량이 없습니다." />
+        <SectionCard title="교체 알림" body="현재 교체시기가 다가오는 차량이 없습니다." />
       )}
-
-      <SectionCard title="OBD BLE 장치">
-        <StatusLine label="상태" value={bleMessage} />
-        {selectedBleDevice ? <StatusLine label="선택 장치" value={selectedBleDevice.name} /> : null}
-        <Pressable style={styles.bleScanBtn} onPress={() => void handleScanObdBle()} disabled={isScanningBle || isProbing}>
-          <Text style={styles.bleScanBtnText}>{isScanningBle ? '검색 중' : 'BLE 장치 검색'}</Text>
-        </Pressable>
-        {bleDevices.map((device) => (
-          <Pressable key={device.id} style={styles.bleDeviceBtn} onPress={() => void handleSelectBleDevice(device)}>
-            <View style={styles.bleDeviceInfo}>
-              <Text style={styles.bleDeviceName}>{device.name}</Text>
-              <Text style={styles.bleDeviceMeta}>RSSI {device.rssi ?? '-'}</Text>
-            </View>
-            <Text style={[styles.bleDeviceAction, selectedBleDevice?.id === device.id && styles.bleDeviceActionSelected]}>
-              {selectedBleDevice?.id === device.id ? '선택됨' : '선택'}
-            </Text>
-          </Pressable>
-        ))}
-        {selectedBleDevice ? (
-          <Pressable
-            style={[styles.bleProbeBtn, isProbing && styles.bleProbeBtnDisabled]}
-            onPress={() => void handleProbeElm327()}
-            disabled={isProbing || isScanningBle}>
-            <Text style={styles.bleProbeBtnText}>{isProbing ? 'ELM327 테스트 중' : 'ELM327 연결 테스트'}</Text>
-          </Pressable>
-        ) : null}
-        {probeResult ? (
-          <View style={styles.probeResultCard}>
-            <Text style={styles.probeResultTitle}>테스트 결과: {probeResult.ok ? '성공' : '실패'}</Text>
-            {probeResult.profile ? <StatusLine label="프로필" value={probeResult.profile} /> : null}
-            {probeResult.rpm !== null ? <StatusLine label="RPM" value={String(probeResult.rpm)} /> : null}
-            {probeResult.speedKmh !== null ? <StatusLine label="속도" value={`${probeResult.speedKmh} km/h`} /> : null}
-            {probeResult.batteryV !== null ? <StatusLine label="배터리" value={`${probeResult.batteryV}V`} /> : null}
-          </View>
-        ) : null}
-      </SectionCard>
 
       {isLoading ? (
         <LoadingCard label="차량 목록을 불러오는 중" />
@@ -281,12 +190,7 @@ export default function VehiclesScreen() {
       ) : (
         <>
           <SectionCard title="차량 선택">
-            <VehicleDropdown
-              vehicles={vehicles}
-              selectedVehicleId={selectedVehicle?.id ?? null}
-              onSelect={setSelectedVehicleId}
-              placeholder="차량을 선택하세요"
-            />
+            <VehicleDropdown vehicles={vehicles} selectedVehicleId={selectedVehicle?.id ?? null} onSelect={setSelectedVehicleId} />
           </SectionCard>
 
           {selectedVehicle && selectedState ? (
@@ -296,7 +200,7 @@ export default function VehiclesScreen() {
                   style={styles.kmInput}
                   value={kmInputs[selectedVehicle.id] ?? ''}
                   onChangeText={(value) => setKmInputs((current) => ({ ...current, [selectedVehicle.id]: value }))}
-                  placeholder="현재 주행거리 km"
+                  placeholder="현재 계기판 km"
                   placeholderTextColor="#94A3B8"
                   keyboardType="number-pad"
                 />
@@ -328,33 +232,59 @@ export default function VehiclesScreen() {
           ) : null}
         </>
       )}
+
+      <Modal visible={isRegisterOpen} transparent animationType="fade" onRequestClose={() => setIsRegisterOpen(false)}>
+        <View style={styles.modalDim}>
+          <View style={styles.registerModal}>
+            <Text style={styles.modalTitle}>차량 등록</Text>
+            <TextInput
+              style={styles.input}
+              value={newVehicleNumber}
+              onChangeText={setNewVehicleNumber}
+              placeholder="차량번호"
+              placeholderTextColor="#94A3B8"
+            />
+            <TextInput
+              style={styles.input}
+              value={newVehicleType}
+              onChangeText={setNewVehicleType}
+              placeholder="종류 예: 카니발, 버스"
+              placeholderTextColor="#94A3B8"
+            />
+            <TextInput
+              style={styles.input}
+              value={newVehicleKm}
+              onChangeText={setNewVehicleKm}
+              placeholder="계기판 주행거리 km"
+              placeholderTextColor="#94A3B8"
+              keyboardType="number-pad"
+            />
+            <View style={styles.modalActions}>
+              <Pressable style={styles.modalCancel} onPress={() => setIsRegisterOpen(false)}>
+                <Text style={styles.modalCancelText}>취소</Text>
+              </Pressable>
+              <Pressable style={styles.modalSave} onPress={() => void handleRegisterVehicle()} disabled={isSaving}>
+                <Text style={styles.modalSaveText}>{isSaving ? '등록 중' : '등록'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </RebuildScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  addRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  addInput: {
-    flex: 1,
-    minHeight: 50,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '800',
-    paddingHorizontal: 14,
-  },
-  addBtn: {
-    minWidth: 72,
-    minHeight: 50,
-    borderRadius: 12,
+  registerOpenBtn: {
+    minHeight: 48,
+    borderRadius: 14,
     backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 12,
+    marginBottom: 12,
   },
-  addBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  registerOpenText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
   kmRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   kmInput: {
     flex: 1,
@@ -368,81 +298,34 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     paddingHorizontal: 14,
   },
-  saveBtn: {
-    minWidth: 68,
-    minHeight: 50,
-    borderRadius: 12,
-    backgroundColor: '#EAF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  saveBtn: { minWidth: 68, minHeight: 50, borderRadius: 12, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
   saveBtnText: { color: '#2563EB', fontSize: 14, fontWeight: '900' },
   itemCard: { borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 14, marginTop: 14 },
   itemCardDue: { borderTopColor: '#DBEAFE' },
-  itemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 2,
-  },
+  itemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 2 },
   itemTitle: { color: '#0F172A', fontSize: 15, fontWeight: '900' },
   remaining: { color: '#0F766E', fontSize: 13, fontWeight: '900', textAlign: 'right', flexShrink: 1 },
   remainingDue: { color: '#DC2626' },
-  completeBtn: {
-    minHeight: 44,
-    borderRadius: 12,
-    backgroundColor: '#0F766E',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-  },
+  completeBtn: { minHeight: 44, borderRadius: 12, backgroundColor: '#0F766E', alignItems: 'center', justifyContent: 'center', marginTop: 12 },
   completeBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
-  bleScanBtn: {
-    minHeight: 46,
+  modalDim: { flex: 1, backgroundColor: 'rgba(15,23,42,0.42)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  registerModal: { width: '100%', borderRadius: 16, backgroundColor: '#FFFFFF', padding: 18 },
+  modalTitle: { color: '#0F172A', fontSize: 20, fontWeight: '900', marginBottom: 4 },
+  input: {
+    minHeight: 50,
     borderRadius: 12,
-    backgroundColor: '#0F172A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-  },
-  bleScanBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
-  bleDeviceBtn: {
-    minHeight: 58,
-    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '800',
     paddingHorizontal: 14,
-    paddingVertical: 10,
     marginTop: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
   },
-  bleDeviceInfo: { flex: 1, minWidth: 0 },
-  bleDeviceName: { color: '#0F172A', fontSize: 14, fontWeight: '900' },
-  bleDeviceMeta: { color: '#64748B', fontSize: 12, fontWeight: '700', marginTop: 2 },
-  bleDeviceAction: { color: '#2563EB', fontSize: 13, fontWeight: '900' },
-  bleDeviceActionSelected: { color: '#0F766E' },
-  bleProbeBtn: {
-    minHeight: 48,
-    borderRadius: 12,
-    backgroundColor: '#1D4ED8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-  },
-  bleProbeBtnDisabled: { backgroundColor: '#94A3B8' },
-  bleProbeBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
-  probeResultCard: {
-    marginTop: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-    padding: 14,
-  },
-  probeResultTitle: { color: '#0F172A', fontSize: 14, fontWeight: '900' },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  modalCancel: { flex: 1, minHeight: 46, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  modalCancelText: { color: '#334155', fontSize: 14, fontWeight: '900' },
+  modalSave: { flex: 1, minHeight: 46, borderRadius: 12, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center' },
+  modalSaveText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
 });

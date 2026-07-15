@@ -1,5 +1,16 @@
 # 변경 이력
 
+## 2026-07-15 UX cleanup batch
+
+- Location tab removed new circle-zone setup and now saves polygon zones from the full-screen map footer.
+- Location tab removed the visible speed-alert and active-vehicle list sections; registered speed zones remain visible.
+- Overspeed inside a configured speed zone now triggers a vibration plus alert while the app is open.
+- Vehicle tab registration now opens a modal for vehicle number, type, and initial odometer; the inline registration input was removed.
+- Records tab adds a monthly equipment operation log export through the native share sheet.
+- Vehicle dropdown copy was simplified by removing the extra label text.
+- Trip tab compacted driver/user inputs into rank/name rows and added a same-as-driver toggle for the user fields.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-15 polygon speed zones
 
 - Location tab speed-zone registration now supports two modes: polygon area zones and legacy circular zones.

@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- Latest UX cleanup:
+  - Location tab: polygon-only setup, save button in full-screen map footer, removed visible speed-alert/active-vehicle sections, keeps registered speed-zone list, and vibrates/alerts on overspeed while open.
+  - Vehicle tab: registration moved to modal with vehicle number/type/initial odometer fields; inline vehicle-number input removed.
+  - Records tab: monthly equipment operation log export uses React Native Share.
+  - Trip tab: compact driver/user rank+name rows, same-as-driver checkbox, simplified vehicle dropdown copy.
+  - `npm.cmd run verify` passed.
 - Latest task: convert speed-limit zone setup from point-only to area-capable.
 - Implemented:
   - `app/(tabs)/map.tsx`: polygon/circle mode selector, map vertex tapping, undo, clear, polygon preview, and save validation.
