@@ -3,6 +3,15 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- Latest commander diagnosis/records update:
+  - Diagnosis tab has a `단말기 연결` button beside vehicle selection. It reuses the saved BLE OBD device if present, otherwise scans and stores the first OBD candidate.
+  - Live OBD frames update the selected vehicle's diagnosis cards and save a synced OBD reading every 30 seconds while connected.
+  - Diagnosis cards are split into `ECU 감지 정보` and `주기성 교환품목` groups, two square cards per row.
+  - Records tab list is intentionally minimal: date, vehicle, and route only. Tap a record for the detail popup used by the monthly equipment operation log.
+  - Monthly export includes operator/user rank+name, latest fuel percentage, and inferred refuel events when OBD fuel percentage increases by 8% or more inside the current month.
+  - Trip start odometer is auto-filled from the selected vehicle's synced current km. Generic ELM327 adapters usually do not expose total odometer, so this remains app/synced-km based unless a vehicle-specific PID is added later.
+  - `lib/obd-data.ts` now uses Supabase `obd_logs.fuel_level_percent`; keep `docs/schema.sql` applied before relying on fuel/refuel data.
+  - `npm.cmd run verify` passed.
 - Latest pastel diagnosis UI:
   - `vehicles` tab title is now shown as `진단`.
   - Diagnosis screen uses two-column square cards for ECU/OBD readings and periodic maintenance items.

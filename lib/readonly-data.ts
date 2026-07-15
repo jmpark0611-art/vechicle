@@ -17,7 +17,9 @@ export type TripSummary = {
   status: string;
   purpose: string | null;
   operatorName: string | null;
+  operatorRank: string | null;
   userName: string | null;
+  userRank: string | null;
   startOdometer: number | null;
   endOdometer: number | null;
 };
@@ -30,6 +32,7 @@ export type ManualTripInput = {
   operatorName?: string;
   operatorRank?: string;
   userName?: string;
+  userRank?: string;
   startOdometer?: number;
 };
 
@@ -68,6 +71,7 @@ type TripRow = {
   operator_name?: string | null;
   operator_rank?: string | null;
   user_name?: string | null;
+  user_rank?: string | null;
   start_odometer?: number | null;
   end_odometer?: number | null;
 };
@@ -102,14 +106,16 @@ function mapTrip(row: TripRow, vehicleById: Map<string, string>): TripSummary {
     status: row.status ?? 'unknown',
     purpose: row.purpose ?? null,
     operatorName: row.operator_name ?? null,
+    operatorRank: row.operator_rank ?? null,
     userName: row.user_name ?? null,
+    userRank: row.user_rank ?? null,
     startOdometer: row.start_odometer ?? null,
     endOdometer: row.end_odometer ?? null,
   };
 }
 
 const BASIC_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status';
-const EXTENDED_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status,purpose,operator_name,user_name,start_odometer,end_odometer';
+const EXTENDED_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status,purpose,operator_name,operator_rank,user_name,user_rank,start_odometer,end_odometer';
 
 function tripSelect(includeExtended = true) {
   return includeExtended ? EXTENDED_TRIP_SELECT : BASIC_TRIP_SELECT;
@@ -270,6 +276,7 @@ export async function startManualTrip(input: ManualTripInput): Promise<TripSumma
     operator_name: input.operatorName?.trim() || null,
     operator_rank: input.operatorRank?.trim() || null,
     user_name: input.userName?.trim() || null,
+    user_rank: input.userRank?.trim() || null,
     start_odometer: input.startOdometer ?? null,
   };
 

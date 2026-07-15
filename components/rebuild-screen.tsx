@@ -80,9 +80,9 @@ export function LoadingCard({ label = '불러오는 중' }: { label?: string }) 
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F7F3FF' },
-  content: { paddingHorizontal: 24 },
-  title: { color: '#222B45', fontSize: 28, fontWeight: '900', letterSpacing: 0 },
-  subtitle: { color: '#7180A3', fontSize: 14, fontWeight: '700', marginTop: 6, marginBottom: 16, lineHeight: 20 },
+  content: { paddingHorizontal: 20 },
+  title: { color: '#24304F', fontSize: 22, fontWeight: '900', letterSpacing: 0, marginBottom: 2 },
+  subtitle: { color: '#7180A3', fontSize: 13, fontWeight: '700', marginTop: 4, marginBottom: 14, lineHeight: 19 },
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16, marginBottom: 16 },
   metricCard: {
     flexBasis: '47%',
@@ -104,18 +104,18 @@ const styles = StyleSheet.create({
   metricValue: { color: '#222B45', fontSize: 20, fontWeight: '900' },
   sectionCard: {
     backgroundColor: '#FFFDFB',
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: '#E8EAF7',
     padding: 18,
     marginBottom: 12,
     shadowColor: '#A7B0D8',
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.14,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 2,
   },
-  sectionTitle: { color: '#222B45', fontSize: 15, fontWeight: '900' },
+  sectionTitle: { color: '#24304F', fontSize: 15, fontWeight: '900' },
   sectionBody: { color: '#7180A3', fontSize: 13, fontWeight: '600', lineHeight: 19, marginTop: 6 },
   statusLine: {
     flexDirection: 'row',

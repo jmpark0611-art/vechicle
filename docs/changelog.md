@@ -1,5 +1,16 @@
 # 변경 이력
 
+## 2026-07-15 commander diagnosis flow
+
+- Diagnosis tab now places a `단말기 연결` button next to vehicle selection for commander-mode spot checks.
+- Diagnosis data is separated into ECU detected values and periodic replacement items, each rendered as two-column square cards.
+- OBD fuel storage was aligned with the Supabase `fuel_level_percent` column.
+- Records tab now shows only date and route in the list; tapping a record opens the monthly-log detail data in a popup.
+- Monthly operation log export now includes rank/name fields, latest OBD fuel, and inferred refuel events when fuel percentage rises sharply.
+- Trip tab now stores operator/user rank fields and auto-fills the start odometer from the selected vehicle's synced current km.
+- The shared screen header was reduced and softened so the top title looks less oversized.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-15 UX cleanup batch
 
 - Location tab removed new circle-zone setup and now saves polygon zones from the full-screen map footer.

@@ -36,7 +36,12 @@ function formatTime(value: string | null) {
 
 function formatKm(value: number | null | undefined) {
   if (value === null || value === undefined) return '- km';
-  return `${value.toLocaleString('ko-KR')} km`;
+  return `${Math.round(value).toLocaleString('ko-KR')} km`;
+}
+
+function parseKm(value: string) {
+  const parsed = Number(value.replace(/,/g, '').trim());
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 export default function TripScreen() {
@@ -145,6 +150,12 @@ export default function TripScreen() {
     }
   }, [operatorName, operatorRank, sameUser]);
 
+  useEffect(() => {
+    if (!activeTrip && selectedCurrentKm !== null && !startOdometer.trim()) {
+      setStartOdometer(String(Math.round(selectedCurrentKm)));
+    }
+  }, [activeTrip, selectedCurrentKm, startOdometer]);
+
   const loadData = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -182,7 +193,6 @@ export default function TripScreen() {
 
     setIsSaving(true);
     try {
-      const autoStartOdometer = startOdometer.trim() ? Number(startOdometer.trim()) : selectedCurrentKm ?? undefined;
       const trip = await startManualTrip({
         vehicleId: selectedVehicleId,
         startPlace,
@@ -191,12 +201,12 @@ export default function TripScreen() {
         operatorName,
         operatorRank,
         userName: sameUser ? operatorName : userName,
-        startOdometer: autoStartOdometer,
+        userRank: sameUser ? operatorRank : userRank,
+        startOdometer: parseKm(startOdometer) ?? selectedCurrentKm ?? undefined,
       });
       setActiveTrips([trip]);
       setPurpose('');
       setEndPlace('');
-      setStartOdometer('');
 
       if (savedBleDeviceId && !isObdConnected) {
         void obdBle.connect(savedBleDeviceId).then((result) => {
@@ -233,15 +243,16 @@ export default function TripScreen() {
 
   async function handleCompleteTrip(trip: TripSummary) {
     const finalEndPlace = endPlace.trim() || trip.endPlace || '목적지 미입력';
-    const endOdo = endOdometers[trip.id]?.trim() ? Number(endOdometers[trip.id].trim()) : undefined;
-    const startOdo = trip.startOdometer ?? undefined;
+    const endOdo = parseKm(endOdometers[trip.id] ?? '');
+    const startOdo = trip.startOdometer ?? parseKm(startOdometer);
     setIsSaving(true);
     try {
       if (isObdConnected && obdLiveData && trip.vehicleId) await saveTripObdLog(trip.vehicleId, trip.id, obdLiveData);
       await completeManualTrip(trip.id, finalEndPlace, endOdo, startOdo);
-      if (trip.vehicleId && endOdo !== undefined && endOdo > 0) {
+      if (trip.vehicleId && endOdo !== undefined) {
         const nextSnapshot = await setVehicleCurrentKm(trip.vehicleId, endOdo);
         setMaintenanceSnapshot(nextSnapshot);
+        setStartOdometer(String(Math.round(endOdo)));
       }
       const gpsResult = await saveCurrentGpsPoint(trip.id);
       setActiveTrips([]);
@@ -265,7 +276,7 @@ export default function TripScreen() {
   }
 
   const obdLabel = isObdConnected
-    ? `OBD ${obdLiveData?.speedKmh ?? '-'}km/h`
+    ? `연결됨 · ${obdLiveData?.speedKmh ?? '-'}km/h · 연료 ${obdLiveData?.fuelPercent ?? '-'}%`
     : savedBleDeviceName
       ? `${savedBleDeviceName} 자동연결 대기`
       : '미연결';
@@ -273,14 +284,15 @@ export default function TripScreen() {
   return (
     <RebuildScreen title="운행" actionLabel={isSaving ? '저장 중' : activeTrip ? '운행 종료' : '운행 시작'} onAction={handlePrimaryAction}>
       {isLoading ? (
-        <LoadingCard label="데이터를 불러오는 중" />
+        <LoadingCard label="운행 데이터를 불러오는 중" />
       ) : errorMessage ? (
         <SectionCard title="오류" body={errorMessage} />
       ) : activeTrip ? (
-        <SectionCard title="운행 중">
+        <SectionCard title="진행 중 운행">
           <Text style={styles.activeTripTitle}>{activeTrip.vehicleNumber}</Text>
           <StatusLine label="경로" value={`${activeTrip.startPlace ?? '-'} → ${activeTrip.endPlace ?? '-'}`} />
           <StatusLine label="시작" value={formatTime(activeTrip.startTime)} />
+          <StatusLine label="출발 계기판" value={formatKm(activeTrip.startOdometer)} />
           <StatusLine label="OBD" value={obdLabel} />
           <TextInput
             style={styles.input}
@@ -295,9 +307,9 @@ export default function TripScreen() {
           </Pressable>
         </SectionCard>
       ) : (
-        <SectionCard title="운행 정보">
+        <SectionCard title="운행 입력">
           <VehicleDropdown vehicles={vehicles} selectedVehicleId={selectedVehicleId} onSelect={setSelectedVehicleId} />
-          <StatusLine label="출발 기준" value={formatKm(selectedCurrentKm)} />
+          <StatusLine label="현재 계기판" value={formatKm(selectedCurrentKm)} />
           <StatusLine label="OBD" value={obdLabel} />
 
           <View style={styles.twoCol}>
@@ -340,7 +352,7 @@ export default function TripScreen() {
             style={styles.input}
             value={startOdometer}
             onChangeText={setStartOdometer}
-            placeholder="출발 계기판 km (비우면 자동)"
+            placeholder="출발 계기판 km"
             placeholderTextColor="#94A3B8"
             keyboardType="number-pad"
           />
@@ -353,13 +365,13 @@ export default function TripScreen() {
 const styles = StyleSheet.create({
   input: {
     minHeight: 44,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-    color: '#0F172A',
+    borderColor: '#E7EAF8',
+    backgroundColor: '#FAFBFF',
+    color: '#24304F',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     paddingHorizontal: 12,
     marginTop: 8,
   },
@@ -367,13 +379,13 @@ const styles = StyleSheet.create({
   halfInput: {
     flex: 1,
     minHeight: 44,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-    color: '#0F172A',
+    borderColor: '#E7EAF8',
+    backgroundColor: '#FAFBFF',
+    color: '#24304F',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     paddingHorizontal: 12,
   },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
@@ -386,17 +398,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxOn: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+  checkboxOn: { backgroundColor: '#5B7CFA', borderColor: '#5B7CFA' },
   checkboxText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
-  checkText: { color: '#334155', fontSize: 13, fontWeight: '800' },
-  activeTripTitle: { color: '#0F172A', fontSize: 18, fontWeight: '900', marginTop: 8 },
+  checkText: { color: '#52607D', fontSize: 13, fontWeight: '800' },
+  activeTripTitle: { color: '#24304F', fontSize: 18, fontWeight: '900', marginTop: 8 },
   cancelBtnWide: {
     minHeight: 44,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    borderRadius: 14,
+    backgroundColor: '#F0F2FA',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
   },
-  cancelBtnText: { color: '#475569', fontSize: 14, fontWeight: '900' },
+  cancelBtnText: { color: '#52607D', fontSize: 14, fontWeight: '900' },
 });

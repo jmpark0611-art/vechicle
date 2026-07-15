@@ -27,13 +27,23 @@ export type ObdInput = {
 
 type ObdLogRow = {
   vehicle_id: string | null;
+  trip_id?: string | null;
   rpm: number | null;
   speed_kmh: number | null;
   coolant_temp_c: number | null;
   battery_voltage: number | null;
-  fuel_percent: number | null;
+  fuel_percent?: number | null;
+  fuel_level_percent?: number | null;
   dtc_count: number | null;
   recorded_at: string | null;
+};
+
+export type FuelEvent = {
+  vehicleId: string;
+  recordedAt: string;
+  beforePercent: number;
+  afterPercent: number;
+  increasePercent: number;
 };
 
 const STORAGE_KEY = 'vehicle-obd-readings-v1';
@@ -115,7 +125,7 @@ function rowToReading(row: ObdLogRow): ObdReading | null {
     speedKmh: normalizeNumber(row.speed_kmh),
     coolantTempC: normalizeNumber(row.coolant_temp_c),
     batteryVoltage: normalizeNumber(row.battery_voltage),
-    fuelPercent: normalizeNumber(row.fuel_percent),
+    fuelPercent: normalizeNumber(row.fuel_level_percent ?? row.fuel_percent),
     dtcCount: normalizeNumber(row.dtc_count),
     recordedAt: row.recorded_at ?? new Date().toISOString(),
   };
@@ -197,7 +207,7 @@ export async function loadSyncedObdSnapshot(vehicleIds: string[]): Promise<{ sna
   const result = await withRequestTimeout(
     supabase
       .from('obd_logs')
-      .select('vehicle_id,rpm,speed_kmh,coolant_temp_c,battery_voltage,fuel_percent,dtc_count,recorded_at')
+      .select('vehicle_id,rpm,speed_kmh,coolant_temp_c,battery_voltage,fuel_level_percent,dtc_count,recorded_at')
       .in('vehicle_id', vehicleIds)
       .order('recorded_at', { ascending: false })
       .limit(200),
@@ -236,7 +246,7 @@ export async function saveObdReading(reading: ObdReading): Promise<{ snapshot: O
       speed_kmh: reading.speedKmh,
       coolant_temp_c: reading.coolantTempC,
       battery_voltage: reading.batteryVoltage,
-      fuel_percent: reading.fuelPercent,
+      fuel_level_percent: reading.fuelPercent,
       dtc_count: reading.dtcCount,
       recorded_at: reading.recordedAt,
     }),
@@ -271,4 +281,61 @@ export async function saveTripObdLog(vehicleId: string, tripId: string, data: Ob
       recorded_at: new Date().toISOString(),
     });
   } catch { /* ignore — driving must not be interrupted by save failures */ }
+}
+
+export async function fetchFuelEvents(
+  vehicleIds: string[],
+  fromIso: string,
+  toIso: string,
+  thresholdPercent = 8,
+): Promise<FuelEvent[]> {
+  if (vehicleIds.length === 0) {
+    return [];
+  }
+
+  const result = await withRequestTimeout(
+    supabase
+      .from('obd_logs')
+      .select('vehicle_id,fuel_level_percent,recorded_at')
+      .in('vehicle_id', vehicleIds)
+      .gte('recorded_at', fromIso)
+      .lt('recorded_at', toIso)
+      .order('vehicle_id', { ascending: true })
+      .order('recorded_at', { ascending: true })
+      .limit(2000),
+    '주유 추정 기록'
+  );
+
+  if (result.error) {
+    if (isMissingObdTable(result.error)) {
+      return [];
+    }
+    throw new Error(result.error.message);
+  }
+
+  const events: FuelEvent[] = [];
+  const previousByVehicle = new Map<string, number>();
+
+  for (const row of (result.data ?? []) as ObdLogRow[]) {
+    if (!row.vehicle_id) continue;
+    const currentFuel = normalizeNumber(row.fuel_level_percent ?? row.fuel_percent);
+    if (currentFuel === null) continue;
+
+    const previousFuel = previousByVehicle.get(row.vehicle_id);
+    if (previousFuel !== undefined) {
+      const increase = currentFuel - previousFuel;
+      if (increase >= thresholdPercent) {
+        events.push({
+          vehicleId: row.vehicle_id,
+          recordedAt: row.recorded_at ?? new Date().toISOString(),
+          beforePercent: previousFuel,
+          afterPercent: currentFuel,
+          increasePercent: increase,
+        });
+      }
+    }
+    previousByVehicle.set(row.vehicle_id, currentFuel);
+  }
+
+  return events;
 }
