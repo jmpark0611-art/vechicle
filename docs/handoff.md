@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- Latest pastel diagnosis UI:
+  - `vehicles` tab title is now shown as `진단`.
+  - Diagnosis screen uses two-column square cards for ECU/OBD readings and periodic maintenance items.
+  - Common screen shell and tab bar were retuned to a pastel palette.
+  - `npm.cmd run verify` passed.
 - Latest UX cleanup:
   - Location tab: polygon-only setup, save button in full-screen map footer, removed visible speed-alert/active-vehicle sections, keeps registered speed-zone list, and vibrates/alerts on overspeed while open.
   - Vehicle tab: registration moved to modal with vehicle number/type/initial odometer fields; inline vehicle-number input removed.

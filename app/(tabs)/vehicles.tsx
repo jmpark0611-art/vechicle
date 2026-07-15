@@ -15,7 +15,16 @@ import {
   type MaintenanceItem,
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
+import { loadSyncedObdSnapshot, type ObdReading, type ObdSnapshot } from '@/lib/obd-data';
 import { createVehicle, fetchLatestVehicleOdometers, fetchVehiclesReadOnly, type VehicleSummary } from '@/lib/readonly-data';
+
+const MAINTENANCE_LABELS: Record<string, string> = {
+  engineOil: '엔진오일',
+  oilFilter: '오일필터',
+  airFilter: '에어필터',
+};
+
+const CARD_COLORS = ['#EAF2FF', '#EAFBF4', '#FFF4DE', '#F1ECFF', '#FFEFF3', '#EAF7FA'];
 
 function formatKm(value: number | null | undefined) {
   if (value === null || value === undefined) return '-';
@@ -32,10 +41,21 @@ function isDue(remainingKm: number | null) {
   return remainingKm !== null && remainingKm <= 1000;
 }
 
+function formatObdDate(reading: ObdReading | null | undefined) {
+  if (!reading) return '데이터 없음';
+  const date = new Date(reading.recordedAt);
+  if (Number.isNaN(date.getTime())) return '최근 감지';
+  return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date
+    .getMinutes()
+    .toString()
+    .padStart(2, '0')}`;
+}
+
 export default function VehiclesScreen() {
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<MaintenanceSnapshot>({});
+  const [obdSnapshot, setObdSnapshot] = useState<ObdSnapshot>({});
   const [kmInputs, setKmInputs] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -65,11 +85,15 @@ export default function VehiclesScreen() {
     try {
       const nextVehicles = await fetchVehiclesReadOnly(200);
       const vehicleIds = nextVehicles.map((vehicle) => vehicle.id);
-      const syncResult = await loadSyncedMaintenanceSnapshot(vehicleIds);
-      const latestOdometers = await fetchLatestVehicleOdometers(vehicleIds);
+      const [syncResult, obdResult, latestOdometers] = await Promise.all([
+        loadSyncedMaintenanceSnapshot(vehicleIds),
+        loadSyncedObdSnapshot(vehicleIds),
+        fetchLatestVehicleOdometers(vehicleIds),
+      ]);
       const nextSnapshot = await mergeVehicleCurrentKm(syncResult.snapshot, latestOdometers);
       setVehicles(nextVehicles);
       setSnapshot(nextSnapshot);
+      setObdSnapshot(obdResult.snapshot);
       setSelectedVehicleId((current) => current ?? nextVehicles[0]?.id ?? null);
       setKmInputs(
         Object.fromEntries(
@@ -80,7 +104,7 @@ export default function VehiclesScreen() {
         )
       );
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : '차량 목록을 불러오지 못했습니다.');
+      setErrorMessage(error instanceof Error ? error.message : '진단 데이터를 불러오지 못했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -155,7 +179,7 @@ export default function VehiclesScreen() {
       const nextSnapshot = await completeMaintenanceItem(vehicle.id, item.key, currentKm);
       setSnapshot(nextSnapshot);
       await syncMaintenanceCompletion(vehicle.id, item.key, currentKm);
-      Alert.alert('교체 완료', `${vehicle.vehicleNumber} ${item.label} 기준 ${formatKm(currentKm)}`);
+      Alert.alert('교체 완료', `${vehicle.vehicleNumber} ${MAINTENANCE_LABELS[item.key] ?? item.label} 기준 ${formatKm(currentKm)}`);
     } catch (error) {
       Alert.alert('교체 기록 실패', error instanceof Error ? error.message : '교체 기록을 저장하지 못했습니다.');
     } finally {
@@ -164,25 +188,46 @@ export default function VehiclesScreen() {
   }
 
   const selectedState = selectedVehicle ? getVehicleMaintenanceState(snapshot, selectedVehicle.id) : null;
+  const selectedObd = selectedVehicle ? obdSnapshot[selectedVehicle.id] : null;
+  const diagnosticCards = selectedVehicle && selectedState ? [
+    { kind: 'obd', title: 'ECU 상태', value: selectedObd ? '감지됨' : '미감지', detail: formatObdDate(selectedObd), tone: selectedObd ? 'ok' : 'wait' },
+    { kind: 'obd', title: '냉각수 온도', value: selectedObd?.coolantTempC == null ? '-' : `${selectedObd.coolantTempC}℃`, detail: 'ECU 센서', tone: selectedObd?.coolantTempC != null && selectedObd.coolantTempC >= 105 ? 'bad' : 'ok' },
+    { kind: 'obd', title: '배터리 전압', value: selectedObd?.batteryVoltage == null ? '-' : `${selectedObd.batteryVoltage}V`, detail: '전원 상태', tone: selectedObd?.batteryVoltage != null && selectedObd.batteryVoltage < 12 ? 'bad' : 'ok' },
+    { kind: 'obd', title: '연료 잔량', value: selectedObd?.fuelPercent == null ? '-' : `${selectedObd.fuelPercent}%`, detail: 'OBD 연료값', tone: selectedObd?.fuelPercent != null && selectedObd.fuelPercent < 20 ? 'warn' : 'ok' },
+    { kind: 'obd', title: '고장 코드', value: selectedObd?.dtcCount == null ? '-' : `${selectedObd.dtcCount}건`, detail: 'DTC 감지', tone: selectedObd?.dtcCount ? 'bad' : 'ok' },
+    ...MAINTENANCE_ITEMS.map((item) => {
+      const remainingKm = getRemainingKm(selectedState, item);
+      return {
+        kind: 'maintenance',
+        item,
+        title: MAINTENANCE_LABELS[item.key] ?? item.label,
+        value: remainingLabel(remainingKm),
+        detail: `${item.intervalKm.toLocaleString('ko-KR')}km 주기`,
+        tone: remainingKm !== null && remainingKm <= 0 ? 'bad' : remainingKm !== null && remainingKm <= 1000 ? 'warn' : 'ok',
+      };
+    }),
+  ] : [];
 
   return (
-    <RebuildScreen title="차량" actionLabel="새로고침" onAction={() => void loadVehicles()}>
+    <RebuildScreen title="진단" actionLabel="새로고침" onAction={() => void loadVehicles()}>
       <Pressable style={styles.registerOpenBtn} onPress={() => setIsRegisterOpen(true)}>
         <Text style={styles.registerOpenText}>차량 등록</Text>
       </Pressable>
 
       {dueItems.length > 0 ? (
         <SectionCard title={`교체 알림 ${dueItems.length}건`}>
-          {dueItems.slice(0, 10).map(({ vehicle, item, remainingKm }) => (
-            <StatusLine key={`${vehicle.id}-${item.key}`} label={`${vehicle.vehicleNumber} · ${item.label}`} value={remainingLabel(remainingKm)} />
+          {dueItems.slice(0, 8).map(({ vehicle, item, remainingKm }) => (
+            <StatusLine
+              key={`${vehicle.id}-${item.key}`}
+              label={`${vehicle.vehicleNumber} · ${MAINTENANCE_LABELS[item.key] ?? item.label}`}
+              value={remainingLabel(remainingKm)}
+            />
           ))}
         </SectionCard>
-      ) : (
-        <SectionCard title="교체 알림" body="현재 교체시기가 다가오는 차량이 없습니다." />
-      )}
+      ) : null}
 
       {isLoading ? (
-        <LoadingCard label="차량 목록을 불러오는 중" />
+        <LoadingCard label="진단 데이터를 불러오는 중" />
       ) : errorMessage ? (
         <SectionCard title="오류" body={errorMessage} />
       ) : vehicles.length === 0 ? (
@@ -194,14 +239,14 @@ export default function VehiclesScreen() {
           </SectionCard>
 
           {selectedVehicle && selectedState ? (
-            <SectionCard title={selectedVehicle.vehicleNumber}>
+            <SectionCard title={selectedVehicle.vehicleNumber} body="ECU 감지값과 주기성 교환품목을 함께 확인합니다.">
               <View style={styles.kmRow}>
                 <TextInput
                   style={styles.kmInput}
                   value={kmInputs[selectedVehicle.id] ?? ''}
                   onChangeText={(value) => setKmInputs((current) => ({ ...current, [selectedVehicle.id]: value }))}
                   placeholder="현재 계기판 km"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor="#9AA8C7"
                   keyboardType="number-pad"
                 />
                 <Pressable style={styles.saveBtn} onPress={() => void handleSaveCurrentKm(selectedVehicle)} disabled={isSaving}>
@@ -210,24 +255,27 @@ export default function VehiclesScreen() {
               </View>
               <StatusLine label="현재 기준" value={formatKm(selectedState.currentKm)} />
 
-              {MAINTENANCE_ITEMS.map((item) => {
-                const remainingKm = getRemainingKm(selectedState, item);
-                const completedKm = selectedState.completedKm[item.key];
-                const due = isDue(remainingKm);
-                return (
-                  <View key={item.key} style={[styles.itemCard, due && styles.itemCardDue]}>
-                    <View style={styles.itemHeader}>
-                      <Text style={styles.itemTitle}>{item.label}</Text>
-                      <Text style={[styles.remaining, due && styles.remainingDue]}>{remainingLabel(remainingKm)}</Text>
-                    </View>
-                    <StatusLine label="최근 교체" value={formatKm(completedKm)} />
-                    <StatusLine label="다음 교체" value={completedKm === undefined ? '-' : formatKm(completedKm + item.intervalKm)} />
-                    <Pressable style={styles.completeBtn} onPress={() => void handleComplete(selectedVehicle, item)} disabled={isSaving}>
-                      <Text style={styles.completeBtnText}>교체완료</Text>
-                    </Pressable>
+              <View style={styles.grid}>
+                {diagnosticCards.map((card, index) => (
+                  <View
+                    key={`${card.kind}-${card.title}`}
+                    style={[
+                      styles.squareCard,
+                      { backgroundColor: CARD_COLORS[index % CARD_COLORS.length] },
+                      card.tone === 'bad' && styles.squareCardBad,
+                      card.tone === 'warn' && styles.squareCardWarn,
+                    ]}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>{card.title}</Text>
+                    <Text style={styles.cardValue} numberOfLines={2} adjustsFontSizeToFit>{card.value}</Text>
+                    <Text style={styles.cardDetail} numberOfLines={1}>{card.detail}</Text>
+                    {'item' in card ? (
+                      <Pressable style={styles.cardAction} onPress={() => void handleComplete(selectedVehicle, card.item)} disabled={isSaving}>
+                        <Text style={styles.cardActionText}>교체완료</Text>
+                      </Pressable>
+                    ) : null}
                   </View>
-                );
-              })}
+                ))}
+              </View>
             </SectionCard>
           ) : null}
         </>
@@ -242,21 +290,21 @@ export default function VehiclesScreen() {
               value={newVehicleNumber}
               onChangeText={setNewVehicleNumber}
               placeholder="차량번호"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#9AA8C7"
             />
             <TextInput
               style={styles.input}
               value={newVehicleType}
               onChangeText={setNewVehicleType}
               placeholder="종류 예: 카니발, 버스"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#9AA8C7"
             />
             <TextInput
               style={styles.input}
               value={newVehicleKm}
               onChangeText={setNewVehicleKm}
               placeholder="계기판 주행거리 km"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#9AA8C7"
               keyboardType="number-pad"
             />
             <View style={styles.modalActions}>
@@ -277,8 +325,8 @@ export default function VehiclesScreen() {
 const styles = StyleSheet.create({
   registerOpenBtn: {
     minHeight: 48,
-    borderRadius: 14,
-    backgroundColor: '#2563EB',
+    borderRadius: 16,
+    backgroundColor: '#8EA7FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,
@@ -289,43 +337,58 @@ const styles = StyleSheet.create({
   kmInput: {
     flex: 1,
     minHeight: 50,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-    color: '#0F172A',
+    borderColor: '#E8EAF7',
+    backgroundColor: '#FAFBFF',
+    color: '#222B45',
     fontSize: 15,
     fontWeight: '800',
     paddingHorizontal: 14,
   },
-  saveBtn: { minWidth: 68, minHeight: 50, borderRadius: 12, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
-  saveBtnText: { color: '#2563EB', fontSize: 14, fontWeight: '900' },
-  itemCard: { borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 14, marginTop: 14 },
-  itemCardDue: { borderTopColor: '#DBEAFE' },
-  itemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 2 },
-  itemTitle: { color: '#0F172A', fontSize: 15, fontWeight: '900' },
-  remaining: { color: '#0F766E', fontSize: 13, fontWeight: '900', textAlign: 'right', flexShrink: 1 },
-  remainingDue: { color: '#DC2626' },
-  completeBtn: { minHeight: 44, borderRadius: 12, backgroundColor: '#0F766E', alignItems: 'center', justifyContent: 'center', marginTop: 12 },
-  completeBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
-  modalDim: { flex: 1, backgroundColor: 'rgba(15,23,42,0.42)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  registerModal: { width: '100%', borderRadius: 16, backgroundColor: '#FFFFFF', padding: 18 },
-  modalTitle: { color: '#0F172A', fontSize: 20, fontWeight: '900', marginBottom: 4 },
+  saveBtn: { minWidth: 68, minHeight: 50, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
+  saveBtnText: { color: '#5B7CFA', fontSize: 14, fontWeight: '900' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
+  squareCard: {
+    width: '48%',
+    aspectRatio: 1,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.72)',
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  squareCardBad: { borderColor: '#FFC6C6', backgroundColor: '#FFEAEA' },
+  squareCardWarn: { borderColor: '#FFE2A8' },
+  cardTitle: { color: '#52607D', fontSize: 12, fontWeight: '900' },
+  cardValue: { color: '#222B45', fontSize: 20, fontWeight: '900', lineHeight: 24 },
+  cardDetail: { color: '#7180A3', fontSize: 11, fontWeight: '800' },
+  cardAction: {
+    minHeight: 30,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardActionText: { color: '#5B7CFA', fontSize: 12, fontWeight: '900' },
+  modalDim: { flex: 1, backgroundColor: 'rgba(80,88,120,0.36)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  registerModal: { width: '100%', borderRadius: 18, backgroundColor: '#FFFDFB', padding: 18 },
+  modalTitle: { color: '#222B45', fontSize: 20, fontWeight: '900', marginBottom: 4 },
   input: {
     minHeight: 50,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-    color: '#0F172A',
+    borderColor: '#E8EAF7',
+    backgroundColor: '#FAFBFF',
+    color: '#222B45',
     fontSize: 15,
     fontWeight: '800',
     paddingHorizontal: 14,
     marginTop: 10,
   },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  modalCancel: { flex: 1, minHeight: 46, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-  modalCancelText: { color: '#334155', fontSize: 14, fontWeight: '900' },
-  modalSave: { flex: 1, minHeight: 46, borderRadius: 12, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center' },
+  modalCancel: { flex: 1, minHeight: 46, borderRadius: 14, backgroundColor: '#F0F2FA', alignItems: 'center', justifyContent: 'center' },
+  modalCancelText: { color: '#52607D', fontSize: 14, fontWeight: '900' },
+  modalSave: { flex: 1, minHeight: 46, borderRadius: 14, backgroundColor: '#8EA7FF', alignItems: 'center', justifyContent: 'center' },
   modalSaveText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
 });

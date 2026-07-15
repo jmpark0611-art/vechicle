@@ -11,6 +11,15 @@
 - Trip tab compacted driver/user inputs into rank/name rows and added a same-as-driver toggle for the user fields.
 - Verification passed with `npm.cmd run verify`.
 
+## 2026-07-15 pastel diagnosis UI
+
+- Renamed the vehicle tab UI label to `진단`.
+- Reworked the diagnosis screen into a two-column square-card grid instead of long vertical maintenance cards.
+- ECU/OBD readings and periodic maintenance items now appear together in the grid.
+- Maintenance cards retain the replacement-complete action.
+- Updated the common screen shell and tab bar to a softer pastel palette.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-15 polygon speed zones
 
 - Location tab speed-zone registration now supports two modes: polygon area zones and legacy circular zones.
