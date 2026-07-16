@@ -26,7 +26,7 @@ function formatTripDate(value: string | null) {
 function statusLabel(status: string) {
   if (status === 'in_progress') return '운행 중';
   if (status === 'completed') return '완료';
-  if (status === 'canceled') return '취소';
+  if (status === 'canceled' || status === 'cancelled') return '취소';
   return status;
 }
 
