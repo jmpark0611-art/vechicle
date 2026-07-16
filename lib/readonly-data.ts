@@ -22,6 +22,7 @@ export type TripSummary = {
   userRank: string | null;
   startOdometer: number | null;
   endOdometer: number | null;
+  dailyKm: number | null;
 };
 
 export type ManualTripInput = {
@@ -74,6 +75,7 @@ type TripRow = {
   user_rank?: string | null;
   start_odometer?: number | null;
   end_odometer?: number | null;
+  daily_km?: number | null;
 };
 
 type QueryResult<T> = {
@@ -111,11 +113,12 @@ function mapTrip(row: TripRow, vehicleById: Map<string, string>): TripSummary {
     userRank: row.user_rank ?? null,
     startOdometer: row.start_odometer ?? null,
     endOdometer: row.end_odometer ?? null,
+    dailyKm: row.daily_km ?? null,
   };
 }
 
 const BASIC_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status';
-const EXTENDED_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status,purpose,operator_name,operator_rank,user_name,user_rank,start_odometer,end_odometer';
+const EXTENDED_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status,purpose,operator_name,operator_rank,user_name,user_rank,start_odometer,end_odometer,daily_km';
 
 function tripSelect(includeExtended = true) {
   return includeExtended ? EXTENDED_TRIP_SELECT : BASIC_TRIP_SELECT;
@@ -302,7 +305,11 @@ export type MonthlyTripRow = {
   endPlace: string | null;
   purpose: string | null;
   operatorName: string | null;
+  operatorRank: string | null;
   userName: string | null;
+  userRank: string | null;
+  startOdometer: number | null;
+  endOdometer: number | null;
   dailyKm: number | null;
 };
 
@@ -313,7 +320,7 @@ export async function fetchMonthlyTrips(vehicleId: string, year: number, month: 
   const extended = await withRequestTimeout(
     supabase
       .from('trips')
-      .select('id,start_time,end_time,start_place,end_place,status,purpose,operator_name,user_name,daily_km')
+      .select('id,start_time,end_time,start_place,end_place,status,purpose,operator_name,operator_rank,user_name,user_rank,start_odometer,end_odometer,daily_km')
       .eq('vehicle_id', vehicleId)
       .gte('start_time', from)
       .lt('start_time', to)
@@ -330,7 +337,11 @@ export async function fetchMonthlyTrips(vehicleId: string, year: number, month: 
       endPlace: (r.end_place as string | null) ?? null,
       purpose: (r.purpose as string | null) ?? null,
       operatorName: (r.operator_name as string | null) ?? null,
+      operatorRank: (r.operator_rank as string | null) ?? null,
       userName: (r.user_name as string | null) ?? null,
+      userRank: (r.user_rank as string | null) ?? null,
+      startOdometer: typeof r.start_odometer === 'number' ? r.start_odometer : null,
+      endOdometer: typeof r.end_odometer === 'number' ? r.end_odometer : null,
       dailyKm: typeof r.daily_km === 'number' ? r.daily_km : null,
     }));
   }
@@ -362,7 +373,11 @@ export async function fetchMonthlyTrips(vehicleId: string, year: number, month: 
     endPlace: (r.end_place as string | null) ?? null,
     purpose: null,
     operatorName: null,
+    operatorRank: null,
     userName: null,
+    userRank: null,
+    startOdometer: null,
+    endOdometer: null,
     dailyKm: null,
   }));
 }

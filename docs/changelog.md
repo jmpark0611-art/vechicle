@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-16 odometer and actual trip distance
+
+- Records detail popup now separates odometer total distance, odometer trip distance, and actual GPS movement distance.
+- Monthly equipment operation log rows were reshaped as daily/operation entries based on trip-screen data.
+- Monthly log now includes route content, operator/user rank+name, odometer total, odometer trip distance, and GPS actual distance.
+- Added GPS distance calculation from saved `gps_points` without requiring a new Supabase migration.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-16 trip header and launch stability
 
 - Reworked the common screen header into a softer pastel card so tab titles no longer appear as plain oversized text.

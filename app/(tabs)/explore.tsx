@@ -3,6 +3,7 @@ import { Alert, Modal, Pressable, Share, StyleSheet, Text, View } from 'react-na
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
+import { fetchTripGpsDistances } from '@/lib/gps-data';
 import { fetchFuelEvents, loadSyncedObdSnapshot, type FuelEvent, type ObdSnapshot } from '@/lib/obd-data';
 import { fetchTripsReadOnly, fetchVehiclesReadOnly, type TripSummary, type VehicleSummary } from '@/lib/readonly-data';
 
@@ -31,10 +32,23 @@ function statusLabel(status: string) {
 }
 
 function tripDistance(trip: TripSummary) {
+  if (trip.dailyKm !== null && trip.dailyKm >= 0) {
+    return `${Math.round(trip.dailyKm).toLocaleString('ko-KR')}km`;
+  }
   if (trip.startOdometer !== null && trip.endOdometer !== null && trip.endOdometer >= trip.startOdometer) {
     return `${Math.round(trip.endOdometer - trip.startOdometer).toLocaleString('ko-KR')}km`;
   }
   return '-';
+}
+
+function totalOdometer(trip: TripSummary) {
+  const value = trip.endOdometer ?? trip.startOdometer;
+  return value === null ? '-' : `${Math.round(value).toLocaleString('ko-KR')}km`;
+}
+
+function gpsDistanceLabel(gpsDistances: Record<string, number>, tripId: string) {
+  const value = gpsDistances[tripId];
+  return typeof value === 'number' && value > 0 ? `${value.toLocaleString('ko-KR')}km` : '-';
 }
 
 function currentMonthRange() {
@@ -59,6 +73,7 @@ export default function RecordsScreen() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [obdSnapshot, setObdSnapshot] = useState<ObdSnapshot>({});
   const [fuelEvents, setFuelEvents] = useState<FuelEvent[]>([]);
+  const [gpsDistances, setGpsDistances] = useState<Record<string, number>>({});
   const [selectedTrip, setSelectedTrip] = useState<TripSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -69,12 +84,16 @@ export default function RecordsScreen() {
     try {
       const [nextTrips, nextVehicles] = await Promise.all([fetchTripsReadOnly(100), fetchVehiclesReadOnly(200)]);
       const vehicleIds = nextVehicles.map((vehicle) => vehicle.id);
-      const obd = await loadSyncedObdSnapshot(vehicleIds);
+      const [obd, nextGpsDistances] = await Promise.all([
+        loadSyncedObdSnapshot(vehicleIds),
+        fetchTripGpsDistances(nextTrips.map((trip) => trip.id)),
+      ]);
       const range = currentMonthRange();
       const nextFuelEvents = await fetchFuelEvents(vehicleIds, range.from, range.to);
       setTrips(nextTrips);
       setVehicles(nextVehicles);
       setObdSnapshot(obd.snapshot);
+      setGpsDistances(nextGpsDistances);
       setFuelEvents(nextFuelEvents);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '운행 기록을 불러오지 못했습니다.');
@@ -100,7 +119,7 @@ export default function RecordsScreen() {
     }
 
     const rows = [
-      '차량번호,상태,출발,도착,출발지,목적지,운행목적,운행자,사용자,운행거리,OBD연료,주유추정',
+      '차량번호,상태,출발,도착,출발지,목적지,운행목적,운행자,사용자,계기판총주행거리,계기판운행거리,실제이동거리,OBD연료,주유추정',
       ...filtered.map((trip) => {
         const fuel = trip.vehicleId && obdSnapshot[trip.vehicleId]?.fuelPercent !== null && obdSnapshot[trip.vehicleId]?.fuelPercent !== undefined
           ? `${obdSnapshot[trip.vehicleId].fuelPercent}%`
@@ -117,7 +136,9 @@ export default function RecordsScreen() {
           trip.purpose ?? '',
           operator,
           user,
+          totalOdometer(trip),
           tripDistance(trip),
+          gpsDistanceLabel(gpsDistances, trip.id),
           fuel,
           fuelEventText(fuelEvents, trip.vehicleId),
         ].map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',');
@@ -173,7 +194,9 @@ export default function RecordsScreen() {
                 <StatusLine label="경로" value={`${selectedTrip.startPlace ?? '-'} → ${selectedTrip.endPlace ?? '-'}`} />
                 <StatusLine label="출발" value={formatTripTime(selectedTrip.startTime)} />
                 <StatusLine label="도착" value={formatTripTime(selectedTrip.endTime)} />
-                <StatusLine label="운행거리" value={tripDistance(selectedTrip)} />
+                <StatusLine label="계기판 총 주행거리" value={totalOdometer(selectedTrip)} />
+                <StatusLine label="계기판 운행거리" value={tripDistance(selectedTrip)} />
+                <StatusLine label="실제 이동거리" value={gpsDistanceLabel(gpsDistances, selectedTrip.id)} />
                 <StatusLine label="운행목적" value={selectedTrip.purpose ?? '-'} />
                 <StatusLine label="운행자" value={[selectedTrip.operatorRank, selectedTrip.operatorName].filter(Boolean).join(' ') || '-'} />
                 <StatusLine label="사용자" value={[selectedTrip.userRank, selectedTrip.userName].filter(Boolean).join(' ') || '-'} />

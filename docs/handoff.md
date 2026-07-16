@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-16 distance/log update:
+  - Records popup distinguishes `계기판 총 주행거리`, `계기판 운행거리`, and `실제 이동거리`.
+  - `lib/gps-data.ts` calculates per-trip actual movement distance from saved `gps_points`; no DB migration is required.
+  - Monthly equipment operation log is now shaped as daily/operation rows using trip-screen data: route content, operator/user rank+name, odometer total, odometer trip distance, and GPS actual distance.
+  - `npm.cmd run verify` passed.
 - 2026-07-16 trip UX/stability update:
   - The `expo-notifications` experiment was removed after the user reported the APK closing immediately on launch.
   - `app/_layout.tsx` was restored to the safer stored-role check instead of forced startup navigation.

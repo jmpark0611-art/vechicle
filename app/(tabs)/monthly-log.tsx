@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
+import { fetchTripGpsDistances } from '@/lib/gps-data';
 import { fetchMonthlyTrips, fetchVehiclesReadOnly, type MonthlyTripRow, type VehicleSummary } from '@/lib/readonly-data';
 
 function fmt(iso: string | null, part: 'date' | 'time'): string {
@@ -14,6 +15,22 @@ function fmt(iso: string | null, part: 'date' | 'time'): string {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 }
 
+function km(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? `${Math.round(value).toLocaleString('ko-KR')}` : '-';
+}
+
+function totalOdometer(trip: MonthlyTripRow) {
+  return trip.endOdometer ?? trip.startOdometer ?? null;
+}
+
+function odometerTripKm(trip: MonthlyTripRow) {
+  if (trip.dailyKm !== null) return trip.dailyKm;
+  if (trip.startOdometer !== null && trip.endOdometer !== null && trip.endOdometer >= trip.startOdometer) {
+    return trip.endOdometer - trip.startOdometer;
+  }
+  return null;
+}
+
 export default function MonthlyLogScreen() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -21,6 +38,7 @@ export default function MonthlyLogScreen() {
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleSummary | null>(null);
   const [trips, setTrips] = useState<MonthlyTripRow[]>([]);
+  const [gpsDistances, setGpsDistances] = useState<Record<string, number>>({});
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
   const [isLoadingTrips, setIsLoadingTrips] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -38,10 +56,14 @@ export default function MonthlyLogScreen() {
     setIsLoadingTrips(true);
     setErrorMessage(null);
     try {
-      setTrips(await fetchMonthlyTrips(vehicleId, y, m));
+      const nextTrips = await fetchMonthlyTrips(vehicleId, y, m);
+      const nextGpsDistances = await fetchTripGpsDistances(nextTrips.map((trip) => trip.id));
+      setTrips(nextTrips);
+      setGpsDistances(nextGpsDistances);
     } catch (e: unknown) {
       setErrorMessage(e instanceof Error ? e.message : '운행 기록 오류');
       setTrips([]);
+      setGpsDistances({});
     } finally {
       setIsLoadingTrips(false);
     }
@@ -62,7 +84,8 @@ export default function MonthlyLogScreen() {
     setYear(y);
   }
 
-  const totalKm = trips.reduce((sum, t) => sum + (t.dailyKm ?? 0), 0);
+  const totalKm = trips.reduce((sum, t) => sum + (odometerTripKm(t) ?? 0), 0);
+  const totalGpsKm = trips.reduce((sum, t) => sum + (gpsDistances[t.id] ?? 0), 0);
 
   return (
     <RebuildScreen
@@ -112,8 +135,8 @@ export default function MonthlyLogScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator style={styles.tableScroll}>
             <View>
               <View style={[styles.tableRow, styles.tableHeader]}>
-                {['날짜', '출발', '도착', '출발지', '목적지', '목적', '운용자', '사용자', '거리'].map((h) => (
-                  <Text key={h} style={[styles.cell, styles.headerCell, h === '날짜' || h === '출발' || h === '도착' ? styles.cellNarrow : styles.cellWide]}>
+                {['일자', '시간', '운행 내용', '운행자', '사용자', '계기판총', '계기판거리', '실제거리'].map((h) => (
+                  <Text key={h} style={[styles.cell, styles.headerCell, h === '운행 내용' ? styles.cellRoute : h === '운행자' || h === '사용자' ? styles.cellWide : styles.cellNarrow]}>
                     {h}
                   </Text>
                 ))}
@@ -121,14 +144,15 @@ export default function MonthlyLogScreen() {
               {trips.map((trip, idx) => (
                 <View key={trip.id} style={[styles.tableRow, idx % 2 === 1 && styles.tableRowAlt]}>
                   <Text style={[styles.cell, styles.cellNarrow]}>{fmt(trip.startTime, 'date')}</Text>
-                  <Text style={[styles.cell, styles.cellNarrow]}>{fmt(trip.startTime, 'time')}</Text>
-                  <Text style={[styles.cell, styles.cellNarrow]}>{fmt(trip.endTime, 'time')}</Text>
-                  <Text style={[styles.cell, styles.cellWide]} numberOfLines={1}>{trip.startPlace ?? '-'}</Text>
-                  <Text style={[styles.cell, styles.cellWide]} numberOfLines={1}>{trip.endPlace ?? '-'}</Text>
-                  <Text style={[styles.cell, styles.cellWide]} numberOfLines={1}>{trip.purpose ?? '-'}</Text>
-                  <Text style={[styles.cell, styles.cellWide]} numberOfLines={1}>{trip.operatorName ?? '-'}</Text>
-                  <Text style={[styles.cell, styles.cellWide]} numberOfLines={1}>{trip.userName ?? '-'}</Text>
-                  <Text style={[styles.cell, styles.cellNarrow]}>{trip.dailyKm !== null ? `${Math.round(trip.dailyKm)}` : '-'}</Text>
+                  <Text style={[styles.cell, styles.cellNarrow]}>{fmt(trip.startTime, 'time')}~{fmt(trip.endTime, 'time')}</Text>
+                  <Text style={[styles.cell, styles.cellRoute]} numberOfLines={1}>
+                    {(trip.purpose ?? '운행')} · {trip.startPlace ?? '-'} → {trip.endPlace ?? '-'}
+                  </Text>
+                  <Text style={[styles.cell, styles.cellWide]} numberOfLines={1}>{[trip.operatorRank, trip.operatorName].filter(Boolean).join(' ') || '-'}</Text>
+                  <Text style={[styles.cell, styles.cellWide]} numberOfLines={1}>{[trip.userRank, trip.userName].filter(Boolean).join(' ') || '-'}</Text>
+                  <Text style={[styles.cell, styles.cellNarrow]}>{km(totalOdometer(trip))}</Text>
+                  <Text style={[styles.cell, styles.cellNarrow]}>{km(odometerTripKm(trip))}</Text>
+                  <Text style={[styles.cell, styles.cellNarrow]}>{km(gpsDistances[trip.id])}</Text>
                 </View>
               ))}
             </View>
@@ -137,6 +161,7 @@ export default function MonthlyLogScreen() {
           <View style={styles.summaryRow}>
             <StatusLine label="총 운행" value={`${trips.length}건`} />
             {totalKm > 0 && <StatusLine label="총 거리" value={`${Math.round(totalKm)}km`} />}
+            {totalGpsKm > 0 && <StatusLine label="실제 이동" value={`${Math.round(totalGpsKm * 10) / 10}km`} />}
           </View>
         </SectionCard>
       )}
@@ -195,6 +220,7 @@ const styles = StyleSheet.create({
   headerCell: { color: '#64748B', fontWeight: '900', fontSize: 11 },
   cellNarrow: { width: 52 },
   cellWide: { width: 88 },
+  cellRoute: { width: 160 },
   summaryRow: { marginTop: 14, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 14 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalSheet: {
