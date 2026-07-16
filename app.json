@@ -44,12 +44,6 @@
         }
       ],
       [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "차량 위치를 기록하기 위해 위치 권한이 필요합니다."
-        }
-      ],
-[
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": false,
