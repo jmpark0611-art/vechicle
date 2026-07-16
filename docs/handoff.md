@@ -3,9 +3,9 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
-- 2026-07-16 trip UX update:
-  - `expo-notifications` was added. Trip start schedules a sticky-looking local notification (`운행 중`), and trip completion/cancel dismisses it.
-  - `app/_layout.tsx` now routes to `/role-select` on app startup so the mode-selection screen appears first again.
+- 2026-07-16 trip UX/stability update:
+  - The `expo-notifications` experiment was removed after the user reported the APK closing immediately on launch.
+  - `app/_layout.tsx` was restored to the safer stored-role check instead of forced startup navigation.
   - `components/rebuild-screen.tsx` now uses a pastel header card and smaller bottom padding to reduce the blank space above the tab bar.
   - Trip completion/cancel clears end-place, odometer, purpose, and temporary end-odometer inputs.
   - `npm.cmd run verify` passed.

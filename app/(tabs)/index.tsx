@@ -24,7 +24,6 @@ import {
   type TripSummary,
   type VehicleSummary,
 } from '@/lib/readonly-data';
-import { clearTripRunningNotification, showTripRunningNotification } from '@/lib/trip-notifications';
 import { getStoredRole, type AppRole } from '@/lib/role';
 
 function formatTime(value: string | null) {
@@ -224,7 +223,6 @@ export default function TripScreen() {
       }
 
       const gpsResult = await saveCurrentGpsPoint(trip.id);
-      await showTripRunningNotification(trip.vehicleNumber, `${trip.startPlace ?? startPlace} → ${trip.endPlace ?? endPlace}`);
       startGpsTimer();
       Alert.alert('운행 시작', `${trip.vehicleNumber} 운행을 시작했습니다.\n${gpsResult.message}`);
     } catch (error) {
@@ -240,7 +238,6 @@ export default function TripScreen() {
       await cancelManualTrip(trip.id);
       setActiveTrips([]);
       setEndOdometers({});
-      await clearTripRunningNotification();
       stopGpsTimer();
     } catch (error) {
       Alert.alert('취소 실패', error instanceof Error ? error.message : '운행을 취소하지 못했습니다.');
@@ -271,7 +268,6 @@ export default function TripScreen() {
       void obdBle.disconnect();
       stopObdSaveTimer();
       stopGpsTimer();
-      await clearTripRunningNotification();
       setIsObdConnected(false);
       setObdLiveData(null);
       Alert.alert('운행 종료', `${trip.vehicleNumber} 운행을 종료했습니다.\n${gpsResult.message}`);
@@ -299,7 +295,7 @@ export default function TripScreen() {
     <RebuildScreen
       title="운행"
       roleLabel={roleLabel}
-      onSettings={() => router.push('/mode-settings')}
+      onSettings={() => router.push('/mode-settings' as never)}
       actionLabel={isSaving ? '저장 중' : activeTrip ? '운행 종료' : '운행 시작'}
       onAction={handlePrimaryAction}>
       {isLoading ? (

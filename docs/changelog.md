@@ -1,12 +1,11 @@
 # 변경 이력
 
-## 2026-07-16 trip header and running notification
+## 2026-07-16 trip header and launch stability
 
 - Reworked the common screen header into a softer pastel card so tab titles no longer appear as plain oversized text.
 - Reduced the common bottom padding to cut the empty space above the tab bar.
-- App startup now returns to the mode-selection screen instead of silently reusing the previously stored mode.
-- Added `expo-notifications` and a safe notification helper for trip-running status.
-- Trip start now shows a phone notification marked `운행 중`; trip completion/cancel clears it.
+- Reverted the native `expo-notifications` experiment after the APK showed a launch crash on device.
+- Reverted startup-time forced role navigation; mode changes remain available from the app flow without risking root-layout navigation crashes.
 - Trip completion/cancel now clears transient input fields so the next trip starts from blank inputs.
 - Verification passed with `npm.cmd run verify`.
 
