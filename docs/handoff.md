@@ -5,8 +5,9 @@
 - Current branch: `claude/env-permissions-session-restart-154onb`.
 - 2026-07-16 launch/header update:
   - App startup now depends on the Stack `initialRouteName: 'role-select'`; no root-layout forced `router.replace` is used.
+  - `app/index.tsx` explicitly redirects `/` to `/role-select` so the APK first screen is mode selection.
   - Common headers are smaller line-style headers to reduce the oversized tab-title look.
-  - Trip footer spacing was reduced so the action button sits closer to the tab bar.
+  - Primary action buttons are rendered inside scroll content, not in a fixed footer, to remove the large empty gap above the tab bar.
   - `npm.cmd run verify` passed.
 - 2026-07-16 distance/log update:
   - Records popup distinguishes `계기판 총 주행거리`, `계기판 운행거리`, and `실제 이동거리`.

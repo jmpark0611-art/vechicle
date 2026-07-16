@@ -3,8 +3,9 @@
 ## 2026-07-16 launch mode and compact header
 
 - Root layout now relies on the Stack initial route so the mode-selection screen is the first screen without startup-time forced navigation.
+- Added an explicit `app/index.tsx` redirect to `/role-select` so APK startup lands on mode selection reliably.
 - Common tab headers were reduced to a cleaner line-style header with smaller title text.
-- Fixed the oversized footer spacing between the trip action button and the tab bar.
+- Moved the primary action button into the scroll content instead of a fixed footer to remove the large blank gap above the tab bar.
 - Verification passed with `npm.cmd run verify`.
 
 ## 2026-07-16 odometer and actual trip distance

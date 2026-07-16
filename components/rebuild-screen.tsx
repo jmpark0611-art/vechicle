@@ -19,14 +19,13 @@ type RebuildScreenProps = PropsWithChildren<{
 
 export function RebuildScreen({ title, subtitle, roleLabel, metrics = [], actionLabel, onAction, onSettings, children }: RebuildScreenProps) {
   const insets = useSafeAreaInsets();
-  const tabBarSpace = insets.bottom + 66;
-  const footerBottomSpace = insets.bottom + 58;
+  const tabBarSpace = insets.bottom + 76;
 
   return (
     <View style={styles.screen}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 10, paddingBottom: actionLabel ? 8 : tabBarSpace }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: tabBarSpace }]}
         showsVerticalScrollIndicator={false}>
 
         <View style={styles.header}>
@@ -60,16 +59,13 @@ export function RebuildScreen({ title, subtitle, roleLabel, metrics = [], action
         ) : null}
 
         {children}
-      </ScrollView>
 
-      {/* 고정 하단 버튼 */}
-      {actionLabel ? (
-        <View style={[styles.footer, { paddingBottom: footerBottomSpace }]}>
+        {actionLabel ? (
           <Pressable style={styles.primaryBtn} onPress={onAction}>
             <Text style={styles.primaryBtnText}>{actionLabel}</Text>
           </Pressable>
-        </View>
-      ) : null}
+        ) : null}
+      </ScrollView>
     </View>
   );
 }
@@ -112,15 +108,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 2,
-    paddingVertical: 5,
-    marginBottom: 8,
+    paddingHorizontal: 0,
+    paddingVertical: 2,
+    marginBottom: 6,
     borderBottomWidth: 1,
     borderBottomColor: '#E8EAF7',
   },
   headerLeft: { flex: 1 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { color: '#24304F', fontSize: 18, fontWeight: '900', letterSpacing: 0 },
+  title: { color: '#52607D', fontSize: 14, fontWeight: '900', letterSpacing: 0 },
   subtitle: { color: '#7180A3', fontSize: 12, fontWeight: '700', marginTop: 3 },
 
   rolePill: {
@@ -190,11 +186,6 @@ const styles = StyleSheet.create({
   statusValue: { color: '#222B45', fontSize: 13, fontWeight: '900', flexShrink: 1, textAlign: 'right' },
   loadingText: { color: '#7180A3', fontSize: 13, fontWeight: '800', textAlign: 'center', marginTop: 12 },
 
-  footer: {
-    paddingHorizontal: 18,
-    paddingTop: 6,
-    backgroundColor: '#F4F5FB',
-  },
   primaryBtn: {
     minHeight: 52,
     borderRadius: 16,
@@ -206,6 +197,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 5 },
     elevation: 3,
+    marginTop: 8,
   },
   primaryBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
 });
