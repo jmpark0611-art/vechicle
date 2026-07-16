@@ -16,6 +16,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="role-select" />
         <Stack.Screen name="commander-pin" />
+        <Stack.Screen name="mode-settings" />
         <Stack.Screen name="(tabs)" />
       </Stack>
       <StatusBar style="dark" />

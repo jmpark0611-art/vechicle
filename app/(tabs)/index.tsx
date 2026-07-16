@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -24,6 +25,7 @@ import {
   type VehicleSummary,
 } from '@/lib/readonly-data';
 import { clearTripRunningNotification, showTripRunningNotification } from '@/lib/trip-notifications';
+import { getStoredRole, type AppRole } from '@/lib/role';
 
 function formatTime(value: string | null) {
   if (!value) return '-';
@@ -67,6 +69,7 @@ export default function TripScreen() {
   const [isObdConnected, setIsObdConnected] = useState(false);
   const [savedBleDeviceId, setSavedBleDeviceId] = useState<string | null>(null);
   const [savedBleDeviceName, setSavedBleDeviceName] = useState<string | null>(null);
+  const [role, setRole] = useState<AppRole | null>(null);
 
   const activeTripsRef = useRef<TripSummary[]>([]);
   const obdLiveRef = useRef<ObdLiveData | null>(null);
@@ -142,6 +145,7 @@ export default function TripScreen() {
         setSavedBleDeviceName(device.name);
       }
     });
+    void getStoredRole().then(setRole);
   }, []);
 
   useEffect(() => {
@@ -289,8 +293,15 @@ export default function TripScreen() {
       ? `${savedBleDeviceName} 자동연결 대기`
       : '미연결';
 
+  const roleLabel = role === 'commander' ? '수송부' : role === 'driver' ? '운전자' : undefined;
+
   return (
-    <RebuildScreen title="운행" actionLabel={isSaving ? '저장 중' : activeTrip ? '운행 종료' : '운행 시작'} onAction={handlePrimaryAction}>
+    <RebuildScreen
+      title="운행"
+      roleLabel={roleLabel}
+      onSettings={() => router.push('/mode-settings')}
+      actionLabel={isSaving ? '저장 중' : activeTrip ? '운행 종료' : '운행 시작'}
+      onAction={handlePrimaryAction}>
       {isLoading ? (
         <LoadingCard label="운행 데이터를 불러오는 중" />
       ) : errorMessage ? (
