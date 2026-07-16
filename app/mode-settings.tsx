@@ -32,10 +32,6 @@ export default function ModeSettingsScreen() {
     ]);
   }, []);
 
-  const handleChangePin = useCallback(() => {
-    router.push('/commander-pin?change=1');
-  }, []);
-
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]}>
       <View style={styles.header}>
@@ -60,12 +56,7 @@ export default function ModeSettingsScreen() {
             <Text style={styles.rowLabel}>모드 변경</Text>
             <Text style={styles.rowArrow}>›</Text>
           </Pressable>
-          {role === 'commander' ? (
-            <Pressable style={[styles.row, styles.rowBorder]} onPress={handleChangePin}>
-              <Text style={styles.rowLabel}>PIN 변경</Text>
-              <Text style={styles.rowArrow}>›</Text>
-            </Pressable>
-          ) : null}
+          {role === 'commander' ? <Text style={styles.pinHint}>수송부 PIN은 1862로 고정되어 있습니다.</Text> : null}
         </View>
       </View>
     </View>
@@ -121,4 +112,5 @@ const styles = StyleSheet.create({
   },
   rowLabel: { color: '#24304F', fontSize: 15, fontWeight: '800' },
   rowArrow: { color: '#B0B8D8', fontSize: 20, fontWeight: '400' },
+  pinHint: { color: '#7B86A8', fontSize: 12, fontWeight: '700', lineHeight: 18, marginTop: 8 },
 });

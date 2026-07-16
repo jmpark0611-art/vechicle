@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-16 strict role tabs/PIN update:
+  - Driver mode displays only the `운행` tab.
+  - Commander mode displays `기록`, `진단`, `위치`, `점검`; the `운행` tab is hidden.
+  - Commander access still goes through `commander-pin`, and the accepted PIN is fixed to `1862`.
+  - Existing stored PIN values are ignored; PIN change UI was removed from settings/check surfaces.
+  - `npm.cmd run verify` passed.
 - 2026-07-16 launch/header update:
   - App startup now depends on the Stack `initialRouteName: 'role-select'`; no root-layout forced `router.replace` is used.
   - `app/index.tsx` explicitly redirects `/` to `/role-select` so the APK first screen is mode selection.

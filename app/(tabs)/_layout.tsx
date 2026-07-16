@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getStoredRole, type AppRole } from '@/lib/role';
@@ -16,13 +16,19 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const [role, setRole] = useState<AppRole | null>(null);
   const isCommander = role === 'commander';
+  const isDriver = role === 'driver';
 
   useEffect(() => {
     void getStoredRole().then(setRole);
   }, []);
 
+  if (role === null) {
+    return <View style={{ flex: 1, backgroundColor: '#F4F5FB' }} />;
+  }
+
   return (
     <Tabs
+      initialRouteName={isCommander ? 'explore' : 'index'}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: ACTIVE,
@@ -32,7 +38,7 @@ export default function TabLayout() {
           left: 16,
           right: 16,
           bottom: insets.bottom + 10,
-          height: role === 'driver' ? 58 : 64,
+          height: isDriver ? 58 : 64,
           borderRadius: 24,
           borderWidth: 1,
           borderColor: '#E7EAF8',
@@ -49,7 +55,10 @@ export default function TabLayout() {
           marginTop: 2,
         },
       }}>
-      <Tabs.Screen name="index" options={{ title: '운행', tabBarIcon: ({ color }) => <TabGlyph label="▶" color={color} /> }} />
+      <Tabs.Screen
+        name="index"
+        options={{ title: '운행', tabBarIcon: ({ color }) => <TabGlyph label="▶" color={color} />, href: isDriver ? undefined : null }}
+      />
       <Tabs.Screen
         name="explore"
         options={{ title: '기록', tabBarIcon: ({ color }) => <TabGlyph label="☰" color={color} />, href: isCommander ? undefined : null }}

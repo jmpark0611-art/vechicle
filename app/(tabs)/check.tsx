@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
-import { setStoredPin, verifyPin } from '@/lib/commander-pin';
 import { fetchTripsReadOnly, fetchVehiclesReadOnly, getSupabaseReadSource } from '@/lib/readonly-data';
 import { clearStoredRole, getStoredRole } from '@/lib/role';
 import { supabase } from '@/lib/supabase';
@@ -84,30 +83,6 @@ export default function CheckScreen() {
     ]);
   }
 
-  function handleChangePin() {
-    Alert.prompt(
-      '현재 PIN 확인',
-      '현재 비밀번호 4자리를 입력하세요',
-      async (current) => {
-        if (!current) return;
-        const ok = await verifyPin(current.trim());
-        if (!ok) {
-          Alert.alert('PIN 오류', '현재 비밀번호가 맞지 않습니다.');
-          return;
-        }
-        Alert.prompt('새 PIN 설정', '새 비밀번호 4자리를 입력하세요', async (next) => {
-          if (!next || next.trim().length !== 4 || !/^\d{4}$/.test(next.trim())) {
-            Alert.alert('형식 오류', '숫자 4자리로 입력해 주세요.');
-            return;
-          }
-          await setStoredPin(next.trim());
-          Alert.alert('PIN 변경 완료', '새 비밀번호가 저장되었습니다.');
-        }, 'secure-text');
-      },
-      'secure-text'
-    );
-  }
-
   const runReadCheck = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -161,11 +136,7 @@ export default function CheckScreen() {
         <Pressable style={styles.changeRoleBtn} onPress={() => void handleChangeRole()}>
           <Text style={styles.changeRoleBtnText}>역할 변경</Text>
         </Pressable>
-        {currentRole === 'commander' && (
-          <Pressable style={styles.changePinBtn} onPress={handleChangePin}>
-            <Text style={styles.changePinBtnText}>수송부 PIN 변경</Text>
-          </Pressable>
-        )}
+        {currentRole === 'commander' ? <Text style={styles.pinHint}>수송부 PIN은 1862로 고정되어 있습니다.</Text> : null}
       </SectionCard>
 
       {isLoading ? (
@@ -193,13 +164,5 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   changeRoleBtnText: { color: '#64748B', fontSize: 14, fontWeight: '900' },
-  changePinBtn: {
-    minHeight: 44,
-    borderRadius: 12,
-    backgroundColor: '#EFF6FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  changePinBtnText: { color: '#2563EB', fontSize: 14, fontWeight: '900' },
+  pinHint: { color: '#7B86A8', fontSize: 12, fontWeight: '700', marginTop: 10 },
 });

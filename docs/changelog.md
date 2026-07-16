@@ -1,5 +1,14 @@
 # 변경 이력
 
+## 2026-07-16 strict role tabs and fixed commander PIN
+
+- Driver mode now shows only the trip tab.
+- Commander mode now hides the trip tab and shows records, diagnosis, location, and check tabs.
+- Commander mode still requires PIN entry before entering the app.
+- Commander PIN is fixed to `1862`; previous locally stored PIN values are ignored.
+- PIN change controls were removed from settings/check screens to avoid conflicting with the fixed PIN policy.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-16 launch mode and compact header
 
 - Root layout now relies on the Stack initial route so the mode-selection screen is the first screen without startup-time forced navigation.
