@@ -19,16 +19,16 @@ type RebuildScreenProps = PropsWithChildren<{
 
 export function RebuildScreen({ title, subtitle, roleLabel, metrics = [], actionLabel, onAction, onSettings, children }: RebuildScreenProps) {
   const insets = useSafeAreaInsets();
-  const tabBarSpace = insets.bottom + 80;
+  const tabBarSpace = insets.bottom + 66;
+  const footerBottomSpace = insets.bottom + 58;
 
   return (
     <View style={styles.screen}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: actionLabel ? 12 : tabBarSpace }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 10, paddingBottom: actionLabel ? 8 : tabBarSpace }]}
         showsVerticalScrollIndicator={false}>
 
-        {/* 헤더 */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.title}>{title}</Text>
@@ -64,7 +64,7 @@ export function RebuildScreen({ title, subtitle, roleLabel, metrics = [], action
 
       {/* 고정 하단 버튼 */}
       {actionLabel ? (
-        <View style={[styles.footer, { paddingBottom: tabBarSpace }]}>
+        <View style={[styles.footer, { paddingBottom: footerBottomSpace }]}>
           <Pressable style={styles.primaryBtn} onPress={onAction}>
             <Text style={styles.primaryBtnText}>{actionLabel}</Text>
           </Pressable>
@@ -112,13 +112,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-    marginBottom: 12,
+    paddingHorizontal: 2,
+    paddingVertical: 5,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8EAF7',
   },
   headerLeft: { flex: 1 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { color: '#1A2340', fontSize: 26, fontWeight: '900', letterSpacing: -0.5 },
+  title: { color: '#24304F', fontSize: 18, fontWeight: '900', letterSpacing: 0 },
   subtitle: { color: '#7180A3', fontSize: 12, fontWeight: '700', marginTop: 3 },
 
   rolePill: {
@@ -190,11 +192,11 @@ const styles = StyleSheet.create({
 
   footer: {
     paddingHorizontal: 18,
-    paddingTop: 10,
+    paddingTop: 6,
     backgroundColor: '#F4F5FB',
   },
   primaryBtn: {
-    minHeight: 54,
+    minHeight: 52,
     borderRadius: 16,
     backgroundColor: '#5B7CFA',
     alignItems: 'center',

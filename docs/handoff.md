@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-16 launch/header update:
+  - App startup now depends on the Stack `initialRouteName: 'role-select'`; no root-layout forced `router.replace` is used.
+  - Common headers are smaller line-style headers to reduce the oversized tab-title look.
+  - Trip footer spacing was reduced so the action button sits closer to the tab bar.
+  - `npm.cmd run verify` passed.
 - 2026-07-16 distance/log update:
   - Records popup distinguishes `계기판 총 주행거리`, `계기판 운행거리`, and `실제 이동거리`.
   - `lib/gps-data.ts` calculates per-trip actual movement distance from saved `gps_points`; no DB migration is required.
