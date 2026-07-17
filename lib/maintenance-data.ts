@@ -2,7 +2,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { supabase } from './supabase';
 
-export type MaintenanceKey = 'engineOil' | 'oilFilter' | 'airFilter';
+export type MaintenanceKey =
+  | 'engineOil'
+  | 'oilFilter'
+  | 'airFilter'
+  | 'fuelFilter'
+  | 'coolant'
+  | 'brakeOil'
+  | 'transmissionOil'
+  | 'powerSteeringOil'
+  | 'battery'
+  | 'tire'
+  | 'brakePad'
+  | 'wiperBlade'
+  | 'sparkPlug'
+  | 'timingBelt';
 
 export type MaintenanceItem = {
   key: MaintenanceKey;
@@ -38,6 +52,17 @@ export const MAINTENANCE_ITEMS: MaintenanceItem[] = [
   { key: 'engineOil', label: '엔진오일', intervalKm: 10000 },
   { key: 'oilFilter', label: '오일필터', intervalKm: 10000 },
   { key: 'airFilter', label: '에어필터', intervalKm: 15000 },
+  { key: 'fuelFilter', label: '연료필터', intervalKm: 30000 },
+  { key: 'coolant', label: '냉각수', intervalKm: 40000 },
+  { key: 'brakeOil', label: '브레이크오일', intervalKm: 40000 },
+  { key: 'transmissionOil', label: '미션오일', intervalKm: 60000 },
+  { key: 'powerSteeringOil', label: '파워오일', intervalKm: 50000 },
+  { key: 'battery', label: '배터리', intervalKm: 60000 },
+  { key: 'tire', label: '타이어', intervalKm: 50000 },
+  { key: 'brakePad', label: '브레이크패드', intervalKm: 30000 },
+  { key: 'wiperBlade', label: '와이퍼', intervalKm: 10000 },
+  { key: 'sparkPlug', label: '점화플러그', intervalKm: 40000 },
+  { key: 'timingBelt', label: '타이밍벨트', intervalKm: 100000 },
 ];
 
 function emptyState(): VehicleMaintenanceState {

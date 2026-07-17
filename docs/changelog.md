@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-17 expanded diagnosis and maintenance cards
+
+- Removed the duplicated square `ECU 상태` card because the horizontal `ECU 감지 상태` bar already shows that information.
+- Diagnosis ECU cards now include RPM, OBD speed, coolant, battery, fuel, DTC count, and placeholder cards for supported future PIDs such as intake temperature, throttle, engine load, fuel trim, MAP, oxygen sensor, VIN, and readiness monitors.
+- Periodic maintenance items now include fuel filter, coolant, brake oil, transmission oil, power steering oil, battery, tire, brake pad, wiper blade, spark plug, and timing belt in addition to the original oil/filter items.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 active trip odometer wording
 
 - Active trip card now labels the departure odometer as `계기판 누적거리`.

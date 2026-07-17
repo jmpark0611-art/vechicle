@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 expanded diagnosis / maintenance:
+  - Removed the duplicated square `ECU 상태` card from `app/(tabs)/vehicles.tsx`; the top horizontal ECU status bar remains.
+  - Diagnosis cards now show live-supported OBD fields first: RPM, OBD speed, coolant, battery, fuel, and DTC count.
+  - Additional OBD capability placeholders are visible for later PID work: intake temp, throttle, engine load, fuel trim, MAP, oxygen sensor, VIN, and readiness.
+  - `lib/maintenance-data.ts` now includes more periodic items: fuel filter, coolant, brake oil, transmission oil, power steering oil, battery, tire, brake pad, wiper blade, spark plug, and timing belt.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 active trip odometer wording:
   - `app/(tabs)/index.tsx` active trip stat now says `계기판 누적거리` instead of `출발 km`.
   - If `activeTrip.startOdometer` is missing, the UI falls back to the selected vehicle's current odometer baseline.
