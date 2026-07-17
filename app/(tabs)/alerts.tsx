@@ -247,12 +247,11 @@ export default function AlertsScreen() {
     <RebuildScreen
       title="정비"
       subtitle="교환 알림과 차량별 정비 설정"
+      bottomSpace="compact"
       metrics={[
         { label: '전체 알림', value: `${alerts.length}건` },
         { label: '정비 필요', value: `${alerts.filter((item) => item.severity === 'bad').length}건` },
-      ]}
-      actionLabel="새로고침"
-      onAction={() => void loadData()}>
+      ]}>
       {isLoading ? (
         <LoadingCard label="알림 데이터를 불러오는 중" />
       ) : errorMessage ? (

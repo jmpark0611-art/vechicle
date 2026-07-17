@@ -23,11 +23,6 @@ import { createVehicle, fetchLatestVehicleOdometers, fetchVehiclesReadOnly, type
 
 const ECU_COLORS = ['#EAF2FF', '#EAFBF4', '#FFF4DE', '#F1ECFF', '#FFEFF3'];
 
-function formatKm(value: number | null | undefined) {
-  if (value === null || value === undefined) return '-';
-  return `${Math.round(value).toLocaleString('ko-KR')}km`;
-}
-
 function liveToReading(vehicleId: string, data: ObdLiveData): ObdReading {
   return {
     ...buildObdReading(vehicleId, {
@@ -253,7 +248,14 @@ export default function VehiclesScreen() {
           <SectionCard title="차량 선택">
             <View style={styles.vehicleRow}>
               <View style={styles.dropdownWrap}>
-                <VehicleDropdown vehicles={vehicles} selectedVehicleId={selectedVehicle?.id ?? null} onSelect={setSelectedVehicleId} />
+                <VehicleDropdown
+                  vehicles={vehicles}
+                  selectedVehicleId={selectedVehicle?.id ?? null}
+                  onSelect={setSelectedVehicleId}
+                  displayLabel="차량 선택"
+                  mutedDisplay
+                  compact
+                />
               </View>
               <Pressable style={styles.connectBtn} onPress={() => void handleConnectDevice()} disabled={isConnecting}>
                 <Text style={styles.connectBtnText}>{isConnecting ? '연결 중' : '단말기 연결'}</Text>
@@ -264,19 +266,12 @@ export default function VehiclesScreen() {
 
           {selectedVehicle && selectedState ? (
             <View style={styles.diagnosisPanel}>
-              <View style={styles.ecuStatusBar}>
-                <View>
-                  <Text style={styles.ecuStatusLabel}>ECU 감지 상태</Text>
-                  <Text style={styles.ecuStatusValue}>{selectedObd ? '감지됨' : '미감지'}</Text>
-                </View>
-                <View style={styles.ecuStatusMeta}>
-                  <Text style={styles.ecuStatusMetaText}>차량 {selectedVehicle.vehicleNumber}</Text>
-                  <Text style={styles.ecuStatusMetaText}>기준 {formatKm(selectedState.currentKm)}</Text>
-                </View>
+              <View style={styles.groupTitleRow}>
+                <Text style={[styles.groupTitle, styles.ecuGroupTitle]}>ECU 감지 정보</Text>
+                <Text style={[styles.detectText, selectedObd && styles.detectTextOn]}>{selectedObd ? 'ECU 감지' : '연결 전'}</Text>
               </View>
-              <Text style={[styles.groupTitle, styles.ecuGroupTitle]}>ECU 감지 정보</Text>
               <View style={styles.grid}>
-                {ecuCards.map((card, index) => (
+                {ecuCards.slice(0, 8).map((card, index) => (
                   <View key={card.title} style={[styles.ecuCard, { backgroundColor: ECU_COLORS[index % ECU_COLORS.length] }, card.tone === 'bad' && styles.squareCardBad, card.tone === 'warn' && styles.squareCardWarn]}>
                     <Text style={styles.cardTitle} numberOfLines={1}>{card.title}</Text>
                     <Text style={styles.cardValue} numberOfLines={2} adjustsFontSizeToFit>{card.value}</Text>
@@ -336,14 +331,14 @@ const styles = StyleSheet.create({
   vehicleRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   dropdownWrap: { flex: 1 },
   connectBtn: {
-    minHeight: 50,
+    minHeight: 42,
     minWidth: 104,
     borderRadius: 14,
     backgroundColor: '#EAFBF4',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
-    marginTop: 8,
+    marginTop: 0,
   },
   connectBtnText: { color: '#13866F', fontSize: 12, fontWeight: '900' },
   diagnosisPanel: {
@@ -375,13 +370,16 @@ const styles = StyleSheet.create({
   ecuStatusValue: { color: '#1E2946', fontSize: 20, fontWeight: '900', marginTop: 2 },
   ecuStatusMeta: { alignItems: 'flex-end', gap: 4 },
   ecuStatusMetaText: { color: '#4F6AE6', fontSize: 12, fontWeight: '900' },
-  groupTitle: { fontSize: 17, fontWeight: '900', marginTop: 12, marginBottom: 2, letterSpacing: 0 },
+  groupTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 },
+  groupTitle: { fontSize: 18, fontWeight: '900', marginTop: 0, marginBottom: 2, letterSpacing: 0 },
   ecuGroupTitle: { color: '#3158E8' },
   partsGroupTitle: { color: '#13866F' },
+  detectText: { color: '#9AA8C7', fontSize: 12, fontWeight: '900' },
+  detectTextOn: { color: '#13866F' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 6 },
   ecuCard: {
     width: '48%',
-    minHeight: 76,
+    minHeight: 68,
     borderRadius: 15,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.72)',
@@ -391,8 +389,8 @@ const styles = StyleSheet.create({
   squareCardBad: { borderColor: '#FFC6C6', backgroundColor: '#FFEAEA' },
   squareCardWarn: { borderColor: '#FFE2A8' },
   cardTitle: { color: '#52607D', fontSize: 11, fontWeight: '900' },
-  cardValue: { color: '#222B45', fontSize: 15, fontWeight: '900', lineHeight: 18 },
-  cardDetail: { color: '#7180A3', fontSize: 10, fontWeight: '800' },
+  cardValue: { color: '#222B45', fontSize: 14, fontWeight: '900', lineHeight: 16 },
+  cardDetail: { color: '#7180A3', fontSize: 9, fontWeight: '800' },
   modalDim: { flex: 1, backgroundColor: 'rgba(80,88,120,0.36)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   registerModal: { width: '100%', borderRadius: 18, backgroundColor: '#FFFDFB', padding: 18 },
   modalTitle: { color: '#222B45', fontSize: 20, fontWeight: '900', marginBottom: 4 },

@@ -337,6 +337,21 @@ npm.cmd run health
 - Important product note: ELM327/OBD does not reliably expose dashboard total odometer through a standard PID. For now, durable automatic reflection means app-recorded trip odometer values, not direct cluster odometer reading.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 handoff: missed layout fixes
+
+- User reported the previous APK still showed:
+  - large lower blank space on active driver trip screen,
+  - diagnosis screen not fitting one viewport,
+  - `ECU 감지 상태 / 미감지` bar taking too much room,
+  - maintenance `새로고침` button overlapping the bottom tab bar.
+- Implemented:
+  - Active/completion driver screens now use a near-full-screen wrapper so the content fills the phone instead of leaving a blank lower half.
+  - Diagnosis dropdown displays muted `차량 선택` text while keeping the selected vehicle id internally.
+  - Removed diagnosis `ECU 감지 상태` status bar; compact status now appears beside the `ECU 감지 정보` heading as `ECU 감지` or `연결 전`.
+  - Primary diagnosis ECU grid now shows the first eight live cards with reduced card height.
+  - Maintenance tab removed its lower refresh action to avoid tab overlap.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 handoff: compact mobile layout pass
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.

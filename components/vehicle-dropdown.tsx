@@ -11,6 +11,8 @@ type VehicleDropdownProps = {
   allLabel?: string;
   placeholder?: string;
   compact?: boolean;
+  displayLabel?: string;
+  mutedDisplay?: boolean;
 };
 
 export function VehicleDropdown({
@@ -21,13 +23,15 @@ export function VehicleDropdown({
   allLabel = '전체',
   placeholder = '차량 선택',
   compact = false,
+  displayLabel,
+  mutedDisplay = false,
 }: VehicleDropdownProps) {
   const [open, setOpen] = useState(false);
   const selectedVehicle = useMemo(
     () => vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? null,
     [selectedVehicleId, vehicles]
   );
-  const label = selectedVehicle?.vehicleNumber ?? (includeAll && selectedVehicleId === null ? allLabel : placeholder);
+  const label = displayLabel ?? selectedVehicle?.vehicleNumber ?? (includeAll && selectedVehicleId === null ? allLabel : placeholder);
 
   function select(vehicleId: string | null) {
     onSelect(vehicleId);
@@ -37,7 +41,7 @@ export function VehicleDropdown({
   return (
     <View style={[styles.wrap, compact && styles.wrapCompact]}>
       <Pressable style={[styles.control, compact && styles.controlCompact]} onPress={() => setOpen((current) => !current)}>
-        <Text style={styles.value} numberOfLines={1}>
+        <Text style={[styles.value, mutedDisplay && styles.valueMuted]} numberOfLines={1}>
           {label}
         </Text>
         <Text style={styles.chevron}>{open ? '▲' : '▼'}</Text>
@@ -84,6 +88,7 @@ const styles = StyleSheet.create({
   },
   controlCompact: { minHeight: 42, borderRadius: 13 },
   value: { color: '#0F172A', fontSize: 15, fontWeight: '900', flex: 1 },
+  valueMuted: { color: '#9AA8C7' },
   chevron: { color: '#64748B', fontSize: 12, fontWeight: '900' },
   menu: {
     marginTop: 8,

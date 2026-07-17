@@ -481,6 +481,15 @@
 - Note: standard OBD generally does not expose dashboard total odometer reliably; the app uses recorded trip odometer values as the durable source.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 missed layout fixes
+
+- Driver active-trip and completion screens now reserve nearly the full phone height so the lower area no longer looks empty after the bottom driver tab is hidden.
+- Diagnosis vehicle dropdown can show a muted `차량 선택` label while still using the selected vehicle internally.
+- Removed the bulky `ECU 감지 상태 / 미감지` status bar from diagnosis and replaced it with a small right-side `ECU 감지` / `연결 전` label.
+- Diagnosis ECU cards are further compressed and only the first eight live ECU cards are shown in the primary view to fit the screen better.
+- Maintenance tab no longer renders a bottom `새로고침` button that overlapped with the tab bar.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 compact mobile layout pass
 
 - Driver mode now hides the bottom tab bar completely instead of showing a single 운행 tab.

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Dimensions, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
@@ -31,6 +31,8 @@ import {
   type VehicleSummary,
 } from '@/lib/readonly-data';
 import { getStoredRole } from '@/lib/role';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 function formatTime(value: string | null) {
   if (!value) return '-';
@@ -439,7 +441,7 @@ export default function TripScreen() {
       ) : errorMessage ? (
         <SectionCard title="오류" body={errorMessage} />
       ) : activeTrip ? (
-        <View style={styles.tripCard}>
+        <View style={[styles.tripCard, styles.tripCardActive]}>
           <View style={styles.heroTop}>
             <View>
               <Text style={styles.kicker}>운행 중</Text>
@@ -495,7 +497,7 @@ export default function TripScreen() {
           </View>
         </View>
       ) : lastCompletion ? (
-        <View>
+        <View style={styles.completionWrap}>
           <View style={styles.thanksCard}>
             <Text style={styles.thanksTitle}>안전운행해주셔서 감사합니다</Text>
             <Text style={styles.thanksSub}>월장비운행증 반영 요소</Text>
@@ -652,6 +654,10 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 6,
   },
+  tripCardActive: {
+    minHeight: Math.max(620, SCREEN_HEIGHT - 126),
+    justifyContent: 'flex-start',
+  },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -771,7 +777,7 @@ const styles = StyleSheet.create({
   checkboxOn: { backgroundColor: '#5B7CFA', borderColor: '#5B7CFA' },
   checkboxText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
   checkText: { color: '#52607D', fontSize: 13, fontWeight: '800' },
-  actionRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  actionRow: { flexDirection: 'row', gap: 10, marginTop: 'auto' },
   cancelBtnWide: {
     flex: 0.7,
     minHeight: 44,
@@ -806,4 +812,5 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   startBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
+  completionWrap: { minHeight: Math.max(620, SCREEN_HEIGHT - 126) },
 });
