@@ -379,7 +379,7 @@ export default function TripScreen() {
 
 const styles = StyleSheet.create({
   input: {
-    minHeight: 44,
+    minHeight: 42,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E7EAF8',
@@ -388,12 +388,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     paddingHorizontal: 12,
-    marginTop: 8,
+    marginTop: 7,
   },
-  twoCol: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  twoCol: { flexDirection: 'row', gap: 8, marginTop: 7 },
   halfInput: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 42,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E7EAF8',
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     paddingHorizontal: 12,
   },
-  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
   checkbox: {
     width: 22,
     height: 22,

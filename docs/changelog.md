@@ -1,5 +1,14 @@
 # 변경 이력
 
+## 2026-07-17 visible mode UI and trip spacing refresh
+
+- Mode selection screen now uses visual emoji icons instead of Korean letters inside the icon blocks.
+- Mode selection cards were restyled with softer pastel cards, cleaner copy, and a more polished hero area.
+- Rebuild screen content now uses `flexGrow` and pushes the primary action button toward the bottom of the available screen instead of leaving loose blank space.
+- Trip input spacing and field heights were tightened so the trip screen fills the viewport more naturally.
+- Common tab title text was reduced further to avoid the oversized, plain-title look.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-16 strict role tabs and fixed commander PIN
 
 - Driver mode now shows only the trip tab.

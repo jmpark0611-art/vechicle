@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 visible UI refresh:
+  - Mode selection now uses emoji icons (`🚐`, `▶️`, `🛠️`) instead of Korean letters in icon blocks.
+  - Mode cards were visually refreshed with softer pastel surfaces and tighter copy.
+  - `RebuildScreen` uses `flexGrow` and pushes the primary action button toward the bottom of the available screen, reducing the large empty gap on the trip screen.
+  - Trip input spacing and field heights were tightened.
+  - `npm.cmd run verify` passed.
 - 2026-07-16 strict role tabs/PIN update:
   - Driver mode displays only the `운행` tab.
   - Commander mode displays `기록`, `진단`, `위치`, `점검`; the `운행` tab is hidden.

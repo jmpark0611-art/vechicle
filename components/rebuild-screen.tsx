@@ -19,7 +19,7 @@ type RebuildScreenProps = PropsWithChildren<{
 
 export function RebuildScreen({ title, subtitle, roleLabel, metrics = [], actionLabel, onAction, onSettings, children }: RebuildScreenProps) {
   const insets = useSafeAreaInsets();
-  const tabBarSpace = insets.bottom + 76;
+  const tabBarSpace = insets.bottom + 68;
 
   return (
     <View style={styles.screen}>
@@ -102,21 +102,20 @@ export function LoadingCard({ label = '불러오는 중' }: { label?: string }) 
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F4F5FB' },
-  content: { paddingHorizontal: 18 },
+  content: { flexGrow: 1, paddingHorizontal: 18 },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 0,
-    paddingVertical: 2,
-    marginBottom: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E8EAF7',
+    minHeight: 36,
+    paddingHorizontal: 2,
+    paddingVertical: 4,
+    marginBottom: 8,
   },
   headerLeft: { flex: 1 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { color: '#52607D', fontSize: 14, fontWeight: '900', letterSpacing: 0 },
+  title: { color: '#536079', fontSize: 13, fontWeight: '900', letterSpacing: 0 },
   subtitle: { color: '#7180A3', fontSize: 12, fontWeight: '700', marginTop: 3 },
 
   rolePill: {
@@ -130,9 +129,9 @@ const styles = StyleSheet.create({
   rolePillText: { color: '#4F6AE6', fontSize: 11, fontWeight: '900' },
 
   settingsBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#FFFDFB',
     borderWidth: 1,
     borderColor: '#E2E8F4',
@@ -188,8 +187,8 @@ const styles = StyleSheet.create({
 
   primaryBtn: {
     minHeight: 52,
-    borderRadius: 16,
-    backgroundColor: '#5B7CFA',
+    borderRadius: 18,
+    backgroundColor: '#4F6AE6',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#8FA3FF',
@@ -197,7 +196,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 5 },
     elevation: 3,
-    marginTop: 8,
+    marginTop: 'auto',
   },
   primaryBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
 });
