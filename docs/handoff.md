@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 diagnosis ECU bar / trip completion isolation:
+  - `app/(tabs)/vehicles.tsx` replaces the old selected vehicle/current-km strip with a horizontal `ECU 감지 상태` bar above the ECU cards.
+  - `app/(tabs)/index.tsx` captures the first live OBD fuel percentage as the trip fuel baseline if OBD connects after the trip starts.
+  - Active trip cards now show current fuel and consumed fuel percentage.
+  - Completed trip summary no longer renders the new-trip input form underneath; `새 운행 입력` clears the summary and returns to the start form.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 speed tab live overspeed alert:
   - Commander `위치` tab/screen has been renamed to `속도`.
   - `app/(tabs)/map.tsx` polls `fetchLocationSnapshot()` every 10 seconds while the speed screen is mounted, so overspeed alerts do not depend on manual refresh.

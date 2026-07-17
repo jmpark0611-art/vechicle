@@ -196,6 +196,13 @@ export default function TripScreen() {
         setIsObdConnected(true);
         setIsObdConnecting(false);
         setObdStatus(`연결됨 · ${data.speedKmh ?? '-'}km/h · 연료 ${data.fuelPercent ?? '-'}%`);
+        if (typeof data.fuelPercent === 'number') {
+          for (const trip of activeTripsRef.current) {
+            if (tripStartFuelRef.current[trip.id] === null || tripStartFuelRef.current[trip.id] === undefined) {
+              tripStartFuelRef.current[trip.id] = data.fuelPercent;
+            }
+          }
+        }
       },
       onStatus: setObdStatus,
       onDisconnect: () => {
@@ -405,6 +412,14 @@ export default function TripScreen() {
     : isObdConnecting
       ? obdStatus
       : obdStatus;
+  const activeStartFuel = activeTrip ? tripStartFuelRef.current[activeTrip.id] : null;
+  const activeFuelUsed =
+    activeStartFuel !== null &&
+    activeStartFuel !== undefined &&
+    typeof obdLiveData?.fuelPercent === 'number' &&
+    activeStartFuel >= obdLiveData.fuelPercent
+      ? `${Math.round((activeStartFuel - obdLiveData.fuelPercent) * 10) / 10}%`
+      : '-';
 
   return (
     <RebuildScreen title="운행">
@@ -439,6 +454,16 @@ export default function TripScreen() {
               <Text style={styles.statValue}>{formatKm(activeTrip.startOdometer)}</Text>
             </View>
           </View>
+          <View style={styles.statRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>현재 연료</Text>
+              <Text style={styles.statValue}>{typeof obdLiveData?.fuelPercent === 'number' ? `${obdLiveData.fuelPercent}%` : '-'}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>소모 유류</Text>
+              <Text style={styles.statValue}>{activeFuelUsed}</Text>
+            </View>
+          </View>
           <View style={styles.obdStrip}>
             <Text style={styles.obdStripLabel}>OBD</Text>
             <Text style={styles.obdStripValue}>{obdLabel}</Text>
@@ -458,9 +483,8 @@ export default function TripScreen() {
             </Pressable>
           </View>
         </View>
-      ) : (
-        <>
-        {lastCompletion ? (
+      ) : lastCompletion ? (
+        <View>
           <View style={styles.thanksCard}>
             <Text style={styles.thanksTitle}>안전운행해주셔서 감사합니다</Text>
             <Text style={styles.thanksSub}>월장비운행증 반영 요소</Text>
@@ -475,7 +499,12 @@ export default function TripScreen() {
             <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행자</Text><Text style={styles.summaryVal}>{lastCompletion.operator}</Text></View>
             <View style={styles.summaryLine}><Text style={styles.summaryKey}>사용자</Text><Text style={styles.summaryVal}>{lastCompletion.user}</Text></View>
           </View>
-        ) : null}
+          <Pressable style={styles.startBtn} onPress={() => setLastCompletion(null)}>
+            <Text style={styles.startBtnText}>새 운행 입력</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <>
         <View style={styles.heroCard}>
           <View>
             <Text style={styles.kicker}>오늘 운행</Text>

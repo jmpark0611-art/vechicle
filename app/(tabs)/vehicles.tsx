@@ -330,11 +330,15 @@ export default function VehiclesScreen() {
 
           {selectedVehicle && selectedState ? (
             <View style={styles.diagnosisPanel}>
-              <View style={styles.vehicleInfoBar}>
-                <Text style={styles.vehicleInfoNumber}>{selectedVehicle.vehicleNumber}</Text>
-                <View style={styles.vehicleInfoDivider} />
-                <Text style={styles.vehicleInfoLabel}>현재 기준</Text>
-                <Text style={styles.vehicleInfoValue}>{formatKm(selectedState.currentKm)}</Text>
+              <View style={styles.ecuStatusBar}>
+                <View>
+                  <Text style={styles.ecuStatusLabel}>ECU 감지 상태</Text>
+                  <Text style={styles.ecuStatusValue}>{selectedObd ? '감지됨' : '미감지'}</Text>
+                </View>
+                <View style={styles.ecuStatusMeta}>
+                  <Text style={styles.ecuStatusMetaText}>차량 {selectedVehicle.vehicleNumber}</Text>
+                  <Text style={styles.ecuStatusMetaText}>기준 {formatKm(selectedState.currentKm)}</Text>
+                </View>
               </View>
               <Text style={styles.groupTitle}>ECU 감지 정보</Text>
               <View style={styles.grid}>
@@ -424,19 +428,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
-  vehicleInfoBar: {
-    minHeight: 42,
-    borderRadius: 12,
+  ecuStatusBar: {
+    minHeight: 58,
+    borderRadius: 16,
     backgroundColor: '#EEF4FF',
+    borderWidth: 1,
+    borderColor: '#DDE7FF',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    gap: 10,
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    gap: 12,
   },
-  vehicleInfoNumber: { color: '#1E2946', fontSize: 17, fontWeight: '900' },
-  vehicleInfoDivider: { width: 1, height: 18, backgroundColor: '#E1E6F3' },
-  vehicleInfoLabel: { color: '#7B86A8', fontSize: 12, fontWeight: '900' },
-  vehicleInfoValue: { color: '#1E2946', fontSize: 13, fontWeight: '900', marginLeft: 'auto' },
+  ecuStatusLabel: { color: '#52607D', fontSize: 12, fontWeight: '900' },
+  ecuStatusValue: { color: '#1E2946', fontSize: 22, fontWeight: '900', marginTop: 3 },
+  ecuStatusMeta: { alignItems: 'flex-end', gap: 4 },
+  ecuStatusMetaText: { color: '#4F6AE6', fontSize: 12, fontWeight: '900' },
   groupTitle: { color: '#52607D', fontSize: 13, fontWeight: '900', marginTop: 10, marginBottom: 0 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 7 },
   ecuCard: {

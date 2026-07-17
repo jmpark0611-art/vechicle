@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-17 diagnosis ECU bar and trip completion isolation
+
+- Diagnosis selected-vehicle detail now replaces the old vehicle/current-km strip with a horizontal `ECU 감지 상태` card.
+- Trip OBD fuel baseline is now captured from the first live fuel reading if OBD connects after trip start.
+- Active trip screen now shows current fuel and consumed fuel percentage.
+- After trip completion, the start form is no longer rendered below the completion summary; users must tap `새 운행 입력` to begin another entry.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 speed tab live overspeed alert
 
 - Renamed the commander `위치` tab and screen title to `속도`.
