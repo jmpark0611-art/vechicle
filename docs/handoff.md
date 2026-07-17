@@ -337,6 +337,18 @@ npm.cmd run health
 - Important product note: ELM327/OBD does not reliably expose dashboard total odometer through a standard PID. For now, durable automatic reflection means app-recorded trip odometer values, not direct cluster odometer reading.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 handoff: larger driver and maintenance cards
+
+- User clarified the recent request was not just "fit more"; for the relevant screenshots the desired fix is larger text and taller cards.
+- Implemented:
+  - Larger active driver screen title/value typography.
+  - Taller active trip route, stat, OBD, auto-odometer, and action sections.
+  - Larger completion-summary title/row fonts and spacing.
+  - Taller maintenance cards in 정비 tab with larger value/detail/button text.
+  - Removed leftover unused `ecuStatusBar` styles from diagnosis to avoid confusion with the old `ECU 감지 상태 / 미감지` design.
+- Note: if the APK still shows the old diagnosis `ECU 감지 상태` bar, the installed APK is not built from this branch after commit `1d84b62` or later.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 handoff: driver fullscreen state layout
 
 - User reported the previous active/completion layout still looked clustered at the top.

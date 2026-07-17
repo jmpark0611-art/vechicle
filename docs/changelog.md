@@ -481,6 +481,15 @@
 - Note: standard OBD generally does not expose dashboard total odometer reliably; the app uses recorded trip odometer values as the durable source.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 larger driver and maintenance cards
+
+- Rechecked the recent user screenshots against the code.
+- Increased active driver screen typography, route panel height, stat card height, OBD strip height, auto-odometer block height, and action button height.
+- Increased completion-summary typography and spacing so the 월장비운행증 summary is easier to read.
+- Increased maintenance item card height, value text size, detail text size, and completion button height in the 정비 tab.
+- Removed leftover unused diagnosis styles for the old `ECU 감지 상태` bar to avoid confusion; the diagnosis screen now only keeps the compact heading status.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 driver fullscreen state layout
 
 - Reworked active-trip and trip-completion driver screens to bypass the shared scroll container.
