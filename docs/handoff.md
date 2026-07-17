@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 active trip odometer wording:
+  - `app/(tabs)/index.tsx` active trip stat now says `계기판 누적거리` instead of `출발 km`.
+  - If `activeTrip.startOdometer` is missing, the UI falls back to the selected vehicle's current odometer baseline.
+  - The destination odometer auto hint uses the same baseline.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 diagnosis ECU bar / trip completion isolation:
   - `app/(tabs)/vehicles.tsx` replaces the old selected vehicle/current-km strip with a horizontal `ECU 감지 상태` bar above the ECU cards.
   - `app/(tabs)/index.tsx` captures the first live OBD fuel percentage as the trip fuel baseline if OBD connects after the trip starts.

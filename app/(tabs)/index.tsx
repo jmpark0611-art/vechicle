@@ -420,6 +420,7 @@ export default function TripScreen() {
     activeStartFuel >= obdLiveData.fuelPercent
       ? `${Math.round((activeStartFuel - obdLiveData.fuelPercent) * 10) / 10}%`
       : '-';
+  const activeStartOdometer = activeTrip?.startOdometer ?? selectedCurrentKm;
 
   return (
     <RebuildScreen title="운행">
@@ -450,8 +451,8 @@ export default function TripScreen() {
               <Text style={styles.statValue}>{formatTime(activeTrip.startTime)}</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>출발 km</Text>
-              <Text style={styles.statValue}>{formatKm(activeTrip.startOdometer)}</Text>
+              <Text style={styles.statLabel}>계기판 누적거리</Text>
+              <Text style={styles.statValue}>{formatKm(activeStartOdometer)}</Text>
             </View>
           </View>
           <View style={styles.statRow}>
@@ -471,7 +472,7 @@ export default function TripScreen() {
           <View style={styles.autoOdoBox}>
             <Text style={styles.autoOdoLabel}>도착 계기판 자동</Text>
             <Text style={styles.autoOdoValue}>
-              {activeTrip.startOdometer !== null ? `${Math.round(activeTrip.startOdometer).toLocaleString('ko-KR')}km + GPS 이동거리` : 'OBD/GPS 기준 자동 저장'}
+              {activeStartOdometer !== null ? `${Math.round(activeStartOdometer).toLocaleString('ko-KR')}km + GPS 이동거리` : 'OBD/GPS 기준 자동 저장'}
             </Text>
           </View>
           <View style={styles.actionRow}>

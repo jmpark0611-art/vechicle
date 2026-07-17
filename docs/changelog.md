@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-17 active trip odometer wording
+
+- Active trip card now labels the departure odometer as `계기판 누적거리`.
+- When the active trip row has no start odometer, the card falls back to the selected vehicle's current odometer baseline.
+- The destination odometer auto-calculation hint uses the same baseline value.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 diagnosis ECU bar and trip completion isolation
 
 - Diagnosis selected-vehicle detail now replaces the old vehicle/current-km strip with a horizontal `ECU 감지 상태` card.
