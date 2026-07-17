@@ -481,6 +481,11 @@
 - Note: standard OBD generally does not expose dashboard total odometer reliably; the app uses recorded trip odometer values as the durable source.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 remove wiper maintenance item
+
+- Removed `와이퍼` from periodic maintenance items so it no longer appears in the 정비 tab or maintenance alerts.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 diagnosis and maintenance balance fix
 
 - Diagnosis ECU cards were restored to a larger internal-card layout after user feedback that the diagnosis screen looked too shrunken.

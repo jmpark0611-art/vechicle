@@ -337,6 +337,13 @@ npm.cmd run health
 - Important product note: ELM327/OBD does not reliably expose dashboard total odometer through a standard PID. For now, durable automatic reflection means app-recorded trip odometer values, not direct cluster odometer reading.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 handoff: remove wiper maintenance item
+
+- User requested removing `와이퍼` from the 정비 tab.
+- Implemented by deleting `wiperBlade` from `MaintenanceKey` and `MAINTENANCE_ITEMS` in `lib/maintenance-data.ts`.
+- This removes it from both maintenance cards and generated maintenance alerts.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 handoff: diagnosis and maintenance balance fix
 
 - User feedback:

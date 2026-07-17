@@ -15,7 +15,6 @@ export type MaintenanceKey =
   | 'battery'
   | 'tire'
   | 'brakePad'
-  | 'wiperBlade'
   | 'sparkPlug'
   | 'timingBelt';
 
@@ -58,7 +57,6 @@ export const MAINTENANCE_ITEMS: MaintenanceItem[] = [
   { key: 'battery', label: '배터리', intervalKm: 60000 },
   { key: 'tire', label: '타이어', intervalKm: 50000 },
   { key: 'brakePad', label: '브레이크패드', intervalKm: 30000 },
-  { key: 'wiperBlade', label: '와이퍼', intervalKm: 10000 },
   { key: 'sparkPlug', label: '점화플러그', intervalKm: 40000 },
   { key: 'timingBelt', label: '타이밍벨트', intervalKm: 100000 },
 ];
