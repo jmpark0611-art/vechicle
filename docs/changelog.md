@@ -481,6 +481,14 @@
 - Note: standard OBD generally does not expose dashboard total odometer reliably; the app uses recorded trip odometer values as the durable source.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 driver fullscreen state layout
+
+- Reworked active-trip and trip-completion driver screens to bypass the shared scroll container.
+- Active trip now renders in a dedicated full-height driver screen, with the card taking the remaining screen space via `flex: 1`.
+- Completion summary now uses a dedicated full-height driver screen so the summary and `새 운행 입력` button are spaced vertically instead of clustering at the top.
+- This is intended to replace the earlier min-height-only attempts that did not visually change enough on device.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 driver active screen fill fix
 
 - Active trip and completion summary screens now reserve a larger near-full-screen height.

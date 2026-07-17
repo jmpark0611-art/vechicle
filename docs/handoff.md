@@ -337,6 +337,17 @@ npm.cmd run health
 - Important product note: ELM327/OBD does not reliably expose dashboard total odometer through a standard PID. For now, durable automatic reflection means app-recorded trip odometer values, not direct cluster odometer reading.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 handoff: driver fullscreen state layout
+
+- User reported the previous active/completion layout still looked clustered at the top.
+- Root cause: adjusting `minHeight` inside the shared `RebuildScreen` scroll container was not enough for the real Android layout.
+- Implemented a stronger fix:
+  - `app/(tabs)/index.tsx` now returns a dedicated non-scroll full-screen layout for active trip state.
+  - Trip card uses `flex: 1` to fill the remaining screen.
+  - Trip completion state also returns a dedicated full-screen layout with `justifyContent: 'space-between'`.
+- Keep future active/completion driver changes in this dedicated branch, not inside the shared scroll screen.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 handoff: driver active screen fill fix
 
 - User reported the active/completion driver screens still looked clustered at the top with a large lower blank area.

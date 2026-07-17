@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Dimensions, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingCard, RebuildScreen, SectionCard } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
@@ -69,6 +70,7 @@ type CompletionSummary = {
 };
 
 export default function TripScreen() {
+  const insets = useSafeAreaInsets();
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [activeTrips, setActiveTrips] = useState<TripSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
@@ -434,6 +436,97 @@ export default function TripScreen() {
       : '-';
   const activeStartOdometer = activeTrip?.startOdometer ?? selectedCurrentKm;
 
+  if (!isLoading && !errorMessage && activeTrip) {
+    return (
+      <View style={[styles.driverScreen, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
+        <Text style={styles.driverTitle}>운행</Text>
+        <View style={[styles.tripCard, styles.tripCardFullscreen]}>
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={styles.kicker}>운행 중</Text>
+              <Text style={styles.activeTitle}>{activeTrip.vehicleNumber}</Text>
+            </View>
+            <View style={styles.liveBadge}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveBadgeText}>LIVE</Text>
+            </View>
+          </View>
+          <View style={styles.routePanel}>
+            <Text style={styles.routePoint}>{activeTrip.startPlace ?? '-'}</Text>
+            <Text style={styles.routeArrow}>→</Text>
+            <Text style={styles.routePoint}>{activeTrip.endPlace ?? '-'}</Text>
+          </View>
+          <View style={styles.statRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>시작</Text>
+              <Text style={styles.statValue}>{formatTime(activeTrip.startTime)}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>계기판 누적거리</Text>
+              <Text style={styles.statValue}>{formatKm(activeStartOdometer)}</Text>
+            </View>
+          </View>
+          <View style={styles.statRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>현재 연료</Text>
+              <Text style={styles.statValue}>{typeof obdLiveData?.fuelPercent === 'number' ? `${obdLiveData.fuelPercent}%` : '-'}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>소모 유류</Text>
+              <Text style={styles.statValue}>{activeFuelUsed}</Text>
+            </View>
+          </View>
+          <View style={styles.obdStrip}>
+            <Text style={styles.obdStripLabel}>OBD</Text>
+            <Text style={styles.obdStripValue}>{obdLabel}</Text>
+          </View>
+          <View style={styles.autoOdoBox}>
+            <Text style={styles.autoOdoLabel}>도착 계기판 자동</Text>
+            <Text style={styles.autoOdoValue}>
+              {activeStartOdometer !== null ? `${Math.round(activeStartOdometer).toLocaleString('ko-KR')}km + GPS 이동거리` : 'OBD/GPS 기준 자동 저장'}
+            </Text>
+          </View>
+          <View style={styles.tripFlexibleSpace} />
+          <View style={styles.actionRow}>
+            <Pressable style={styles.cancelBtnWide} onPress={() => void handleCancelTrip(activeTrip)} disabled={isSaving}>
+              <Text style={styles.cancelBtnText}>취소</Text>
+            </Pressable>
+            <Pressable style={styles.endBtn} onPress={handlePrimaryAction} disabled={isSaving}>
+              <Text style={styles.endBtnText}>{isSaving ? '저장 중' : '운행 종료'}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (!isLoading && !errorMessage && lastCompletion) {
+    return (
+      <View style={[styles.driverScreen, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
+        <Text style={styles.driverTitle}>운행</Text>
+        <View style={styles.completionFullscreen}>
+          <View style={styles.thanksCard}>
+            <Text style={styles.thanksTitle}>안전운행해주셔서 감사합니다</Text>
+            <Text style={styles.thanksSub}>월장비운행증 반영 요소</Text>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>차량</Text><Text style={styles.summaryVal}>{lastCompletion.vehicleNumber}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>경로</Text><Text style={styles.summaryVal}>{lastCompletion.route}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>출발/도착</Text><Text style={styles.summaryVal}>{lastCompletion.startTime} / {lastCompletion.endTime}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>계기판 총 주행거리</Text><Text style={styles.summaryVal}>{lastCompletion.totalOdometer}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>계기판 운행거리</Text><Text style={styles.summaryVal}>{lastCompletion.tripDistance}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>실제 이동거리</Text><Text style={styles.summaryVal}>{lastCompletion.gpsDistance}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>소모 유류</Text><Text style={styles.summaryVal}>{lastCompletion.fuelUsed}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행목적</Text><Text style={styles.summaryVal}>{lastCompletion.purpose}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행자</Text><Text style={styles.summaryVal}>{lastCompletion.operator}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>사용자</Text><Text style={styles.summaryVal}>{lastCompletion.user}</Text></View>
+          </View>
+          <Pressable style={styles.startBtn} onPress={() => setLastCompletion(null)}>
+            <Text style={styles.startBtnText}>새 운행 입력</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <RebuildScreen title="운행" bottomSpace="none">
       {isLoading ? (
@@ -602,6 +695,19 @@ export default function TripScreen() {
 }
 
 const styles = StyleSheet.create({
+  driverScreen: {
+    flex: 1,
+    backgroundColor: '#F4F5FB',
+    paddingHorizontal: 18,
+  },
+  driverTitle: {
+    color: '#4F6AE6',
+    fontSize: 23,
+    fontWeight: '900',
+    letterSpacing: 0,
+    marginBottom: 14,
+    paddingHorizontal: 2,
+  },
   heroCard: {
     minHeight: 96,
     borderRadius: 24,
@@ -659,6 +765,11 @@ const styles = StyleSheet.create({
     minHeight: Math.max(720, SCREEN_HEIGHT - 72),
     justifyContent: 'flex-start',
   },
+  tripCardFullscreen: {
+    flex: 1,
+    marginBottom: 0,
+    padding: 18,
+  },
   tripFlexibleSpace: { flex: 1, minHeight: 18 },
   liveBadge: {
     flexDirection: 'row',
@@ -672,7 +783,7 @@ const styles = StyleSheet.create({
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#16A34A' },
   liveBadgeText: { color: '#047857', fontSize: 11, fontWeight: '900' },
   routePanel: {
-    minHeight: 50,
+    minHeight: 58,
     borderRadius: 18,
     backgroundColor: '#F6F8FE',
     flexDirection: 'row',
@@ -684,7 +795,7 @@ const styles = StyleSheet.create({
   routePoint: { color: '#1E2946', fontSize: 15, fontWeight: '900', flex: 1 },
   routeArrow: { color: '#7B86A8', fontSize: 18, fontWeight: '900', marginHorizontal: 10 },
   statRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  statCard: { flex: 1, borderRadius: 15, backgroundColor: '#F6F8FE', padding: 10 },
+  statCard: { flex: 1, borderRadius: 15, backgroundColor: '#F6F8FE', padding: 12 },
   statLabel: { color: '#7B86A8', fontSize: 10, fontWeight: '900', marginBottom: 4 },
   statValue: { color: '#1E2946', fontSize: 13, fontWeight: '900' },
   obdStrip: {
@@ -815,4 +926,5 @@ const styles = StyleSheet.create({
   },
   startBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
   completionWrap: { minHeight: Math.max(720, SCREEN_HEIGHT - 72), justifyContent: 'space-between' },
+  completionFullscreen: { flex: 1, justifyContent: 'space-between' },
 });
