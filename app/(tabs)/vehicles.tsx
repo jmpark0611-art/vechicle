@@ -249,18 +249,6 @@ export default function VehiclesScreen() {
     }
   }
 
-  async function handleSaveCurrentKm(vehicle: VehicleSummary) {
-    setIsSaving(true);
-    try {
-      const currentKm = await saveCurrentKm(vehicle);
-      if (currentKm !== null) Alert.alert('저장 완료', `${vehicle.vehicleNumber} 현재 ${formatKm(currentKm)}`);
-    } catch (error) {
-      Alert.alert('저장 실패', error instanceof Error ? error.message : '주행거리를 저장하지 못했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   async function handleComplete(vehicle: VehicleSummary, item: MaintenanceItem) {
     setIsSaving(true);
     try {
@@ -341,22 +329,11 @@ export default function VehiclesScreen() {
           </SectionCard>
 
           {selectedVehicle && selectedState ? (
-            <SectionCard title={selectedVehicle.vehicleNumber} body="ECU 감지값과 주기성 교환품목을 구분해서 확인합니다.">
-              <View style={styles.kmRow}>
-                <TextInput
-                  style={styles.kmInput}
-                  value={kmInputs[selectedVehicle.id] ?? ''}
-                  onChangeText={(value) => setKmInputs((current) => ({ ...current, [selectedVehicle.id]: value }))}
-                  placeholder="현재 계기판 km"
-                  placeholderTextColor="#9AA8C7"
-                  keyboardType="number-pad"
-                />
-                <Pressable style={styles.saveBtn} onPress={() => void handleSaveCurrentKm(selectedVehicle)} disabled={isSaving}>
-                  <Text style={styles.saveBtnText}>저장</Text>
-                </Pressable>
+            <SectionCard title={selectedVehicle.vehicleNumber}>
+              <View style={styles.currentKmPill}>
+                <Text style={styles.currentKmLabel}>현재 기준</Text>
+                <Text style={styles.currentKmValue}>{formatKm(selectedState.currentKm)}</Text>
               </View>
-              <StatusLine label="현재 기준" value={formatKm(selectedState.currentKm)} />
-
               <Text style={styles.groupTitle}>ECU 감지 정보</Text>
               <View style={styles.grid}>
                 {ecuCards.map((card, index) => (
@@ -432,22 +409,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   connectBtnText: { color: '#13866F', fontSize: 12, fontWeight: '900' },
-  kmRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  kmInput: {
-    flex: 1,
-    minHeight: 50,
+  currentKmPill: {
+    minHeight: 40,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E8EAF7',
-    backgroundColor: '#FAFBFF',
-    color: '#222B45',
-    fontSize: 15,
-    fontWeight: '800',
-    paddingHorizontal: 14,
+    backgroundColor: '#F6F8FE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    marginTop: 10,
   },
-  saveBtn: { minWidth: 68, minHeight: 50, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
-  saveBtnText: { color: '#5B7CFA', fontSize: 14, fontWeight: '900' },
-  groupTitle: { color: '#52607D', fontSize: 13, fontWeight: '900', marginTop: 18, marginBottom: 2 },
+  currentKmLabel: { color: '#7B86A8', fontSize: 12, fontWeight: '900' },
+  currentKmValue: { color: '#1E2946', fontSize: 13, fontWeight: '900' },
+  groupTitle: { color: '#52607D', fontSize: 13, fontWeight: '900', marginTop: 14, marginBottom: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
   squareCard: {
     width: '48%',

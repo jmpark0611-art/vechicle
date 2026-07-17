@@ -24,7 +24,7 @@ import {
   type TripSummary,
   type VehicleSummary,
 } from '@/lib/readonly-data';
-import { getStoredRole, type AppRole } from '@/lib/role';
+import { getStoredRole } from '@/lib/role';
 
 function formatTime(value: string | null) {
   if (!value) return '-';
@@ -68,7 +68,6 @@ export default function TripScreen() {
   const [isObdConnected, setIsObdConnected] = useState(false);
   const [savedBleDeviceId, setSavedBleDeviceId] = useState<string | null>(null);
   const [savedBleDeviceName, setSavedBleDeviceName] = useState<string | null>(null);
-  const [role, setRole] = useState<AppRole | null>(null);
 
   const activeTripsRef = useRef<TripSummary[]>([]);
   const obdLiveRef = useRef<ObdLiveData | null>(null);
@@ -145,7 +144,6 @@ export default function TripScreen() {
       }
     });
     void getStoredRole().then((nextRole) => {
-      setRole(nextRole);
       if (nextRole === 'commander') router.replace('/(tabs)/explore');
     });
   }, []);
@@ -292,12 +290,8 @@ export default function TripScreen() {
       ? `${savedBleDeviceName} 자동연결 대기`
       : '미연결';
 
-  const roleLabel = role === 'commander' ? '수송부' : role === 'driver' ? '운전자' : undefined;
-
   return (
-    <RebuildScreen
-      title="운행"
-      roleLabel={roleLabel}>
+    <RebuildScreen title="운행">
       {isLoading ? (
         <LoadingCard label="운행 데이터를 불러오는 중" />
       ) : errorMessage ? (
@@ -356,30 +350,21 @@ export default function TripScreen() {
           <View>
             <Text style={styles.kicker}>오늘 운행</Text>
             <Text style={styles.heroTitle}>출발 준비</Text>
-            <Text style={styles.heroDesc}>차량과 인원을 확인한 뒤 운행을 시작하세요.</Text>
           </View>
           <View style={styles.heroIconBox}>
             <Text style={styles.heroIcon}>▶</Text>
           </View>
         </View>
 
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>계기판</Text>
-            <Text style={styles.summaryValue}>{formatKm(selectedCurrentKm)}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>OBD</Text>
-            <Text style={styles.summaryValue}>{isObdConnected ? '연결' : '대기'}</Text>
-          </View>
-        </View>
-
         <View style={styles.formCard}>
-          <Text style={styles.formTitle}>차량</Text>
-          <VehicleDropdown vehicles={vehicles} selectedVehicleId={selectedVehicleId} onSelect={setSelectedVehicleId} />
-          <View style={styles.obdStrip}>
+          <View style={styles.compactHeader}>
+            <Text style={styles.formTitle}>차량</Text>
+            <Text style={styles.compactMeta}>계기판 {formatKm(selectedCurrentKm)}</Text>
+          </View>
+          <VehicleDropdown vehicles={vehicles} selectedVehicleId={selectedVehicleId} onSelect={setSelectedVehicleId} compact />
+          <View style={styles.compactStatus}>
             <Text style={styles.obdStripLabel}>OBD</Text>
-            <Text style={styles.obdStripValue}>{obdLabel}</Text>
+            <Text style={styles.obdStripValue}>{isObdConnected ? obdLabel : '대기'}</Text>
           </View>
         </View>
 
@@ -445,11 +430,12 @@ export default function TripScreen() {
 
 const styles = StyleSheet.create({
   heroCard: {
-    minHeight: 128,
-    borderRadius: 26,
+    minHeight: 96,
+    borderRadius: 24,
     backgroundColor: '#1D2B5C',
-    padding: 20,
-    marginBottom: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -463,42 +449,31 @@ const styles = StyleSheet.create({
   kicker: { color: '#94A3B8', fontSize: 12, fontWeight: '900', marginBottom: 5 },
   heroTitle: { color: '#FFFFFF', fontSize: 27, fontWeight: '900' },
   activeTitle: { color: '#1E2946', fontSize: 27, fontWeight: '900' },
-  heroDesc: { color: '#DDE6FF', fontSize: 13, fontWeight: '700', marginTop: 8, lineHeight: 19 },
   heroIconBox: {
-    width: 54,
-    height: 54,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 18,
     backgroundColor: '#EDF4FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroIcon: { color: '#4F6AE6', fontSize: 24, fontWeight: '900' },
-  summaryRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  summaryCard: {
-    flex: 1,
-    minHeight: 78,
-    borderRadius: 20,
-    backgroundColor: '#FFFDFB',
-    borderWidth: 1,
-    borderColor: '#E8EAF7',
-    padding: 14,
-  },
-  summaryLabel: { color: '#7B86A8', fontSize: 12, fontWeight: '900', marginBottom: 6 },
-  summaryValue: { color: '#1E2946', fontSize: 19, fontWeight: '900' },
   formCard: {
     backgroundColor: '#FFFDFB',
-    borderRadius: 22,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E8EAF7',
-    padding: 14,
-    marginBottom: 10,
+    padding: 12,
+    marginBottom: 8,
     shadowColor: '#B0B8D8',
     shadowOpacity: 0.1,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 5 },
     elevation: 2,
   },
-  formTitle: { color: '#1E2946', fontSize: 15, fontWeight: '900', marginBottom: 10 },
+  compactHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  formTitle: { color: '#1E2946', fontSize: 15, fontWeight: '900' },
+  compactMeta: { color: '#7B86A8', fontSize: 11, fontWeight: '900' },
   tripCard: {
     borderRadius: 26,
     backgroundColor: '#FFFDFB',
@@ -544,11 +519,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginTop: 8,
   },
+  compactStatus: {
+    minHeight: 34,
+    borderRadius: 13,
+    backgroundColor: '#EFF6FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 11,
+    marginTop: 7,
+  },
   obdStripLabel: { color: '#52607D', fontSize: 12, fontWeight: '900' },
   obdStripValue: { color: '#1D4ED8', fontSize: 12, fontWeight: '900', flexShrink: 1, textAlign: 'right' },
   input: {
-    minHeight: 42,
-    borderRadius: 14,
+    minHeight: 38,
+    borderRadius: 13,
     borderWidth: 1,
     borderColor: '#E7EAF8',
     backgroundColor: '#FAFBFF',
@@ -556,13 +541,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     paddingHorizontal: 12,
-    marginTop: 7,
+    marginTop: 6,
   },
-  twoCol: { flexDirection: 'row', gap: 8, marginTop: 7 },
+  twoCol: { flexDirection: 'row', gap: 8, marginTop: 6 },
   halfInput: {
     flex: 1,
-    minHeight: 42,
-    borderRadius: 14,
+    minHeight: 38,
+    borderRadius: 13,
     borderWidth: 1,
     borderColor: '#E7EAF8',
     backgroundColor: '#FAFBFF',
@@ -571,7 +556,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     paddingHorizontal: 12,
   },
-  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 7 },
   checkbox: {
     width: 22,
     height: 22,
@@ -606,7 +591,7 @@ const styles = StyleSheet.create({
   },
   endBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
   startBtn: {
-    minHeight: 56,
+    minHeight: 50,
     borderRadius: 19,
     backgroundColor: '#4F6AE6',
     alignItems: 'center',
@@ -616,7 +601,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 7 },
     elevation: 4,
-    marginTop: 2,
+    marginTop: 0,
   },
   startBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
 });

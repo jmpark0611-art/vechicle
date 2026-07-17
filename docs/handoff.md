@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 tab title only / compact trip form:
+  - Removed top-right role/mode switching pill from the common header; mode changes should happen only through explicit role selection flows.
+  - Common header now displays only the active tab name in a larger blue title, not `차량운행시스템`.
+  - Trip tab removed duplicate odometer/OBD summary cards, uses compact vehicle dropdown, and reduced card/input heights so the form sits higher and is closer to one-screen use.
+  - Diagnosis tab removed the circled manual current-km input/save block; current km is shown as a read-only pill.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 stable APK download:
   - Android workflow updates a fixed `latest-apk` release on every successful APK build.
   - Use this stable direct URL for users: `https://github.com/jmpark0611-art/vechicle/releases/download/latest-apk/app-release.apk`.

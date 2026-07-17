@@ -1,5 +1,14 @@
 # 변경 이력
 
+## 2026-07-17 tab title only and compact trip form
+
+- Removed the top-right role/mode switching pill from all tabs.
+- Common screen header now shows only the current tab name in a larger blue title instead of `차량운행시스템`.
+- Trip tab removed duplicate odometer/OBD summary cards and compressed card/input spacing so the start form sits higher and fits better on one screen.
+- Vehicle dropdown supports a compact height for dense screens.
+- Diagnosis tab removed the manual current-km input/save block and now shows current km as a small read-only pill.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 stable APK download link
 
 - Android APK workflow now updates a fixed `latest-apk` GitHub Release so the APK download URL stays stable across builds.

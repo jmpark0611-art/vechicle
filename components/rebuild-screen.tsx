@@ -1,9 +1,6 @@
-import { router } from 'expo-router';
-import { PropsWithChildren, useEffect, useMemo, useState } from 'react';
+import { PropsWithChildren } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { getStoredRole, setStoredRole, type AppRole } from '@/lib/role';
 
 type Metric = {
   label: string;
@@ -20,34 +17,9 @@ type RebuildScreenProps = PropsWithChildren<{
   onSettings?: () => void;
 }>;
 
-export function RebuildScreen({ title, subtitle, roleLabel, metrics = [], actionLabel, onAction, onSettings, children }: RebuildScreenProps) {
+export function RebuildScreen({ title, subtitle, metrics = [], actionLabel, onAction, children }: RebuildScreenProps) {
   const insets = useSafeAreaInsets();
   const tabBarSpace = insets.bottom + 68;
-  const [storedRole, setStoredRoleState] = useState<AppRole | null>(null);
-  const currentRole = roleLabel === '수송부' ? 'commander' : roleLabel === '운전자' ? 'driver' : storedRole;
-  const resolvedRoleLabel = currentRole === 'commander' ? '수송부' : currentRole === 'driver' ? '운전자' : undefined;
-  const titleIcon = useMemo(() => {
-    if (title === '운행') return '▶';
-    if (title === '기록') return '☰';
-    if (title === '진단') return '▣';
-    if (title === '위치') return '⌖';
-    if (title === '점검') return '✓';
-    return '•';
-  }, [title]);
-
-  useEffect(() => {
-    void getStoredRole().then(setStoredRoleState);
-  }, []);
-
-  async function handleModePress() {
-    if (onSettings) onSettings();
-    else if (currentRole === 'driver') router.push('/commander-pin' as never);
-    else if (currentRole === 'commander') {
-      await setStoredRole('driver');
-      setStoredRoleState('driver');
-      router.replace('/(tabs)' as never);
-    } else router.replace('/role-select');
-  }
 
   return (
     <View style={styles.screen}>
@@ -58,24 +30,8 @@ export function RebuildScreen({ title, subtitle, roleLabel, metrics = [], action
 
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <View style={styles.brandRow}>
-              <Text style={styles.brandAccent}>차량</Text>
-              <Text style={styles.brandText}>운행시스템</Text>
-              <Text style={styles.brandArrow}>⌄</Text>
-            </View>
-            <View style={styles.pageLine}>
-              <Text style={styles.titleIcon}>{titleIcon}</Text>
-              <Text style={styles.title}>{title}</Text>
-            </View>
+            <Text style={styles.title}>{title}</Text>
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-          </View>
-          <View style={styles.headerRight}>
-            {resolvedRoleLabel ? (
-              <Pressable style={styles.rolePill} onPress={() => void handleModePress()} hitSlop={10}>
-                <View style={styles.roleDot} />
-                <Text style={styles.rolePillText}>{resolvedRoleLabel}</Text>
-              </Pressable>
-            ) : null}
           </View>
         </View>
 
@@ -146,48 +102,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   headerLeft: { flex: 1, minWidth: 0 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  brandRow: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    marginBottom: 4,
-  },
-  brandAccent: { color: '#4F6AE6', fontSize: 19, fontWeight: '900', letterSpacing: 0 },
-  brandText: { color: '#1A2340', fontSize: 19, fontWeight: '900', letterSpacing: 0 },
-  brandArrow: { color: '#1A2340', fontSize: 18, fontWeight: '900', marginLeft: 3 },
-  pageLine: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  titleIcon: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#E8EEFF',
-    color: '#4F6AE6',
-    fontSize: 10,
-    fontWeight: '900',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  title: { color: '#66728F', fontSize: 12, fontWeight: '900', letterSpacing: 0 },
+  title: { color: '#4F6AE6', fontSize: 23, fontWeight: '900', letterSpacing: 0 },
   subtitle: { color: '#7180A3', fontSize: 12, fontWeight: '700', marginTop: 3 },
-
-  rolePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#E7EEF9',
-    borderRadius: 20,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-  },
-  roleDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#52607D' },
-  rolePillText: { color: '#24304F', fontSize: 12, fontWeight: '900' },
 
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
   metricCard: {

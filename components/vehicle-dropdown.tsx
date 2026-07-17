@@ -10,6 +10,7 @@ type VehicleDropdownProps = {
   includeAll?: boolean;
   allLabel?: string;
   placeholder?: string;
+  compact?: boolean;
 };
 
 export function VehicleDropdown({
@@ -19,6 +20,7 @@ export function VehicleDropdown({
   includeAll = false,
   allLabel = '전체',
   placeholder = '차량 선택',
+  compact = false,
 }: VehicleDropdownProps) {
   const [open, setOpen] = useState(false);
   const selectedVehicle = useMemo(
@@ -33,8 +35,8 @@ export function VehicleDropdown({
   }
 
   return (
-    <View style={styles.wrap}>
-      <Pressable style={styles.control} onPress={() => setOpen((current) => !current)}>
+    <View style={[styles.wrap, compact && styles.wrapCompact]}>
+      <Pressable style={[styles.control, compact && styles.controlCompact]} onPress={() => setOpen((current) => !current)}>
         <Text style={styles.value} numberOfLines={1}>
           {label}
         </Text>
@@ -42,7 +44,7 @@ export function VehicleDropdown({
       </Pressable>
 
       {open ? (
-        <View style={styles.menu}>
+        <View style={[styles.menu, compact && styles.menuCompact]}>
           {includeAll ? (
             <Pressable
               style={[styles.option, selectedVehicleId === null && styles.optionActive]}
@@ -68,6 +70,7 @@ export function VehicleDropdown({
 
 const styles = StyleSheet.create({
   wrap: { marginTop: 8 },
+  wrapCompact: { marginTop: 0 },
   control: {
     minHeight: 50,
     borderRadius: 14,
@@ -79,6 +82,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  controlCompact: { minHeight: 42, borderRadius: 13 },
   value: { color: '#0F172A', fontSize: 15, fontWeight: '900', flex: 1 },
   chevron: { color: '#64748B', fontSize: 12, fontWeight: '900' },
   menu: {
@@ -89,6 +93,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
+  menuCompact: { marginTop: 6 },
   option: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
   optionActive: { backgroundColor: '#EFF6FF' },
   optionText: { color: '#334155', fontSize: 14, fontWeight: '800' },
