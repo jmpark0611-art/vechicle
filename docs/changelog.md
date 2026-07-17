@@ -2,6 +2,8 @@
 
 ## 2026-07-17 role selection polish and fleet alert tab
 
+- Renamed the commander `알림` tab to `정비` because it now combines fleet alerts with vehicle-specific maintenance settings.
+- Moved periodic replacement item cards out of the diagnosis tab and into the `정비` tab under a new `차량 설정` section with vehicle dropdown, current km baseline, ECU receive status, and replacement completion buttons.
 - Diagnosis screen moved `차량 등록` from a wide full-width button to a compact top-right pill and made `ECU 감지 정보` / `주기성 교환품목` section titles larger with distinct accent colors.
 - Mode selection first screen now uses the softer title `차량 운행관리`, larger mode cards, and more spacing between the title and mode guidance text.
 - Added a commander-only `알림` tab that gathers all vehicles needing periodic replacement or ECU-based inspection.

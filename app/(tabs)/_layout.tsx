@@ -69,7 +69,7 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="alerts"
-        options={{ title: '알림', tabBarIcon: ({ color }) => <TabGlyph label="!" color={color} />, href: isCommander ? undefined : null }}
+        options={{ title: '정비', tabBarIcon: ({ color }) => <TabGlyph label="!" color={color} />, href: isCommander ? undefined : null }}
       />
       <Tabs.Screen
         name="map"

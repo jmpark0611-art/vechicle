@@ -5,15 +5,10 @@ import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/component
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { showLiveEcuAlertPopup } from '@/lib/fleet-alerts';
 import {
-  completeMaintenanceItem,
-  getRemainingKm,
   getVehicleMaintenanceState,
   loadSyncedMaintenanceSnapshot,
-  MAINTENANCE_ITEMS,
   mergeVehicleCurrentKm,
   setVehicleCurrentKm,
-  syncMaintenanceCompletion,
-  type MaintenanceItem,
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
 import { buildObdReading, EMPTY_OBD_INPUT, loadSyncedObdSnapshot, saveObdReading, type ObdReading, type ObdSnapshot } from '@/lib/obd-data';
@@ -26,39 +21,11 @@ import {
 } from '@/lib/obd-ble';
 import { createVehicle, fetchLatestVehicleOdometers, fetchVehiclesReadOnly, type VehicleSummary } from '@/lib/readonly-data';
 
-const MAINTENANCE_LABELS: Record<string, string> = {
-  engineOil: '엔진오일',
-  oilFilter: '오일필터',
-  airFilter: '에어필터',
-  fuelFilter: '연료필터',
-  coolant: '냉각수',
-  brakeOil: '브레이크오일',
-  transmissionOil: '미션오일',
-  powerSteeringOil: '파워오일',
-  battery: '배터리',
-  tire: '타이어',
-  brakePad: '브레이크패드',
-  wiperBlade: '와이퍼',
-  sparkPlug: '점화플러그',
-  timingBelt: '타이밍벨트',
-};
-
 const ECU_COLORS = ['#EAF2FF', '#EAFBF4', '#FFF4DE', '#F1ECFF', '#FFEFF3'];
-const PART_COLORS = ['#EAFBF4', '#FFF4DE', '#EAF7FA'];
 
 function formatKm(value: number | null | undefined) {
   if (value === null || value === undefined) return '-';
   return `${Math.round(value).toLocaleString('ko-KR')}km`;
-}
-
-function remainingLabel(remainingKm: number | null) {
-  if (remainingKm === null) return '현재 km 필요';
-  if (remainingKm <= 0) return `${Math.abs(remainingKm).toLocaleString('ko-KR')}km 초과`;
-  return `${remainingKm.toLocaleString('ko-KR')}km 남음`;
-}
-
-function isDue(remainingKm: number | null) {
-  return remainingKm !== null && remainingKm <= 1000;
 }
 
 function liveToReading(vehicleId: string, data: ObdLiveData): ObdReading {
@@ -89,7 +56,6 @@ export default function VehiclesScreen() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<MaintenanceSnapshot>({});
   const [obdSnapshot, setObdSnapshot] = useState<ObdSnapshot>({});
-  const [kmInputs, setKmInputs] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -111,15 +77,6 @@ export default function VehiclesScreen() {
     [selectedVehicleId, vehicles]
   );
 
-  const dueItems = useMemo(() => {
-    return vehicles.flatMap((vehicle) => {
-      const state = getVehicleMaintenanceState(snapshot, vehicle.id);
-      return MAINTENANCE_ITEMS
-        .map((item) => ({ vehicle, item, remainingKm: getRemainingKm(state, item) }))
-        .filter((entry) => isDue(entry.remainingKm));
-    });
-  }, [snapshot, vehicles]);
-
   const loadVehicles = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -136,14 +93,6 @@ export default function VehiclesScreen() {
       setSnapshot(nextSnapshot);
       setObdSnapshot(obdResult.snapshot);
       setSelectedVehicleId((current) => current ?? nextVehicles[0]?.id ?? null);
-      setKmInputs(
-        Object.fromEntries(
-          nextVehicles.map((vehicle) => {
-            const currentKm = getVehicleMaintenanceState(nextSnapshot, vehicle.id).currentKm;
-            return [vehicle.id, currentKm === null ? '' : String(currentKm)];
-          })
-        )
-      );
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '진단 데이터를 불러오지 못했습니다.');
     } finally {
@@ -187,18 +136,6 @@ export default function VehiclesScreen() {
   useEffect(() => {
     void loadVehicles();
   }, [loadVehicles]);
-
-  async function saveCurrentKm(vehicle: VehicleSummary) {
-    const currentKm = Number(kmInputs[vehicle.id]?.replace(/,/g, '').trim());
-    if (!Number.isFinite(currentKm) || currentKm < 0) {
-      Alert.alert('주행거리 확인', '현재 계기판 주행거리를 숫자로 입력해 주세요.');
-      return null;
-    }
-    const nextSnapshot = await setVehicleCurrentKm(vehicle.id, currentKm);
-    setSnapshot(nextSnapshot);
-    setKmInputs((current) => ({ ...current, [vehicle.id]: String(Math.round(currentKm)) }));
-    return Math.round(currentKm);
-  }
 
   async function handleConnectDevice() {
     if (!selectedVehicle) {
@@ -269,22 +206,6 @@ export default function VehiclesScreen() {
     }
   }
 
-  async function handleComplete(vehicle: VehicleSummary, item: MaintenanceItem) {
-    setIsSaving(true);
-    try {
-      const currentKm = await saveCurrentKm(vehicle);
-      if (currentKm === null) return;
-      const nextSnapshot = await completeMaintenanceItem(vehicle.id, item.key, currentKm);
-      setSnapshot(nextSnapshot);
-      await syncMaintenanceCompletion(vehicle.id, item.key, currentKm);
-      Alert.alert('교체 완료', `${vehicle.vehicleNumber} ${MAINTENANCE_LABELS[item.key] ?? item.label} 기준 ${formatKm(currentKm)}`);
-    } catch (error) {
-      Alert.alert('교체 기록 실패', error instanceof Error ? error.message : '교체 기록을 저장하지 못했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   const selectedState = selectedVehicle ? getVehicleMaintenanceState(snapshot, selectedVehicle.id) : null;
   const selectedObd = selectedVehicle ? obdSnapshot[selectedVehicle.id] : null;
   const ecuCards = selectedVehicle
@@ -313,19 +234,6 @@ export default function VehiclesScreen() {
         { title: '배출 준비', value: selectedObd?.readinessSummary ?? '미수신', detail: 'Readiness', tone: selectedObd?.readinessSummary === '준비 완료' ? 'ok' : 'warn' },
       ]
     : [];
-  const maintenanceCards = selectedVehicle && selectedState
-    ? MAINTENANCE_ITEMS.map((item) => {
-        const remainingKm = getRemainingKm(selectedState, item);
-        return {
-          item,
-          title: MAINTENANCE_LABELS[item.key] ?? item.label,
-          value: remainingLabel(remainingKm),
-          detail: `${item.intervalKm.toLocaleString('ko-KR')}km 주기`,
-          tone: remainingKm !== null && remainingKm <= 0 ? 'bad' : remainingKm !== null && remainingKm <= 1000 ? 'warn' : 'ok',
-        };
-      })
-    : [];
-
   return (
     <RebuildScreen title="진단" actionLabel="새로고침" onAction={() => void loadVehicles()}>
       <View style={styles.topActionRow}>
@@ -333,18 +241,6 @@ export default function VehiclesScreen() {
           <Text style={styles.registerOpenText}>차량 등록</Text>
         </Pressable>
       </View>
-
-      {dueItems.length > 0 ? (
-        <SectionCard title={`교체 알림 ${dueItems.length}건`}>
-          {dueItems.slice(0, 8).map(({ vehicle, item, remainingKm }) => (
-            <StatusLine
-              key={`${vehicle.id}-${item.key}`}
-              label={`${vehicle.vehicleNumber} · ${MAINTENANCE_LABELS[item.key] ?? item.label}`}
-              value={remainingLabel(remainingKm)}
-            />
-          ))}
-        </SectionCard>
-      ) : null}
 
       {isLoading ? (
         <LoadingCard label="진단 데이터를 불러오는 중" />
@@ -389,19 +285,6 @@ export default function VehiclesScreen() {
                 ))}
               </View>
 
-              <Text style={[styles.groupTitle, styles.partsGroupTitle]}>주기성 교환품목</Text>
-              <View style={styles.grid}>
-                {maintenanceCards.map((card, index) => (
-                  <View key={card.item.key} style={[styles.maintenanceCard, { backgroundColor: PART_COLORS[index % PART_COLORS.length] }, card.tone === 'bad' && styles.squareCardBad, card.tone === 'warn' && styles.squareCardWarn]}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{card.title}</Text>
-                    <Text style={styles.cardValue} numberOfLines={2} adjustsFontSizeToFit>{card.value}</Text>
-                    <Text style={styles.cardDetail} numberOfLines={1}>{card.detail}</Text>
-                    <Pressable style={styles.cardAction} onPress={() => void handleComplete(selectedVehicle, card.item)} disabled={isSaving}>
-                      <Text style={styles.cardActionText}>교체완료</Text>
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
             </View>
           ) : null}
         </>
@@ -505,28 +388,11 @@ const styles = StyleSheet.create({
     padding: 10,
     justifyContent: 'space-between',
   },
-  maintenanceCard: {
-    width: '48%',
-    minHeight: 116,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.72)',
-    padding: 10,
-    justifyContent: 'space-between',
-  },
   squareCardBad: { borderColor: '#FFC6C6', backgroundColor: '#FFEAEA' },
   squareCardWarn: { borderColor: '#FFE2A8' },
   cardTitle: { color: '#52607D', fontSize: 12, fontWeight: '900' },
   cardValue: { color: '#222B45', fontSize: 17, fontWeight: '900', lineHeight: 20 },
   cardDetail: { color: '#7180A3', fontSize: 10, fontWeight: '800' },
-  cardAction: {
-    minHeight: 30,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardActionText: { color: '#5B7CFA', fontSize: 12, fontWeight: '900' },
   modalDim: { flex: 1, backgroundColor: 'rgba(80,88,120,0.36)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   registerModal: { width: '100%', borderRadius: 18, backgroundColor: '#FFFDFB', padding: 18 },
   modalTitle: { color: '#222B45', fontSize: 20, fontWeight: '900', marginBottom: 4 },
