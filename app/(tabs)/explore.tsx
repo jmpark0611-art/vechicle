@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
@@ -81,6 +81,12 @@ export default function RecordsScreen() {
   const [tripFuelUsage, setTripFuelUsage] = useState<TripFuelUsage>({});
   const [gpsDistances, setGpsDistances] = useState<Record<string, number>>({});
   const [selectedTrip, setSelectedTrip] = useState<TripSummary | null>(null);
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportFrom, setExportFrom] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  });
+  const [exportTo, setExportTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -120,15 +126,40 @@ export default function RecordsScreen() {
   );
   const completedCount = useMemo(() => filtered.filter((trip) => trip.status === 'completed').length, [filtered]);
 
+  function parseDateStart(value: string) {
+    const date = new Date(`${value.trim()}T00:00:00`);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function parseDateEnd(value: string) {
+    const date = new Date(`${value.trim()}T23:59:59`);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
   async function exportMonthlyLog() {
-    if (filtered.length === 0) {
+    const fromDate = parseDateStart(exportFrom);
+    const toDate = parseDateEnd(exportTo);
+    if (!fromDate || !toDate || fromDate > toDate) {
+      Alert.alert('기간 확인', '기간을 YYYY-MM-DD 형식으로 올바르게 입력해 주세요.');
+      return;
+    }
+
+    const exportRows = filtered.filter((trip) => {
+      if (!trip.startTime) return false;
+      const started = new Date(trip.startTime);
+      return !Number.isNaN(started.getTime()) && started >= fromDate && started <= toDate;
+    });
+
+    if (exportRows.length === 0) {
       Alert.alert('내보낼 기록 없음', '선택한 조건의 운행 기록이 없습니다.');
       return;
     }
 
     const rows = [
+      '\uFEFF월장비운행증 엑셀 내보내기',
+      `기간,${exportFrom},${exportTo}`,
       '차량번호,상태,출발,도착,출발지,목적지,운행목적,운행자,사용자,계기판총주행거리,계기판운행거리,실제이동거리,소모유류,OBD연료,주유추정',
-      ...filtered.map((trip) => {
+      ...exportRows.map((trip) => {
         const fuel = trip.vehicleId && obdSnapshot[trip.vehicleId]?.fuelPercent !== null && obdSnapshot[trip.vehicleId]?.fuelPercent !== undefined
           ? `${obdSnapshot[trip.vehicleId].fuelPercent}%`
           : '';
@@ -154,9 +185,10 @@ export default function RecordsScreen() {
       }),
     ];
     await Share.share({
-      title: '월장비운행증',
+      title: '월장비운행증 엑셀 내보내기',
       message: rows.join('\n'),
     });
+    setExportModalVisible(false);
   }
 
   return (
@@ -165,8 +197,8 @@ export default function RecordsScreen() {
       metrics={[{ label: '완료', value: `${completedCount}건` }]}
       actionLabel="새로고침"
       onAction={() => void loadData()}>
-      <Pressable style={styles.exportBtn} onPress={() => void exportMonthlyLog()}>
-        <Text style={styles.exportBtnText}>월장비운행증 내보내기</Text>
+      <Pressable style={styles.exportBtn} onPress={() => setExportModalVisible(true)}>
+        <Text style={styles.exportBtnText}>월장비운행증 엑셀 내보내기</Text>
       </Pressable>
 
       {vehicles.length > 0 ? (
@@ -220,6 +252,37 @@ export default function RecordsScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={exportModalVisible} transparent animationType="fade" onRequestClose={() => setExportModalVisible(false)}>
+        <View style={styles.modalDim}>
+          <View style={styles.detailModal}>
+            <Text style={styles.modalTitle}>엑셀 내보내기</Text>
+            <Text style={styles.modalSub}>기간을 설정하면 해당 기간의 월장비운행증 데이터를 CSV로 공유합니다.</Text>
+            <TextInput
+              style={styles.dateInput}
+              value={exportFrom}
+              onChangeText={setExportFrom}
+              placeholder="시작일 YYYY-MM-DD"
+              placeholderTextColor="#9AA8C7"
+            />
+            <TextInput
+              style={styles.dateInput}
+              value={exportTo}
+              onChangeText={setExportTo}
+              placeholder="종료일 YYYY-MM-DD"
+              placeholderTextColor="#9AA8C7"
+            />
+            <View style={styles.modalActions}>
+              <Pressable style={styles.modalCancel} onPress={() => setExportModalVisible(false)}>
+                <Text style={styles.modalCancelText}>취소</Text>
+              </Pressable>
+              <Pressable style={styles.modalSave} onPress={() => void exportMonthlyLog()}>
+                <Text style={styles.modalSaveText}>엑셀 내보내기</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </RebuildScreen>
   );
 }
@@ -249,4 +312,21 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   modalCloseText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  dateInput: {
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E8EAF7',
+    backgroundColor: '#FAFBFF',
+    color: '#222B45',
+    fontSize: 15,
+    fontWeight: '800',
+    paddingHorizontal: 14,
+    marginTop: 10,
+  },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  modalCancel: { flex: 1, minHeight: 46, borderRadius: 14, backgroundColor: '#F0F2FA', alignItems: 'center', justifyContent: 'center' },
+  modalCancelText: { color: '#52607D', fontSize: 14, fontWeight: '900' },
+  modalSave: { flex: 1.35, minHeight: 46, borderRadius: 14, backgroundColor: '#8EA7FF', alignItems: 'center', justifyContent: 'center' },
+  modalSaveText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
 });

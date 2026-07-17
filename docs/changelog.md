@@ -481,6 +481,15 @@
 - Note: standard OBD generally does not expose dashboard total odometer reliably; the app uses recorded trip odometer values as the durable source.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 vehicle deletion and Excel export controls
+
+- Added selected-vehicle delete and all-vehicle reset controls to the diagnosis tab.
+- Added Supabase helper functions to delete selected/all vehicles with related trip cleanup.
+- Added schema updates for vehicle/trip delete policies and `trips.vehicle_id` nullability so deletion can work after DB migration is applied.
+- Attempted to delete the currently registered Supabase vehicles (`1호차`, `3호차`, `5호차`, `7호차`, `111`, `222`), but the live DB blocked deletion because delete RLS/nullability migrations are not applied yet.
+- Changed records export to open a period-setting popup and export Excel-compatible CSV data for the selected period.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 remove wiper maintenance item
 
 - Removed `와이퍼` from periodic maintenance items so it no longer appears in the 정비 tab or maintenance alerts.

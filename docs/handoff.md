@@ -337,6 +337,21 @@ npm.cmd run health
 - Important product note: ELM327/OBD does not reliably expose dashboard total odometer through a standard PID. For now, durable automatic reflection means app-recorded trip odometer values, not direct cluster odometer reading.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 handoff: vehicle deletion and Excel export controls
+
+- User requested deleting currently registered vehicles, adding a vehicle delete button, and changing 월장비운행증 export to Excel with a period-setting popup.
+- Implemented:
+  - Diagnosis tab now has `선택 차량 삭제` and `전체 초기화` buttons.
+  - `lib/readonly-data.ts` now has `deleteVehicleAndTrips` and `deleteAllVehiclesAndTrips`.
+  - Records tab export now opens a popup for `YYYY-MM-DD` start/end dates and shares Excel-compatible CSV text.
+  - `docs/schema.sql` now includes delete RLS policies for `vehicles`/`trips` and drops NOT NULL from `trips.vehicle_id`.
+- Live DB deletion attempt:
+  - Found vehicles: `1호차`, `3호차`, `5호차`, `7호차`, `111`, `222`.
+  - Direct delete failed due to FK references from `trips`.
+  - Reference-unlink attempt failed because live DB still has `trips.vehicle_id` NOT NULL.
+  - Apply the latest `docs/schema.sql` migration in Supabase SQL Editor, then the app delete buttons should work.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 handoff: remove wiper maintenance item
 
 - User requested removing `와이퍼` from the 정비 tab.

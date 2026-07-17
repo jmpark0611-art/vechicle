@@ -44,6 +44,7 @@ alter table public.trips add column if not exists user_rank text;
 alter table public.trips add column if not exists daily_km numeric;
 alter table public.trips add column if not exists start_odometer numeric;
 alter table public.trips add column if not exists end_odometer numeric;
+alter table public.trips alter column vehicle_id drop not null;
 
 create index if not exists trips_status_start_time_idx
   on public.trips (status, start_time desc);
@@ -233,6 +234,11 @@ create policy vehicles_anon_update
   using (true)
   with check (true);
 
+drop policy if exists vehicles_anon_delete on public.vehicles;
+create policy vehicles_anon_delete
+  on public.vehicles for delete
+  using (true);
+
 drop policy if exists trips_anon_select on public.trips;
 create policy trips_anon_select
   on public.trips for select
@@ -248,6 +254,11 @@ create policy trips_anon_update
   on public.trips for update
   using (true)
   with check (true);
+
+drop policy if exists trips_anon_delete on public.trips;
+create policy trips_anon_delete
+  on public.trips for delete
+  using (true);
 
 drop policy if exists gps_points_anon_select on public.gps_points;
 create policy gps_points_anon_select
