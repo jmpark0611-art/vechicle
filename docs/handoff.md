@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 trip home redesign / direct mode switch:
+  - Common header now looks like a compact brand header (`차량운행시스템`) with the tab title as a smaller secondary line, matching the user's reference direction more closely than the old plain title.
+  - Right-side role pill is the mode action: driver -> commander PIN, commander -> driver mode directly. No separate gear/radar button is shown.
+  - Trip tab now uses a dark hero card, summary cards, grouped `차량/인원/운행 정보` cards, and an in-screen start/end button.
+  - Records popup/export now include `소모한 유류`, calculated as first OBD fuel percentage minus last OBD fuel percentage for that trip. This is percentage-based until vehicle fuel tank capacity is modeled.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 tab header/location polish:
   - `components/rebuild-screen.tsx` now renders a small icon pill header across tabs and makes the `운전자/수송부` role pill open mode settings; the old separate gear/radar-looking button is removed.
   - Trip primary action no longer uses `marginTop: 'auto'`, reducing the large blank space above the tab bar.

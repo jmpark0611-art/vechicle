@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
+import { LoadingCard, RebuildScreen, SectionCard } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { saveCurrentGpsPoint } from '@/lib/gps-data';
 import {
@@ -297,20 +297,42 @@ export default function TripScreen() {
   return (
     <RebuildScreen
       title="운행"
-      roleLabel={roleLabel}
-      actionLabel={isSaving ? '저장 중' : activeTrip ? '운행 종료' : '운행 시작'}
-      onAction={handlePrimaryAction}>
+      roleLabel={roleLabel}>
       {isLoading ? (
         <LoadingCard label="운행 데이터를 불러오는 중" />
       ) : errorMessage ? (
         <SectionCard title="오류" body={errorMessage} />
       ) : activeTrip ? (
-        <SectionCard title="진행 중 운행">
-          <Text style={styles.activeTripTitle}>{activeTrip.vehicleNumber}</Text>
-          <StatusLine label="경로" value={`${activeTrip.startPlace ?? '-'} → ${activeTrip.endPlace ?? '-'}`} />
-          <StatusLine label="시작" value={formatTime(activeTrip.startTime)} />
-          <StatusLine label="출발 계기판" value={formatKm(activeTrip.startOdometer)} />
-          <StatusLine label="OBD" value={obdLabel} />
+        <View style={styles.tripCard}>
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={styles.kicker}>운행 중</Text>
+              <Text style={styles.activeTitle}>{activeTrip.vehicleNumber}</Text>
+            </View>
+            <View style={styles.liveBadge}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveBadgeText}>LIVE</Text>
+            </View>
+          </View>
+          <View style={styles.routePanel}>
+            <Text style={styles.routePoint}>{activeTrip.startPlace ?? '-'}</Text>
+            <Text style={styles.routeArrow}>→</Text>
+            <Text style={styles.routePoint}>{activeTrip.endPlace ?? '-'}</Text>
+          </View>
+          <View style={styles.statRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>시작</Text>
+              <Text style={styles.statValue}>{formatTime(activeTrip.startTime)}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>출발 km</Text>
+              <Text style={styles.statValue}>{formatKm(activeTrip.startOdometer)}</Text>
+            </View>
+          </View>
+          <View style={styles.obdStrip}>
+            <Text style={styles.obdStripLabel}>OBD</Text>
+            <Text style={styles.obdStripValue}>{obdLabel}</Text>
+          </View>
           <TextInput
             style={styles.input}
             value={endOdometers[activeTrip.id] ?? ''}
@@ -319,16 +341,50 @@ export default function TripScreen() {
             placeholderTextColor="#94A3B8"
             keyboardType="number-pad"
           />
-          <Pressable style={styles.cancelBtnWide} onPress={() => void handleCancelTrip(activeTrip)} disabled={isSaving}>
-            <Text style={styles.cancelBtnText}>운행 취소</Text>
-          </Pressable>
-        </SectionCard>
+          <View style={styles.actionRow}>
+            <Pressable style={styles.cancelBtnWide} onPress={() => void handleCancelTrip(activeTrip)} disabled={isSaving}>
+              <Text style={styles.cancelBtnText}>취소</Text>
+            </Pressable>
+            <Pressable style={styles.endBtn} onPress={handlePrimaryAction} disabled={isSaving}>
+              <Text style={styles.endBtnText}>{isSaving ? '저장 중' : '운행 종료'}</Text>
+            </Pressable>
+          </View>
+        </View>
       ) : (
-        <SectionCard title="운행 입력">
-          <VehicleDropdown vehicles={vehicles} selectedVehicleId={selectedVehicleId} onSelect={setSelectedVehicleId} />
-          <StatusLine label="현재 계기판" value={formatKm(selectedCurrentKm)} />
-          <StatusLine label="OBD" value={obdLabel} />
+        <>
+        <View style={styles.heroCard}>
+          <View>
+            <Text style={styles.kicker}>오늘 운행</Text>
+            <Text style={styles.heroTitle}>출발 준비</Text>
+            <Text style={styles.heroDesc}>차량과 인원을 확인한 뒤 운행을 시작하세요.</Text>
+          </View>
+          <View style={styles.heroIconBox}>
+            <Text style={styles.heroIcon}>▶</Text>
+          </View>
+        </View>
 
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>계기판</Text>
+            <Text style={styles.summaryValue}>{formatKm(selectedCurrentKm)}</Text>
+          </View>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>OBD</Text>
+            <Text style={styles.summaryValue}>{isObdConnected ? '연결' : '대기'}</Text>
+          </View>
+        </View>
+
+        <View style={styles.formCard}>
+          <Text style={styles.formTitle}>차량</Text>
+          <VehicleDropdown vehicles={vehicles} selectedVehicleId={selectedVehicleId} onSelect={setSelectedVehicleId} />
+          <View style={styles.obdStrip}>
+            <Text style={styles.obdStripLabel}>OBD</Text>
+            <Text style={styles.obdStripValue}>{obdLabel}</Text>
+          </View>
+        </View>
+
+        <View style={styles.formCard}>
+          <Text style={styles.formTitle}>인원</Text>
           <View style={styles.twoCol}>
             <TextInput style={styles.halfInput} value={operatorRank} onChangeText={setOperatorRank} placeholder="운행자 계급" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.halfInput} value={operatorName} onChangeText={setOperatorName} placeholder="운행자 성명" placeholderTextColor="#94A3B8" />
@@ -359,7 +415,10 @@ export default function TripScreen() {
               editable={!sameUser}
             />
           </View>
+        </View>
 
+        <View style={styles.formCard}>
+          <Text style={styles.formTitle}>운행 정보</Text>
           <TextInput style={styles.input} value={purpose} onChangeText={setPurpose} placeholder="운행 목적" placeholderTextColor="#94A3B8" />
           <View style={styles.twoCol}>
             <TextInput style={styles.halfInput} value={startPlace} onChangeText={setStartPlace} placeholder="출발지" placeholderTextColor="#94A3B8" />
@@ -373,13 +432,120 @@ export default function TripScreen() {
             placeholderTextColor="#94A3B8"
             keyboardType="number-pad"
           />
-        </SectionCard>
+        </View>
+
+        <Pressable style={styles.startBtn} onPress={handlePrimaryAction} disabled={isSaving}>
+          <Text style={styles.startBtnText}>{isSaving ? '저장 중' : '운행 시작'}</Text>
+        </Pressable>
+        </>
       )}
     </RebuildScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  heroCard: {
+    minHeight: 128,
+    borderRadius: 26,
+    backgroundColor: '#1D2B5C',
+    padding: 20,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#7180A3',
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+  heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 },
+  kicker: { color: '#94A3B8', fontSize: 12, fontWeight: '900', marginBottom: 5 },
+  heroTitle: { color: '#FFFFFF', fontSize: 27, fontWeight: '900' },
+  activeTitle: { color: '#1E2946', fontSize: 27, fontWeight: '900' },
+  heroDesc: { color: '#DDE6FF', fontSize: 13, fontWeight: '700', marginTop: 8, lineHeight: 19 },
+  heroIconBox: {
+    width: 54,
+    height: 54,
+    borderRadius: 20,
+    backgroundColor: '#EDF4FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroIcon: { color: '#4F6AE6', fontSize: 24, fontWeight: '900' },
+  summaryRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  summaryCard: {
+    flex: 1,
+    minHeight: 78,
+    borderRadius: 20,
+    backgroundColor: '#FFFDFB',
+    borderWidth: 1,
+    borderColor: '#E8EAF7',
+    padding: 14,
+  },
+  summaryLabel: { color: '#7B86A8', fontSize: 12, fontWeight: '900', marginBottom: 6 },
+  summaryValue: { color: '#1E2946', fontSize: 19, fontWeight: '900' },
+  formCard: {
+    backgroundColor: '#FFFDFB',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#E8EAF7',
+    padding: 14,
+    marginBottom: 10,
+    shadowColor: '#B0B8D8',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
+  },
+  formTitle: { color: '#1E2946', fontSize: 15, fontWeight: '900', marginBottom: 10 },
+  tripCard: {
+    borderRadius: 26,
+    backgroundColor: '#FFFDFB',
+    borderWidth: 1,
+    borderColor: '#E8EAF7',
+    padding: 18,
+    marginBottom: 10,
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    backgroundColor: '#ECFDF3',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#16A34A' },
+  liveBadgeText: { color: '#047857', fontSize: 11, fontWeight: '900' },
+  routePanel: {
+    minHeight: 58,
+    borderRadius: 18,
+    backgroundColor: '#F6F8FE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    marginBottom: 10,
+  },
+  routePoint: { color: '#1E2946', fontSize: 15, fontWeight: '900', flex: 1 },
+  routeArrow: { color: '#7B86A8', fontSize: 18, fontWeight: '900', marginHorizontal: 10 },
+  statRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  statCard: { flex: 1, borderRadius: 16, backgroundColor: '#F6F8FE', padding: 12 },
+  statLabel: { color: '#7B86A8', fontSize: 11, fontWeight: '900', marginBottom: 5 },
+  statValue: { color: '#1E2946', fontSize: 13, fontWeight: '900' },
+  obdStrip: {
+    minHeight: 42,
+    borderRadius: 15,
+    backgroundColor: '#EFF6FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    marginTop: 8,
+  },
+  obdStripLabel: { color: '#52607D', fontSize: 12, fontWeight: '900' },
+  obdStripValue: { color: '#1D4ED8', fontSize: 12, fontWeight: '900', flexShrink: 1, textAlign: 'right' },
   input: {
     minHeight: 42,
     borderRadius: 14,
@@ -418,8 +584,9 @@ const styles = StyleSheet.create({
   checkboxOn: { backgroundColor: '#5B7CFA', borderColor: '#5B7CFA' },
   checkboxText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
   checkText: { color: '#52607D', fontSize: 13, fontWeight: '800' },
-  activeTripTitle: { color: '#24304F', fontSize: 18, fontWeight: '900', marginTop: 8 },
+  actionRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
   cancelBtnWide: {
+    flex: 0.7,
     minHeight: 44,
     borderRadius: 14,
     backgroundColor: '#F0F2FA',
@@ -428,4 +595,28 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   cancelBtnText: { color: '#52607D', fontSize: 14, fontWeight: '900' },
+  endBtn: {
+    flex: 1.4,
+    minHeight: 44,
+    borderRadius: 14,
+    backgroundColor: '#128A7A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  endBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  startBtn: {
+    minHeight: 56,
+    borderRadius: 19,
+    backgroundColor: '#4F6AE6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#8FA3FF',
+    shadowOpacity: 0.24,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 4,
+    marginTop: 2,
+  },
+  startBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
 });

@@ -46,6 +46,8 @@ export type FuelEvent = {
   increasePercent: number;
 };
 
+export type TripFuelUsage = Record<string, number>;
+
 const STORAGE_KEY = 'vehicle-obd-readings-v1';
 const REQUEST_TIMEOUT_MS = 8_000;
 
@@ -338,4 +340,38 @@ export async function fetchFuelEvents(
   }
 
   return events;
+}
+
+export async function fetchTripFuelUsage(tripIds: string[]): Promise<TripFuelUsage> {
+  if (tripIds.length === 0) return {};
+
+  const result = await withRequestTimeout(
+    supabase
+      .from('obd_logs')
+      .select('trip_id,fuel_level_percent,recorded_at')
+      .in('trip_id', tripIds)
+      .order('trip_id', { ascending: true })
+      .order('recorded_at', { ascending: true })
+      .limit(3000),
+    '운행별 유류 소모'
+  );
+
+  if (result.error) {
+    if (isMissingObdTable(result.error)) return {};
+    throw new Error(result.error.message);
+  }
+
+  const ranges = new Map<string, { first: number; last: number }>();
+  for (const row of (result.data ?? []) as ObdLogRow[]) {
+    if (!row.trip_id) continue;
+    const fuel = normalizeNumber(row.fuel_level_percent ?? row.fuel_percent);
+    if (fuel === null) continue;
+    const current = ranges.get(row.trip_id);
+    if (!current) ranges.set(row.trip_id, { first: fuel, last: fuel });
+    else current.last = fuel;
+  }
+
+  return Object.fromEntries(
+    Array.from(ranges.entries()).map(([tripId, range]) => [tripId, Math.max(0, range.first - range.last)])
+  );
 }

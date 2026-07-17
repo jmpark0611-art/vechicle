@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-17 trip home redesign and fuel usage detail
+
+- Reworked the common top header into a cleaner brand-style header (`차량운행시스템`) with the active tab shown as a smaller secondary line.
+- The right-side role button now changes modes directly: driver opens commander PIN, commander switches back to driver mode.
+- Trip tab was redesigned into a dark hero card, summary cards, grouped input cards, and an in-screen start/end action button instead of a single dense form card.
+- Records detail and monthly export now include `소모한 유류`, calculated from the first and last OBD fuel percentage saved for each trip.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 tab header and speed-zone form polish
 
 - Common tab headers now use a compact pill with a small icon mark instead of a plain text title.
