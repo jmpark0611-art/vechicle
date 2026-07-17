@@ -13,7 +13,13 @@ import {
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
 import { saveTripObdLog } from '@/lib/obd-data';
-import { loadSelectedObdBleDevice, obdBle, type ObdLiveData } from '@/lib/obd-ble';
+import {
+  loadSelectedObdBleDevice,
+  obdBle,
+  saveSelectedObdBleDevice,
+  scanForObdBleDevices,
+  type ObdLiveData,
+} from '@/lib/obd-ble';
 import {
   cancelManualTrip,
   completeManualTrip,
@@ -80,6 +86,8 @@ export default function TripScreen() {
   const [maintenanceSnapshot, setMaintenanceSnapshot] = useState<MaintenanceSnapshot>({});
   const [obdLiveData, setObdLiveData] = useState<ObdLiveData | null>(null);
   const [isObdConnected, setIsObdConnected] = useState(false);
+  const [isObdConnecting, setIsObdConnecting] = useState(false);
+  const [obdStatus, setObdStatus] = useState('자동연결 준비');
   const [savedBleDeviceId, setSavedBleDeviceId] = useState<string | null>(null);
   const [savedBleDeviceName, setSavedBleDeviceName] = useState<string | null>(null);
 
@@ -88,6 +96,7 @@ export default function TripScreen() {
   const tripStartFuelRef = useRef<Record<string, number | null>>({});
   const obdSaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gpsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const obdRetryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   activeTripsRef.current = activeTrips;
   obdLiveRef.current = obdLiveData;
@@ -129,16 +138,71 @@ export default function TripScreen() {
     }, 60_000);
   }, [stopGpsTimer]);
 
+  const stopObdRetryTimer = useCallback(() => {
+    if (obdRetryTimerRef.current !== null) {
+      clearInterval(obdRetryTimerRef.current);
+      obdRetryTimerRef.current = null;
+    }
+  }, []);
+
+  const ensureObdConnected = useCallback(async () => {
+    if (isObdConnected || isObdConnecting) return;
+
+    setIsObdConnecting(true);
+    try {
+      let deviceId = savedBleDeviceId;
+      let deviceName = savedBleDeviceName;
+
+      if (!deviceId) {
+        setObdStatus('OBD 단말기 자동 검색 중');
+        const scan = await scanForObdBleDevices();
+        if (!scan.ok || scan.devices.length === 0) {
+          setObdStatus(scan.message || 'OBD 단말기 검색 실패 · 자동 재시도 중');
+          return;
+        }
+        const device = scan.devices[0];
+        await saveSelectedObdBleDevice(device);
+        deviceId = device.id;
+        deviceName = device.name;
+        setSavedBleDeviceId(device.id);
+        setSavedBleDeviceName(device.name);
+      }
+
+      setObdStatus(`${deviceName ?? 'OBD'} 연결 중`);
+      const result = await obdBle.connect(deviceId);
+      if (!result.ok) {
+        setIsObdConnected(false);
+        setObdStatus(`${deviceName ?? 'OBD'} 연결 실패 · 자동 재시도 중`);
+        return;
+      }
+
+      setIsObdConnected(true);
+      setObdStatus(`${deviceName ?? 'OBD'} 연결됨`);
+      obdBle.startPolling(2000);
+      startObdSaveTimer();
+      stopObdRetryTimer();
+    } catch (error) {
+      setIsObdConnected(false);
+      setObdStatus(error instanceof Error ? `자동연결 오류 · ${error.message}` : '자동연결 오류 · 자동 재시도 중');
+    } finally {
+      setIsObdConnecting(false);
+    }
+  }, [isObdConnected, isObdConnecting, savedBleDeviceId, savedBleDeviceName, startObdSaveTimer, stopObdRetryTimer]);
+
   useEffect(() => {
     obdBle.setCallbacks({
       onData: (data: ObdLiveData) => {
         setObdLiveData(data);
         setIsObdConnected(true);
+        setIsObdConnecting(false);
+        setObdStatus(`연결됨 · ${data.speedKmh ?? '-'}km/h · 연료 ${data.fuelPercent ?? '-'}%`);
       },
-      onStatus: () => {},
+      onStatus: setObdStatus,
       onDisconnect: () => {
         setObdLiveData(null);
         setIsObdConnected(false);
+        setIsObdConnecting(false);
+        setObdStatus('연결 끊김 · 자동 재시도 중');
         stopObdSaveTimer();
       },
     });
@@ -148,14 +212,16 @@ export default function TripScreen() {
       void obdBle.disconnect();
       stopObdSaveTimer();
       stopGpsTimer();
+      stopObdRetryTimer();
     };
-  }, [stopGpsTimer, stopObdSaveTimer]);
+  }, [stopGpsTimer, stopObdSaveTimer, stopObdRetryTimer]);
 
   useEffect(() => {
     void loadSelectedObdBleDevice().then((device) => {
       if (device) {
         setSavedBleDeviceId(device.id);
         setSavedBleDeviceName(device.name);
+        setObdStatus(`${device.name} 자동연결 준비`);
       }
     });
     void getStoredRole().then((nextRole) => {
@@ -201,6 +267,20 @@ export default function TripScreen() {
     void loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (!activeTrip) {
+      stopObdRetryTimer();
+      return;
+    }
+    void ensureObdConnected();
+    if (obdRetryTimerRef.current === null) {
+      obdRetryTimerRef.current = setInterval(() => {
+        if (!obdBle.isConnected) void ensureObdConnected();
+      }, 12_000);
+    }
+    return stopObdRetryTimer;
+  }, [activeTrip, ensureObdConnected, stopObdRetryTimer]);
+
   async function handleStartTrip() {
     if (!selectedVehicleId) {
       Alert.alert('차량 선택 필요', '운행을 시작할 차량을 선택해 주세요.');
@@ -230,15 +310,7 @@ export default function TripScreen() {
       setPurpose('');
       setEndPlace('');
 
-      if (savedBleDeviceId && !isObdConnected) {
-        void obdBle.connect(savedBleDeviceId).then((result) => {
-          if (result.ok) {
-            setIsObdConnected(true);
-            obdBle.startPolling(2000);
-            startObdSaveTimer();
-          }
-        });
-      }
+      void ensureObdConnected();
 
       const gpsResult = await saveCurrentGpsPoint(trip.id);
       startGpsTimer();
@@ -312,7 +384,9 @@ export default function TripScreen() {
       stopObdSaveTimer();
       stopGpsTimer();
       setIsObdConnected(false);
+      setIsObdConnecting(false);
       setObdLiveData(null);
+      setObdStatus(savedBleDeviceName ? `${savedBleDeviceName} 자동연결 준비` : '자동연결 준비');
       Alert.alert('운행 종료', `안전운행해주셔서 감사합니다.\n${gpsResult.message}`);
     } catch (error) {
       Alert.alert('운행 종료 실패', error instanceof Error ? error.message : '운행을 종료하지 못했습니다.');
@@ -328,9 +402,9 @@ export default function TripScreen() {
 
   const obdLabel = isObdConnected
     ? `연결됨 · ${obdLiveData?.speedKmh ?? '-'}km/h · 연료 ${obdLiveData?.fuelPercent ?? '-'}%`
-    : savedBleDeviceName
-      ? `${savedBleDeviceName} 자동연결 대기`
-      : '미연결';
+    : isObdConnecting
+      ? obdStatus
+      : obdStatus;
 
   return (
     <RebuildScreen title="운행">
@@ -420,7 +494,7 @@ export default function TripScreen() {
           <VehicleDropdown vehicles={vehicles} selectedVehicleId={selectedVehicleId} onSelect={setSelectedVehicleId} compact />
           <View style={styles.compactStatus}>
             <Text style={styles.obdStripLabel}>OBD</Text>
-            <Text style={styles.obdStripValue}>{isObdConnected ? obdLabel : '대기'}</Text>
+            <Text style={styles.obdStripValue}>{obdLabel}</Text>
           </View>
         </View>
 

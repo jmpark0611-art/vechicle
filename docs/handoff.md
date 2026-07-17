@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 automatic OBD retry on trip screen:
+  - Trip screen now displays actual OBD auto-connection state instead of a fixed `대기` label.
+  - While a trip is active, it automatically connects to the saved OBD device.
+  - If no saved device exists, it scans for OBD candidates, saves the first candidate, and connects.
+  - Failed/disconnected OBD connections are retried every 12 seconds during the trip.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 trip completion auto summary:
   - Active trip UI removed manual destination odometer input.
   - Completion saves a final GPS point, reads GPS trip distance, and estimates end odometer as start odometer + GPS distance when no direct OBD odometer PID is available.

@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-17 automatic OBD retry on trip screen
+
+- Trip screen OBD status now shows real automatic connection states instead of a static `대기` label.
+- When a trip is active, the app now automatically connects to the saved OBD device.
+- If no saved OBD device exists, the trip screen automatically scans for an OBD candidate, saves the first candidate, and connects.
+- If connection fails or disconnects during a trip, the app retries automatically every 12 seconds.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 trip completion auto summary
 
 - Active trip screen no longer asks for manual end odometer input.
