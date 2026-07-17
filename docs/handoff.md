@@ -513,3 +513,17 @@ npm.cmd run health
   - Apply the same `VehicleDropdown` pattern anywhere else that asks for a vehicle selection.
   - Keep the tab count small; prefer improving the existing 기록 screen over reintroducing 월장비운행증 as a separate tab.
   - Device-test APK after GitHub Actions finishes, especially tab navigation and trip start/end.
+## 2026-07-18 cleanup / DB reminder
+
+- Remember to tell the user later: the Supabase schema migration still must be applied manually or through an authenticated Supabase connection.
+  - Required for vehicle deletion/history preservation: `alter table public.trips alter column vehicle_id drop not null;`
+  - Required for speed-area saving: `speed_zones.zone_kind`, `speed_zones.polygon_points`, and related RLS policies in `docs/schema.sql`.
+  - Until this is applied, app code can show friendly errors, but production DB writes for vehicle delete unlinking and polygon speed zones can still fail.
+- Current vehicle delete UX rule:
+  - Do not re-add an all-vehicle reset/initialization feature.
+  - Keep only per-vehicle delete.
+  - Deleting a vehicle must show a confirmation popup before deleting.
+  - Trip history should be preserved by unlinking `trips.vehicle_id` rather than deleting trip rows.
+- Local cleanup audit:
+  - `.expo-export-check*` and `expo-start.*.log` are ignored local build/test artifacts and are not pushed to GitHub.
+  - A cleanup attempt hit Windows access-denied on those ignored artifacts, so they may remain locally; they do not affect source commits or APK builds.

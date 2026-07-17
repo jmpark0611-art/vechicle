@@ -600,3 +600,8 @@
 - Rewrote the 운행 and 기록 screen copy back to clean Korean in the touched files.
 - Simplified shared card styling in `components/rebuild-screen.tsx` to reduce the busy rounded-card look.
 - Verification passed with `npm.cmd run verify`.
+## 2026-07-18 cleanup audit
+
+- Documented the pending Supabase schema migration as a must-remind item for later.
+- Confirmed ignored local Expo export-check folders and Expo start logs are not tracked by Git and do not affect GitHub/APK builds.
+- Confirmed the current intended vehicle-deletion UX is per-vehicle delete only, with confirmation, and no all-vehicle reset feature.
