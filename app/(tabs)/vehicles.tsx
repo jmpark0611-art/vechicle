@@ -329,7 +329,7 @@ export default function VehiclesScreen() {
           </SectionCard>
 
           {selectedVehicle && selectedState ? (
-            <SectionCard title="">
+            <View style={styles.diagnosisPanel}>
               <View style={styles.vehicleInfoBar}>
                 <Text style={styles.vehicleInfoNumber}>{selectedVehicle.vehicleNumber}</Text>
                 <View style={styles.vehicleInfoDivider} />
@@ -339,7 +339,7 @@ export default function VehiclesScreen() {
               <Text style={styles.groupTitle}>ECU 감지 정보</Text>
               <View style={styles.grid}>
                 {ecuCards.map((card, index) => (
-                  <View key={card.title} style={[styles.squareCard, { backgroundColor: ECU_COLORS[index % ECU_COLORS.length] }, card.tone === 'bad' && styles.squareCardBad, card.tone === 'warn' && styles.squareCardWarn]}>
+                  <View key={card.title} style={[styles.ecuCard, { backgroundColor: ECU_COLORS[index % ECU_COLORS.length] }, card.tone === 'bad' && styles.squareCardBad, card.tone === 'warn' && styles.squareCardWarn]}>
                     <Text style={styles.cardTitle} numberOfLines={1}>{card.title}</Text>
                     <Text style={styles.cardValue} numberOfLines={2} adjustsFontSizeToFit>{card.value}</Text>
                     <Text style={styles.cardDetail} numberOfLines={1}>{card.detail}</Text>
@@ -350,7 +350,7 @@ export default function VehiclesScreen() {
               <Text style={styles.groupTitle}>주기성 교환품목</Text>
               <View style={styles.grid}>
                 {maintenanceCards.map((card, index) => (
-                  <View key={card.item.key} style={[styles.squareCard, { backgroundColor: PART_COLORS[index % PART_COLORS.length] }, card.tone === 'bad' && styles.squareCardBad, card.tone === 'warn' && styles.squareCardWarn]}>
+                  <View key={card.item.key} style={[styles.maintenanceCard, { backgroundColor: PART_COLORS[index % PART_COLORS.length] }, card.tone === 'bad' && styles.squareCardBad, card.tone === 'warn' && styles.squareCardWarn]}>
                     <Text style={styles.cardTitle} numberOfLines={1}>{card.title}</Text>
                     <Text style={styles.cardValue} numberOfLines={2} adjustsFontSizeToFit>{card.value}</Text>
                     <Text style={styles.cardDetail} numberOfLines={1}>{card.detail}</Text>
@@ -360,7 +360,7 @@ export default function VehiclesScreen() {
                   </View>
                 ))}
               </View>
-            </SectionCard>
+            </View>
           ) : null}
         </>
       )}
@@ -411,10 +411,23 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   connectBtnText: { color: '#13866F', fontSize: 12, fontWeight: '900' },
+  diagnosisPanel: {
+    backgroundColor: '#FFFDFB',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E8EAF7',
+    padding: 12,
+    marginBottom: 10,
+    shadowColor: '#B0B8D8',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
   vehicleInfoBar: {
-    minHeight: 44,
-    borderRadius: 14,
-    backgroundColor: '#F6F8FE',
+    minHeight: 42,
+    borderRadius: 12,
+    backgroundColor: '#EEF4FF',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
@@ -424,22 +437,31 @@ const styles = StyleSheet.create({
   vehicleInfoDivider: { width: 1, height: 18, backgroundColor: '#E1E6F3' },
   vehicleInfoLabel: { color: '#7B86A8', fontSize: 12, fontWeight: '900' },
   vehicleInfoValue: { color: '#1E2946', fontSize: 13, fontWeight: '900', marginLeft: 'auto' },
-  groupTitle: { color: '#52607D', fontSize: 13, fontWeight: '900', marginTop: 12, marginBottom: 0 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 },
-  squareCard: {
+  groupTitle: { color: '#52607D', fontSize: 13, fontWeight: '900', marginTop: 10, marginBottom: 0 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 7 },
+  ecuCard: {
     width: '48%',
-    minHeight: 122,
-    borderRadius: 16,
+    minHeight: 96,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.72)',
-    padding: 11,
+    padding: 10,
+    justifyContent: 'space-between',
+  },
+  maintenanceCard: {
+    width: '48%',
+    minHeight: 116,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.72)',
+    padding: 10,
     justifyContent: 'space-between',
   },
   squareCardBad: { borderColor: '#FFC6C6', backgroundColor: '#FFEAEA' },
   squareCardWarn: { borderColor: '#FFE2A8' },
   cardTitle: { color: '#52607D', fontSize: 12, fontWeight: '900' },
-  cardValue: { color: '#222B45', fontSize: 18, fontWeight: '900', lineHeight: 22 },
-  cardDetail: { color: '#7180A3', fontSize: 11, fontWeight: '800' },
+  cardValue: { color: '#222B45', fontSize: 17, fontWeight: '900', lineHeight: 20 },
+  cardDetail: { color: '#7180A3', fontSize: 10, fontWeight: '800' },
   cardAction: {
     minHeight: 30,
     borderRadius: 10,

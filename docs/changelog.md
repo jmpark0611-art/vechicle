@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-17 stronger diagnosis compact layout
+
+- Diagnosis detail no longer uses an empty `SectionCard` title area; it now renders as a custom compact panel.
+- Vehicle/current-km info is shown as the first horizontal bar inside the panel.
+- ECU cards are reduced to 96px minimum height, and maintenance cards use a separate shorter layout.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 compact diagnosis cards
 
 - Diagnosis detail header now uses one horizontal bar for vehicle number and current km instead of a separate rounded title/current block.

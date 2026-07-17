@@ -3,6 +3,10 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 stronger diagnosis compact layout:
+  - Replaced the selected-vehicle `SectionCard title=""` wrapper with a custom `diagnosisPanel` to remove the leftover blank title area.
+  - ECU cards now use a lower 96px min-height; maintenance cards use a separate 116px min-height for the action button.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 compact diagnosis cards:
   - Diagnosis selected-vehicle area now uses a single horizontal info bar with vehicle number, `현재 기준`, and current km.
   - ECU/maintenance cards changed from square cards to shorter rectangular cards to reduce vertical scrolling.
