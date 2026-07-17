@@ -12,7 +12,7 @@ import {
   setVehicleCurrentKm,
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
-import { saveTripObdLog } from '@/lib/obd-data';
+import { buildObdReadingFromLiveData, saveLocalObdReading, saveTripObdLog } from '@/lib/obd-data';
 import {
   loadSelectedObdBleDevice,
   obdBle,
@@ -97,6 +97,7 @@ export default function TripScreen() {
   const obdSaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gpsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const obdRetryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const obdSnapshotSaveAtRef = useRef<Record<string, number>>({});
 
   activeTripsRef.current = activeTrips;
   obdLiveRef.current = obdLiveData;
@@ -196,6 +197,15 @@ export default function TripScreen() {
         setIsObdConnected(true);
         setIsObdConnecting(false);
         setObdStatus(`연결됨 · ${data.speedKmh ?? '-'}km/h · 연료 ${data.fuelPercent ?? '-'}%`);
+        const now = Date.now();
+        for (const trip of activeTripsRef.current) {
+          if (!trip.vehicleId) continue;
+          const previousSaveAt = obdSnapshotSaveAtRef.current[trip.vehicleId] ?? 0;
+          if (now - previousSaveAt > 30_000) {
+            obdSnapshotSaveAtRef.current[trip.vehicleId] = now;
+            void saveLocalObdReading(buildObdReadingFromLiveData(trip.vehicleId, data));
+          }
+        }
         if (typeof data.fuelPercent === 'number') {
           for (const trip of activeTripsRef.current) {
             if (tripStartFuelRef.current[trip.id] === null || tripStartFuelRef.current[trip.id] === undefined) {

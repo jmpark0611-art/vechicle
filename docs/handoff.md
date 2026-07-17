@@ -10,6 +10,7 @@
   - ECU alert thresholds are first-pass operational rules: DTC > 0, coolant >= 105°C, battery outside 12~15V, fuel <= 15%, engine load >= 90%, short/long fuel trim absolute value >= 20%, and emissions readiness not `준비 완료`.
   - `교체완료` reuses the existing maintenance baseline save/sync path. `점검완료` stores an acknowledgement fingerprint locally, so the same ECU value is hidden but a changed value appears again.
   - `lib/fleet-alerts.ts` adds commander-side live OBD popups for the same ECU thresholds. These popups are wired only in `app/(tabs)/vehicles.tsx`; driver trip mode intentionally does not show maintenance popups.
+  - Driver trip mode still feeds commander visibility: `app/(tabs)/index.tsx` saves latest OBD live data to the shared local OBD snapshot every 30 seconds via `buildObdReadingFromLiveData()` + `saveLocalObdReading()`, so the commander `알림` tab can show detected issues.
 - 2026-07-17 VIN / emissions readiness OBD support:
   - `ObdLiveData` and `ObdReading` now include VIN, readiness summary, intake temp, throttle percent, engine load, MAP, short/long fuel trims, oxygen sensor voltage, and DTC count.
   - `lib/obd-ble.native.ts` polls inspection-related PIDs: `0101` readiness/DTC count, `0104`, `0106`, `0107`, `010B`, `010F`, `0111`, `0114`, and `0902` VIN.

@@ -214,6 +214,28 @@ export function buildObdReading(vehicleId: string, input: ObdInput): ObdReading 
   return reading;
 }
 
+export function buildObdReadingFromLiveData(vehicleId: string, data: ObdLiveData): ObdReading {
+  return {
+    vehicleId,
+    rpm: data.rpm,
+    speedKmh: data.speedKmh,
+    coolantTempC: data.coolantC,
+    batteryVoltage: data.batteryV,
+    fuelPercent: data.fuelPercent,
+    dtcCount: data.dtcCount,
+    intakeTempC: data.intakeTempC,
+    throttlePercent: data.throttlePercent,
+    engineLoadPercent: data.engineLoadPercent,
+    mapKpa: data.mapKpa,
+    shortFuelTrimPercent: data.shortFuelTrimPercent,
+    longFuelTrimPercent: data.longFuelTrimPercent,
+    oxygenSensorV: data.oxygenSensorV,
+    vin: data.vin,
+    readinessSummary: data.readinessSummary,
+    recordedAt: new Date().toISOString(),
+  };
+}
+
 export async function loadObdSnapshot(): Promise<ObdSnapshot> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   if (!raw) {
@@ -234,6 +256,13 @@ export async function loadObdSnapshot(): Promise<ObdSnapshot> {
 
 async function saveObdSnapshot(snapshot: ObdSnapshot) {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+}
+
+export async function saveLocalObdReading(reading: ObdReading): Promise<ObdSnapshot> {
+  const localSnapshot = await loadObdSnapshot();
+  const nextSnapshot = { ...localSnapshot, [reading.vehicleId]: reading };
+  await saveObdSnapshot(nextSnapshot);
+  return nextSnapshot;
 }
 
 export async function loadSyncedObdSnapshot(vehicleIds: string[]): Promise<{ snapshot: ObdSnapshot; message: string }> {
