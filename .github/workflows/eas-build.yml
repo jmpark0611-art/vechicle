@@ -9,6 +9,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: android-apk-${{ github.ref }}
   cancel-in-progress: true
@@ -79,5 +82,25 @@ jobs:
             실행: ${{ github.run_id }}
           files: android/app/build/outputs/apk/release/*.apk
           prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update stable APK download release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-apk
+          name: "차량운행시스템 최신 APK"
+          body: |
+            항상 최신 APK를 받을 수 있는 고정 다운로드 릴리스입니다.
+
+            직접 다운로드:
+            https://github.com/jmpark0611-art/vechicle/releases/download/latest-apk/app-release.apk
+
+            커밋: ${{ github.sha }}
+            브랜치: ${{ github.ref_name }}
+            실행: ${{ github.run_id }}
+          files: android/app/build/outputs/apk/release/*.apk
+          overwrite_files: true
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

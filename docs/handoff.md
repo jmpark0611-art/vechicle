@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 stable APK download:
+  - Android workflow updates a fixed `latest-apk` release on every successful APK build.
+  - Use this stable direct URL for users: `https://github.com/jmpark0611-art/vechicle/releases/download/latest-apk/app-release.apk`.
+  - Web deploy also publishes a visible button page: `https://jmpark0611-art.github.io/vechicle/download.html`.
+  - After this workflow change is pushed, the stable links become valid once the next Android APK and Pages workflows complete.
 - 2026-07-17 trip home redesign / direct mode switch:
   - Common header now looks like a compact brand header (`차량운행시스템`) with the tab title as a smaller secondary line, matching the user's reference direction more closely than the old plain title.
   - Right-side role pill is the mode action: driver -> commander PIN, commander -> driver mode directly. No separate gear/radar button is shown.

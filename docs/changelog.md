@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-17 stable APK download link
+
+- Android APK workflow now updates a fixed `latest-apk` GitHub Release so the APK download URL stays stable across builds.
+- Web deploy workflow now publishes `/download.html`, a visible GitHub Pages download page with a large APK download button.
+- Stable direct APK URL: `https://github.com/jmpark0611-art/vechicle/releases/download/latest-apk/app-release.apk`.
+- Stable visible page: `https://jmpark0611-art.github.io/vechicle/download.html`.
+
 ## 2026-07-17 trip home redesign and fuel usage detail
 
 - Reworked the common top header into a cleaner brand-style header (`차량운행시스템`) with the active tab shown as a smaller secondary line.
