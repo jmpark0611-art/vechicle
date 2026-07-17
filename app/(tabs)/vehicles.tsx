@@ -328,9 +328,11 @@ export default function VehiclesScreen() {
 
   return (
     <RebuildScreen title="진단" actionLabel="새로고침" onAction={() => void loadVehicles()}>
-      <Pressable style={styles.registerOpenBtn} onPress={() => setIsRegisterOpen(true)}>
-        <Text style={styles.registerOpenText}>차량 등록</Text>
-      </Pressable>
+      <View style={styles.topActionRow}>
+        <Pressable style={styles.registerOpenBtn} onPress={() => setIsRegisterOpen(true)}>
+          <Text style={styles.registerOpenText}>차량 등록</Text>
+        </Pressable>
+      </View>
 
       {dueItems.length > 0 ? (
         <SectionCard title={`교체 알림 ${dueItems.length}건`}>
@@ -376,7 +378,7 @@ export default function VehiclesScreen() {
                   <Text style={styles.ecuStatusMetaText}>기준 {formatKm(selectedState.currentKm)}</Text>
                 </View>
               </View>
-              <Text style={styles.groupTitle}>ECU 감지 정보</Text>
+              <Text style={[styles.groupTitle, styles.ecuGroupTitle]}>ECU 감지 정보</Text>
               <View style={styles.grid}>
                 {ecuCards.map((card, index) => (
                   <View key={card.title} style={[styles.ecuCard, { backgroundColor: ECU_COLORS[index % ECU_COLORS.length] }, card.tone === 'bad' && styles.squareCardBad, card.tone === 'warn' && styles.squareCardWarn]}>
@@ -387,7 +389,7 @@ export default function VehiclesScreen() {
                 ))}
               </View>
 
-              <Text style={styles.groupTitle}>주기성 교환품목</Text>
+              <Text style={[styles.groupTitle, styles.partsGroupTitle]}>주기성 교환품목</Text>
               <View style={styles.grid}>
                 {maintenanceCards.map((card, index) => (
                   <View key={card.item.key} style={[styles.maintenanceCard, { backgroundColor: PART_COLORS[index % PART_COLORS.length] }, card.tone === 'bad' && styles.squareCardBad, card.tone === 'warn' && styles.squareCardWarn]}>
@@ -428,16 +430,26 @@ export default function VehiclesScreen() {
 }
 
 const styles = StyleSheet.create({
+  topActionRow: {
+    alignItems: 'flex-end',
+    marginTop: -48,
+    marginBottom: 18,
+    paddingRight: 2,
+  },
   registerOpenBtn: {
-    minHeight: 46,
-    borderRadius: 16,
+    minHeight: 36,
+    borderRadius: 999,
     backgroundColor: '#8EA7FF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
-    marginBottom: 12,
+    paddingHorizontal: 14,
+    shadowColor: '#8FA3FF',
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
-  registerOpenText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
+  registerOpenText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
   vehicleRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   dropdownWrap: { flex: 1 },
   connectBtn: {
@@ -480,7 +492,9 @@ const styles = StyleSheet.create({
   ecuStatusValue: { color: '#1E2946', fontSize: 22, fontWeight: '900', marginTop: 3 },
   ecuStatusMeta: { alignItems: 'flex-end', gap: 4 },
   ecuStatusMetaText: { color: '#4F6AE6', fontSize: 12, fontWeight: '900' },
-  groupTitle: { color: '#52607D', fontSize: 13, fontWeight: '900', marginTop: 10, marginBottom: 0 },
+  groupTitle: { fontSize: 17, fontWeight: '900', marginTop: 18, marginBottom: 3, letterSpacing: 0 },
+  ecuGroupTitle: { color: '#3158E8' },
+  partsGroupTitle: { color: '#13866F' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 7 },
   ecuCard: {
     width: '48%',

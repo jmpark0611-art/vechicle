@@ -4,6 +4,7 @@
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
 - 2026-07-17 role selection / fleet alert tab:
+  - `app/(tabs)/vehicles.tsx` now places `차량 등록` as a compact top-right pill on the diagnosis screen. `ECU 감지 정보` and `주기성 교환품목` headings are larger and color-separated for clearer scanning.
   - `app/role-select.tsx` now presents the app as `차량 운행관리`, with taller mode cards and more breathing room between title and guidance text.
   - Added commander-only `app/(tabs)/alerts.tsx` and a matching `알림` bottom tab.
   - The alert tab aggregates all vehicles with periodic replacement due/overdue items and ECU inspection alerts from the latest OBD snapshot.

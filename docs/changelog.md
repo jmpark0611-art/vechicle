@@ -2,6 +2,7 @@
 
 ## 2026-07-17 role selection polish and fleet alert tab
 
+- Diagnosis screen moved `차량 등록` from a wide full-width button to a compact top-right pill and made `ECU 감지 정보` / `주기성 교환품목` section titles larger with distinct accent colors.
 - Mode selection first screen now uses the softer title `차량 운행관리`, larger mode cards, and more spacing between the title and mode guidance text.
 - Added a commander-only `알림` tab that gathers all vehicles needing periodic replacement or ECU-based inspection.
 - The new alert tab flags maintenance items within 1,000km/overdue and ECU values outside first-pass thresholds: DTC, coolant temperature, battery voltage, fuel level, engine load, fuel trims, and emissions readiness.
