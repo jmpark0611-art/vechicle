@@ -513,6 +513,16 @@ npm.cmd run health
   - Apply the same `VehicleDropdown` pattern anywhere else that asks for a vehicle selection.
   - Keep the tab count small; prefer improving the existing 기록 screen over reintroducing 월장비운행증 as a separate tab.
   - Device-test APK after GitHub Actions finishes, especially tab navigation and trip start/end.
+## 2026-07-18 handoff: compact records cards
+
+- User reported records tab cards became too large.
+- Cause: monthly-log metric tiles were added directly to each records-list card.
+- Fix:
+  - Removed the four large metric tiles from the list card.
+  - Kept one compact summary line under the route.
+  - Detailed monthly-log fields remain available in the detail popup and CSV export.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-18 handoff: unit filter transition fallback
 
 - User reported that tabs looked different after adding unit selection.

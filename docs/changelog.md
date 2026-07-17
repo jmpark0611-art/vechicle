@@ -600,6 +600,12 @@
 - Rewrote the 운행 and 기록 screen copy back to clean Korean in the touched files.
 - Simplified shared card styling in `components/rebuild-screen.tsx` to reduce the busy rounded-card look.
 - Verification passed with `npm.cmd run verify`.
+## 2026-07-18 compact records cards
+
+- Restored compact records-list cards after the monthly-log metric tiles made each record too tall.
+- The list now shows route plus one compact summary line, while detailed odometer/GPS/fuel fields remain in the detail popup and monthly export.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-18 unit filter transition fallback
 
 - Fixed a transition issue after adding unit selection: existing test rows with `unit_code = null` were hidden, making tabs look changed or empty.

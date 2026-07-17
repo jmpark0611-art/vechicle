@@ -259,24 +259,9 @@ export default function RecordsScreen() {
               <Text style={styles.routeText} numberOfLines={1}>
                 {trip.startPlace ?? '-'} → {trip.endPlace ?? '-'}
               </Text>
-              <View style={styles.tripMetricGrid}>
-                <View style={styles.tripMetric}>
-                  <Text style={styles.tripMetricLabel}>계기판 총</Text>
-                  <Text style={styles.tripMetricValue}>{totalOdometer(trip)}</Text>
-                </View>
-                <View style={styles.tripMetric}>
-                  <Text style={styles.tripMetricLabel}>계기판 운행</Text>
-                  <Text style={styles.tripMetricValue}>{tripDistance(trip)}</Text>
-                </View>
-                <View style={styles.tripMetric}>
-                  <Text style={styles.tripMetricLabel}>실제 이동</Text>
-                  <Text style={styles.tripMetricValue}>{gpsDistanceLabel(gpsDistances, trip.id)}</Text>
-                </View>
-                <View style={styles.tripMetric}>
-                  <Text style={styles.tripMetricLabel}>소모 유류</Text>
-                  <Text style={styles.tripMetricValue}>{fuelUsageLabel(tripFuelUsage, trip.id)}</Text>
-                </View>
-              </View>
+              <Text style={styles.compactMeta} numberOfLines={1}>
+                계기판 {tripDistance(trip)} · 실제 {gpsDistanceLabel(gpsDistances, trip.id)} · 유류 {fuelUsageLabel(tripFuelUsage, trip.id)}
+              </Text>
             </SectionCard>
           </Pressable>
         ))
@@ -356,23 +341,7 @@ const styles = StyleSheet.create({
   },
   exportBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
   routeText: { color: '#52607D', fontSize: 14, fontWeight: '800', marginTop: 10 },
-  tripMetricGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 12,
-  },
-  tripMetric: {
-    width: '48%',
-    minHeight: 54,
-    borderRadius: 14,
-    backgroundColor: '#F6F8FF',
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    justifyContent: 'center',
-  },
-  tripMetricLabel: { color: '#7180A3', fontSize: 11, fontWeight: '900' },
-  tripMetricValue: { color: '#222B45', fontSize: 15, fontWeight: '900', marginTop: 3 },
+  compactMeta: { color: '#8A96B5', fontSize: 12, fontWeight: '800', marginTop: 8 },
   modalDim: { flex: 1, backgroundColor: 'rgba(80,88,120,0.36)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   detailModal: { width: '100%', borderRadius: 18, backgroundColor: '#FFFDFB', padding: 18 },
   modalTitle: { color: '#222B45', fontSize: 20, fontWeight: '900' },
