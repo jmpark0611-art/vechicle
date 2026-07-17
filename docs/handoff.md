@@ -337,6 +337,17 @@ npm.cmd run health
 - Important product note: ELM327/OBD does not reliably expose dashboard total odometer through a standard PID. For now, durable automatic reflection means app-recorded trip odometer values, not direct cluster odometer reading.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 handoff: remove bulk vehicle reset
+
+- User clarified not to keep an initialization/reset-all feature.
+- Implemented:
+  - Removed `전체 초기화` UI from diagnosis tab.
+  - Removed `deleteAllVehiclesAndTrips`.
+  - Kept only per-vehicle `차량 삭제` button with confirmation popup.
+  - Changed vehicle deletion to unlink trip history (`vehicle_id: null`) before deleting the selected vehicle, instead of deleting trip rows.
+- Important: live Supabase still needs the latest `docs/schema.sql` migration (`trips.vehicle_id drop not null`, delete policies) before per-vehicle deletion can work.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 handoff: vehicle deletion and Excel export controls
 
 - User requested deleting currently registered vehicles, adding a vehicle delete button, and changing 월장비운행증 export to Excel with a period-setting popup.

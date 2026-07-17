@@ -168,12 +168,12 @@ export async function createVehicle(vehicleNumber: string): Promise<VehicleSumma
 }
 
 export async function deleteVehicleAndTrips(vehicleId: string): Promise<void> {
-  const tripsResult = await withRequestTimeout(
-    supabase.from('trips').delete().eq('vehicle_id', vehicleId),
-    '차량 운행기록 삭제'
+  const unlinkResult = await withRequestTimeout(
+    supabase.from('trips').update({ vehicle_id: null }).eq('vehicle_id', vehicleId),
+    '차량 운행기록 연결 해제'
   );
-  if (tripsResult.error) {
-    throw new Error(tripsResult.error.message);
+  if (unlinkResult.error) {
+    throw new Error(unlinkResult.error.message);
   }
 
   const vehicleResult = await withRequestTimeout(
@@ -182,28 +182,6 @@ export async function deleteVehicleAndTrips(vehicleId: string): Promise<void> {
   );
   if (vehicleResult.error) {
     throw new Error(vehicleResult.error.message);
-  }
-}
-
-export async function deleteAllVehiclesAndTrips(): Promise<void> {
-  const vehicles = await fetchVehiclesReadOnly(500);
-  const vehicleIds = vehicles.map((vehicle) => vehicle.id);
-  if (vehicleIds.length === 0) return;
-
-  const tripsResult = await withRequestTimeout(
-    supabase.from('trips').delete().in('vehicle_id', vehicleIds),
-    '전체 운행기록 삭제'
-  );
-  if (tripsResult.error) {
-    throw new Error(tripsResult.error.message);
-  }
-
-  const vehiclesResult = await withRequestTimeout(
-    supabase.from('vehicles').delete().in('id', vehicleIds),
-    '전체 차량 삭제'
-  );
-  if (vehiclesResult.error) {
-    throw new Error(vehiclesResult.error.message);
   }
 }
 

@@ -481,6 +481,13 @@
 - Note: standard OBD generally does not expose dashboard total odometer reliably; the app uses recorded trip odometer values as the durable source.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 remove bulk vehicle reset
+
+- Removed the all-vehicle reset/initialization feature from the diagnosis tab.
+- Kept only per-vehicle deletion with a destructive confirmation popup.
+- Vehicle deletion now disconnects existing trip records from the vehicle instead of deleting trip history, then deletes the selected vehicle.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 vehicle deletion and Excel export controls
 
 - Added selected-vehicle delete and all-vehicle reset controls to the diagnosis tab.

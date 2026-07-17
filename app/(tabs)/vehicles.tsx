@@ -21,7 +21,6 @@ import {
 } from '@/lib/obd-ble';
 import {
   createVehicle,
-  deleteAllVehiclesAndTrips,
   deleteVehicleAndTrips,
   fetchLatestVehicleOdometers,
   fetchVehiclesReadOnly,
@@ -213,7 +212,7 @@ export default function VehiclesScreen() {
       Alert.alert('차량 선택 필요', '삭제할 차량을 먼저 선택해 주세요.');
       return;
     }
-    Alert.alert('차량 삭제', `${selectedVehicle.vehicleNumber} 차량과 관련 운행기록을 삭제할까요?`, [
+    Alert.alert('차량 삭제 확인', `${selectedVehicle.vehicleNumber} 차량을 삭제할까요?\n삭제 전 한 번 더 확인해 주세요.`, [
       { text: '취소', style: 'cancel' },
       { text: '삭제', style: 'destructive', onPress: () => void handleDeleteSelectedVehicle(selectedVehicle.id) },
     ]);
@@ -225,30 +224,9 @@ export default function VehiclesScreen() {
       await deleteVehicleAndTrips(vehicleId);
       setSelectedVehicleId(null);
       await loadVehicles();
-      Alert.alert('차량 삭제 완료', '선택한 차량과 관련 운행기록을 삭제했습니다.');
+      Alert.alert('차량 삭제 완료', '선택한 차량을 삭제했습니다.');
     } catch (error) {
       Alert.alert('차량 삭제 실패', error instanceof Error ? error.message : '차량을 삭제하지 못했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  function confirmDeleteAllVehicles() {
-    Alert.alert('등록 차량 초기화', '현재 등록된 모든 차량과 관련 운행기록을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
-      { text: '전체 삭제', style: 'destructive', onPress: () => void handleDeleteAllVehicles() },
-    ]);
-  }
-
-  async function handleDeleteAllVehicles() {
-    setIsSaving(true);
-    try {
-      await deleteAllVehiclesAndTrips();
-      setSelectedVehicleId(null);
-      await loadVehicles();
-      Alert.alert('초기화 완료', '등록된 차량 정보를 모두 삭제했습니다.');
-    } catch (error) {
-      Alert.alert('초기화 실패', error instanceof Error ? error.message : '차량 정보를 삭제하지 못했습니다.');
     } finally {
       setIsSaving(false);
     }
@@ -317,10 +295,7 @@ export default function VehiclesScreen() {
             <StatusLine label="상태" value={obdStatus} />
             <View style={styles.deleteRow}>
               <Pressable style={styles.deleteBtn} onPress={confirmDeleteSelectedVehicle} disabled={isSaving}>
-                <Text style={styles.deleteBtnText}>선택 차량 삭제</Text>
-              </Pressable>
-              <Pressable style={styles.deleteAllBtn} onPress={confirmDeleteAllVehicles} disabled={isSaving}>
-                <Text style={styles.deleteAllBtnText}>전체 초기화</Text>
+                <Text style={styles.deleteBtnText}>차량 삭제</Text>
               </Pressable>
             </View>
           </SectionCard>
@@ -402,7 +377,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   connectBtnText: { color: '#13866F', fontSize: 12, fontWeight: '900' },
-  deleteRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  deleteRow: { flexDirection: 'row', marginTop: 12 },
   deleteBtn: {
     flex: 1,
     minHeight: 40,
@@ -412,15 +387,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   deleteBtnText: { color: '#E11D48', fontSize: 12, fontWeight: '900' },
-  deleteAllBtn: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteAllBtnText: { color: '#475569', fontSize: 12, fontWeight: '900' },
   diagnosisPanel: {
     backgroundColor: '#FFFDFB',
     borderRadius: 18,
