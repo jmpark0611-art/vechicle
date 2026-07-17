@@ -7,6 +7,9 @@ import { VehicleMap } from '@/components/vehicle-map';
 import { createSpeedZone, fetchLocationSnapshot, type LocationSnapshot, type ZonePoint } from '@/lib/location-data';
 import { generateVehicleMapHtml } from '@/lib/map-html';
 
+const SPEED_REFRESH_MS = 10_000;
+const OVERSPEED_VIBRATION_PATTERN = [0, 650, 160, 650, 160, 900];
+
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const [snapshot, setSnapshot] = useState<LocationSnapshot>({ positions: [], zones: [], alerts: [], message: '대기' });
@@ -36,15 +39,19 @@ export default function MapScreen() {
     [snapshot.positions, snapshot.zones, pickerDraft]
   );
 
-  const loadLocation = useCallback(async () => {
-    setIsLoading(true);
+  const loadLocation = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setIsLoading(true);
+    }
     setErrorMessage(null);
     try {
       setSnapshot(await fetchLocationSnapshot());
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '위치 데이터를 불러오지 못했습니다.');
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -53,15 +60,23 @@ export default function MapScreen() {
   }, [loadLocation]);
 
   useEffect(() => {
+    const timer = setInterval(() => {
+      void loadLocation(false);
+    }, SPEED_REFRESH_MS);
+
+    return () => clearInterval(timer);
+  }, [loadLocation]);
+
+  useEffect(() => {
     const overspeed = snapshot.alerts.find((alert) => alert.status === 'overspeed');
     if (!overspeed) return;
     const key = `${overspeed.tripId}-${overspeed.zoneName}-${Math.round(overspeed.speedKmh ?? 0)}`;
     if (alertedKeyRef.current === key) return;
     alertedKeyRef.current = key;
-    Vibration.vibrate([0, 450, 120, 450]);
+    Vibration.vibrate(OVERSPEED_VIBRATION_PATTERN);
     Alert.alert(
-      '제한속도 초과',
-      `${overspeed.vehicleNumber}\n${overspeed.zoneName}\n현재 ${Math.round(overspeed.speedKmh ?? 0)}km/h / 제한 ${Math.round(overspeed.speedLimitKmh)}km/h`
+      '제한속도 초과 경고',
+      `${overspeed.vehicleNumber}\n${overspeed.zoneName}\n현재 ${Math.round(overspeed.speedKmh ?? 0)}km/h / 제한 ${Math.round(overspeed.speedLimitKmh)}km/h\n\n즉시 감속해 주세요.`
     );
   }, [snapshot.alerts]);
 
@@ -117,7 +132,7 @@ export default function MapScreen() {
   }
 
   return (
-    <RebuildScreen title="위치" actionLabel="새로고침" onAction={() => void loadLocation()}>
+    <RebuildScreen title="속도" actionLabel="새로고침" onAction={() => void loadLocation()}>
       {isLoading ? (
         <LoadingCard label="위치 데이터를 불러오는 중" />
       ) : errorMessage ? (

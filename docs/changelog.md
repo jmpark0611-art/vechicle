@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-17 speed tab live overspeed alert
+
+- Renamed the commander `위치` tab and screen title to `속도`.
+- Speed tab now refreshes the location snapshot every 10 seconds while open, so saved speed zones can raise overspeed warnings without manual refresh.
+- Overspeed warnings now use a stronger vibration pattern plus the Android system alert dialog. A forced custom warning sound still requires adding and validating a native audio/notification module.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 stronger diagnosis compact layout
 
 - Diagnosis detail no longer uses an empty `SectionCard` title area; it now renders as a custom compact panel.

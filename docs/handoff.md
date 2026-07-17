@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 speed tab live overspeed alert:
+  - Commander `위치` tab/screen has been renamed to `속도`.
+  - `app/(tabs)/map.tsx` polls `fetchLocationSnapshot()` every 10 seconds while the speed screen is mounted, so overspeed alerts do not depend on manual refresh.
+  - Overspeed alerts now trigger a stronger `Vibration` pattern and an Android system `Alert`. There is no dedicated audio module in the app right now; a guaranteed custom warning sound would require adding and validating a native module such as Expo audio/notifications in a separate APK build.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 stronger diagnosis compact layout:
   - Replaced the selected-vehicle `SectionCard title=""` wrapper with a custom `diagnosisPanel` to remove the leftover blank title area.
   - ECU cards now use a lower 96px min-height; maintenance cards use a separate 116px min-height for the action button.
