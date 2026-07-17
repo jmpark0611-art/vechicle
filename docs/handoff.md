@@ -337,6 +337,15 @@ npm.cmd run health
 - Important product note: ELM327/OBD does not reliably expose dashboard total odometer through a standard PID. For now, durable automatic reflection means app-recorded trip odometer values, not direct cluster odometer reading.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 handoff: driver active screen fill fix
+
+- User reported the active/completion driver screens still looked clustered at the top with a large lower blank area.
+- Implemented a stronger fill fix in `app/(tabs)/index.tsx`:
+  - active trip card min height increased to near full screen,
+  - added `tripFlexibleSpace` before the cancel/end action row,
+  - completion summary wrapper now uses a larger min height and `justifyContent: 'space-between'`.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 handoff: missed layout fixes
 
 - User reported the previous APK still showed:

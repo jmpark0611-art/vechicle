@@ -487,6 +487,7 @@ export default function TripScreen() {
               {activeStartOdometer !== null ? `${Math.round(activeStartOdometer).toLocaleString('ko-KR')}km + GPS 이동거리` : 'OBD/GPS 기준 자동 저장'}
             </Text>
           </View>
+          <View style={styles.tripFlexibleSpace} />
           <View style={styles.actionRow}>
             <Pressable style={styles.cancelBtnWide} onPress={() => void handleCancelTrip(activeTrip)} disabled={isSaving}>
               <Text style={styles.cancelBtnText}>취소</Text>
@@ -655,9 +656,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   tripCardActive: {
-    minHeight: Math.max(620, SCREEN_HEIGHT - 126),
+    minHeight: Math.max(720, SCREEN_HEIGHT - 72),
     justifyContent: 'flex-start',
   },
+  tripFlexibleSpace: { flex: 1, minHeight: 18 },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -812,5 +814,5 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   startBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
-  completionWrap: { minHeight: Math.max(620, SCREEN_HEIGHT - 126) },
+  completionWrap: { minHeight: Math.max(720, SCREEN_HEIGHT - 72), justifyContent: 'space-between' },
 });
