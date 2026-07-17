@@ -72,6 +72,26 @@ function fuelEventText(events: FuelEvent[], vehicleId: string | null) {
     .join(' / ');
 }
 
+function csvCell(value: unknown) {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`;
+}
+
+function dailyDocumentDate(value: string | null) {
+  if (!value) return '날짜 없음';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function groupTripsByDay(trips: TripSummary[]) {
+  const grouped = new Map<string, TripSummary[]>();
+  for (const trip of trips) {
+    const key = dailyDocumentDate(trip.startTime);
+    grouped.set(key, [...(grouped.get(key) ?? []), trip]);
+  }
+  return Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b));
+}
+
 export default function RecordsScreen() {
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
@@ -156,16 +176,22 @@ export default function RecordsScreen() {
     }
 
     const rows = [
-      '\uFEFF월장비운행증 엑셀 내보내기',
+      '\uFEFF월장비운행증 일일 작성 문서',
       `기간,${exportFrom},${exportTo}`,
-      '차량번호,상태,출발,도착,출발지,목적지,운행목적,운행자,사용자,계기판총주행거리,계기판운행거리,실제이동거리,소모유류,OBD연료,주유추정',
-      ...exportRows.map((trip) => {
+      '',
+    ];
+
+    for (const [day, dayTrips] of groupTripsByDay(exportRows)) {
+      rows.push(`작성일자,${day}`);
+      rows.push('차량번호,상태,출발시각,도착시각,출발지,목적지,운행목적,운행자,사용자,계기판 총 주행거리,계기판 운행거리,실제 이동거리,소모한 유류,OBD 연료,주유추정');
+
+      for (const trip of dayTrips) {
         const fuel = trip.vehicleId && obdSnapshot[trip.vehicleId]?.fuelPercent !== null && obdSnapshot[trip.vehicleId]?.fuelPercent !== undefined
           ? `${obdSnapshot[trip.vehicleId].fuelPercent}%`
           : '';
         const operator = [trip.operatorRank, trip.operatorName].filter(Boolean).join(' ');
         const user = [trip.userRank, trip.userName].filter(Boolean).join(' ');
-        return [
+        rows.push([
           trip.vehicleNumber,
           statusLabel(trip.status),
           formatTripTime(trip.startTime),
@@ -181,9 +207,22 @@ export default function RecordsScreen() {
           fuelUsageLabel(tripFuelUsage, trip.id),
           fuel,
           fuelEventText(fuelEvents, trip.vehicleId),
-        ].map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',');
-      }),
-    ];
+        ].map(csvCell).join(','));
+      }
+
+      const dayOdometerKm = dayTrips.reduce((sum, trip) => {
+        const value = trip.dailyKm ?? (
+          trip.startOdometer !== null && trip.endOdometer !== null && trip.endOdometer >= trip.startOdometer
+            ? trip.endOdometer - trip.startOdometer
+            : 0
+        );
+        return sum + Math.max(0, value ?? 0);
+      }, 0);
+      const dayGpsKm = dayTrips.reduce((sum, trip) => sum + (gpsDistances[trip.id] ?? 0), 0);
+      rows.push(`일일합계,운행 ${dayTrips.length}건,계기판 운행거리 ${Math.round(dayOdometerKm).toLocaleString('ko-KR')}km,실제 이동거리 ${Math.round(dayGpsKm * 10) / 10}km`);
+      rows.push('');
+    }
+
     await Share.share({
       title: '월장비운행증 엑셀 내보내기',
       message: rows.join('\n'),
@@ -220,6 +259,24 @@ export default function RecordsScreen() {
               <Text style={styles.routeText} numberOfLines={1}>
                 {trip.startPlace ?? '-'} → {trip.endPlace ?? '-'}
               </Text>
+              <View style={styles.tripMetricGrid}>
+                <View style={styles.tripMetric}>
+                  <Text style={styles.tripMetricLabel}>계기판 총</Text>
+                  <Text style={styles.tripMetricValue}>{totalOdometer(trip)}</Text>
+                </View>
+                <View style={styles.tripMetric}>
+                  <Text style={styles.tripMetricLabel}>계기판 운행</Text>
+                  <Text style={styles.tripMetricValue}>{tripDistance(trip)}</Text>
+                </View>
+                <View style={styles.tripMetric}>
+                  <Text style={styles.tripMetricLabel}>실제 이동</Text>
+                  <Text style={styles.tripMetricValue}>{gpsDistanceLabel(gpsDistances, trip.id)}</Text>
+                </View>
+                <View style={styles.tripMetric}>
+                  <Text style={styles.tripMetricLabel}>소모 유류</Text>
+                  <Text style={styles.tripMetricValue}>{fuelUsageLabel(tripFuelUsage, trip.id)}</Text>
+                </View>
+              </View>
             </SectionCard>
           </Pressable>
         ))
@@ -299,6 +356,23 @@ const styles = StyleSheet.create({
   },
   exportBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
   routeText: { color: '#52607D', fontSize: 14, fontWeight: '800', marginTop: 10 },
+  tripMetricGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  tripMetric: {
+    width: '48%',
+    minHeight: 54,
+    borderRadius: 14,
+    backgroundColor: '#F6F8FF',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    justifyContent: 'center',
+  },
+  tripMetricLabel: { color: '#7180A3', fontSize: 11, fontWeight: '900' },
+  tripMetricValue: { color: '#222B45', fontSize: 15, fontWeight: '900', marginTop: 3 },
   modalDim: { flex: 1, backgroundColor: 'rgba(80,88,120,0.36)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   detailModal: { width: '100%', borderRadius: 18, backgroundColor: '#FFFDFB', padding: 18 },
   modalTitle: { color: '#222B45', fontSize: 20, fontWeight: '900' },

@@ -600,6 +600,12 @@
 - Rewrote the 운행 and 기록 screen copy back to clean Korean in the touched files.
 - Simplified shared card styling in `components/rebuild-screen.tsx` to reduce the busy rounded-card look.
 - Verification passed with `npm.cmd run verify`.
+## 2026-07-18 monthly log daily export
+
+- Records cards now show monthly-log metrics directly: odometer total, odometer trip distance, GPS actual distance, and fuel used.
+- Monthly equipment operation export now outputs a daily document structure by trip date, with a per-day total row for trip count, odometer trip distance, and actual GPS distance.
+- The export keeps the period popup and Excel-compatible CSV sharing behavior.
+
 ## 2026-07-18 cleanup audit
 
 - Documented the pending Supabase schema migration as a must-remind item for later.

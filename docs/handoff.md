@@ -513,6 +513,19 @@ npm.cmd run health
   - Apply the same `VehicleDropdown` pattern anywhere else that asks for a vehicle selection.
   - Keep the tab count small; prefer improving the existing 기록 screen over reintroducing 월장비운행증 as a separate tab.
   - Device-test APK after GitHub Actions finishes, especially tab navigation and trip start/end.
+## 2026-07-18 handoff: monthly log daily export
+
+- User said the requested 월장비운행증 changes were not reflected.
+- Updated `app/(tabs)/explore.tsx` records cards to show the fields the user asked for without opening the popup:
+  - `계기판 총`
+  - `계기판 운행`
+  - `실제 이동`
+  - `소모 유류`
+- Updated 월장비운행증 export to keep the period popup but generate Excel-compatible CSV as daily document sections:
+  - `작성일자` section per trip day.
+  - Daily trip rows include vehicle, route, purpose, operator/user, odometer total, odometer trip distance, GPS actual distance, fuel used, OBD fuel, and inferred refuel notes.
+  - Each day ends with an `일일합계` row.
+
 ## 2026-07-18 cleanup / DB reminder
 
 - Remember to tell the user later: the Supabase schema migration still must be applied manually or through an authenticated Supabase connection.
