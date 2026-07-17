@@ -337,6 +337,20 @@ npm.cmd run health
 - Important product note: ELM327/OBD does not reliably expose dashboard total odometer through a standard PID. For now, durable automatic reflection means app-recorded trip odometer values, not direct cluster odometer reading.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 handoff: compact mobile layout pass
+
+- Current branch: `claude/env-permissions-session-restart-154onb`.
+- User feedback: mode selection cards should be taller; driver mode should not show the bottom 운행 tab; active/completion driver screens, speed tab, and diagnosis tab should minimize lower whitespace and fit more on one phone screen.
+- Implemented:
+  - Driver mode tab bar is hidden via `app/(tabs)/_layout.tsx`.
+  - `components/rebuild-screen.tsx` now accepts `bottomSpace="none" | "compact" | "tab"`.
+  - Driver trip screen uses `bottomSpace="none"` and tighter active/completion card spacing.
+  - Speed and diagnosis screens use `bottomSpace="compact"`.
+  - Speed screen removes the lower refresh action, reduces map/input heights, and limits the visible zone preview to two items plus a count.
+  - Diagnosis screen removes the lower refresh action and lowers ECU card height.
+  - Role select mode cards are taller with right-side role badges (`운전자용`, `관리자용`).
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-15 handoff: active trip button flow
 
 - Driver trip screen now branches by active-trip state.

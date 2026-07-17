@@ -34,6 +34,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: ACTIVE,
         tabBarInactiveTintColor: MUTED,
         tabBarStyle: {
+          display: isDriver ? 'none' : 'flex',
           position: 'absolute',
           left: 16,
           right: 16,

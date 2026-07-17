@@ -235,7 +235,7 @@ export default function VehiclesScreen() {
       ]
     : [];
   return (
-    <RebuildScreen title="진단" actionLabel="새로고침" onAction={() => void loadVehicles()}>
+    <RebuildScreen title="진단" bottomSpace="compact">
       <View style={styles.topActionRow}>
         <Pressable style={styles.registerOpenBtn} onPress={() => setIsRegisterOpen(true)}>
           <Text style={styles.registerOpenText}>차량 등록</Text>
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   topActionRow: {
     alignItems: 'flex-end',
     marginTop: -48,
-    marginBottom: 18,
+    marginBottom: 12,
     paddingRight: 2,
   },
   registerOpenBtn: {
@@ -351,8 +351,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#E8EAF7',
-    padding: 12,
-    marginBottom: 10,
+    padding: 10,
+    marginBottom: 8,
     shadowColor: '#B0B8D8',
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   ecuStatusBar: {
-    minHeight: 58,
+    minHeight: 50,
     borderRadius: 16,
     backgroundColor: '#EEF4FF',
     borderWidth: 1,
@@ -372,26 +372,26 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   ecuStatusLabel: { color: '#52607D', fontSize: 12, fontWeight: '900' },
-  ecuStatusValue: { color: '#1E2946', fontSize: 22, fontWeight: '900', marginTop: 3 },
+  ecuStatusValue: { color: '#1E2946', fontSize: 20, fontWeight: '900', marginTop: 2 },
   ecuStatusMeta: { alignItems: 'flex-end', gap: 4 },
   ecuStatusMetaText: { color: '#4F6AE6', fontSize: 12, fontWeight: '900' },
-  groupTitle: { fontSize: 17, fontWeight: '900', marginTop: 18, marginBottom: 3, letterSpacing: 0 },
+  groupTitle: { fontSize: 17, fontWeight: '900', marginTop: 12, marginBottom: 2, letterSpacing: 0 },
   ecuGroupTitle: { color: '#3158E8' },
   partsGroupTitle: { color: '#13866F' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 7 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 6 },
   ecuCard: {
     width: '48%',
-    minHeight: 96,
+    minHeight: 76,
     borderRadius: 15,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.72)',
-    padding: 10,
+    padding: 9,
     justifyContent: 'space-between',
   },
   squareCardBad: { borderColor: '#FFC6C6', backgroundColor: '#FFEAEA' },
   squareCardWarn: { borderColor: '#FFE2A8' },
-  cardTitle: { color: '#52607D', fontSize: 12, fontWeight: '900' },
-  cardValue: { color: '#222B45', fontSize: 17, fontWeight: '900', lineHeight: 20 },
+  cardTitle: { color: '#52607D', fontSize: 11, fontWeight: '900' },
+  cardValue: { color: '#222B45', fontSize: 15, fontWeight: '900', lineHeight: 18 },
   cardDetail: { color: '#7180A3', fontSize: 10, fontWeight: '800' },
   modalDim: { flex: 1, backgroundColor: 'rgba(80,88,120,0.36)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   registerModal: { width: '100%', borderRadius: 18, backgroundColor: '#FFFDFB', padding: 18 },

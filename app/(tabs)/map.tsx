@@ -132,7 +132,7 @@ export default function MapScreen() {
   }
 
   return (
-    <RebuildScreen title="속도" actionLabel="새로고침" onAction={() => void loadLocation()}>
+    <RebuildScreen title="속도" bottomSpace="compact">
       {isLoading ? (
         <LoadingCard label="위치 데이터를 불러오는 중" />
       ) : errorMessage ? (
@@ -174,7 +174,7 @@ export default function MapScreen() {
             {snapshot.zones.length === 0 ? (
               <StatusLine label="상태" value="등록 구역 없음" />
             ) : (
-              snapshot.zones.map((zone) => (
+              snapshot.zones.slice(0, 2).map((zone) => (
                 <View key={zone.id} style={styles.listItem}>
                   <Text style={styles.listTitle}>{zone.name}</Text>
                   <StatusLine label="방식" value={zone.zoneKind === 'polygon' ? `면적 ${zone.polygonPoints.length}점` : '기존 원형'} />
@@ -182,6 +182,7 @@ export default function MapScreen() {
                 </View>
               ))
             )}
+            {snapshot.zones.length > 2 ? <Text style={styles.moreText}>외 {snapshot.zones.length - 2}개 구역 저장됨</Text> : null}
           </SectionCard>
 
           <Modal visible={isPickerOpen} animationType="slide" onRequestClose={() => setIsPickerOpen(false)}>
@@ -215,10 +216,10 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  map: { height: 260, borderRadius: 8, marginBottom: 14 },
+  map: { height: 196, borderRadius: 14, marginBottom: 10 },
   zoneInputRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   input: {
-    minHeight: 50,
+    minHeight: 44,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -230,10 +231,10 @@ const styles = StyleSheet.create({
   },
   zoneNameInput: { flex: 1.5 },
   zoneLimitInput: { flex: 0.8 },
-  draftToolbar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  draftToolbar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 9 },
   draftCount: { flex: 1, color: '#0F172A', fontSize: 14, fontWeight: '900' },
   smallButton: {
-    minHeight: 36,
+    minHeight: 34,
     borderRadius: 10,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
@@ -242,17 +243,18 @@ const styles = StyleSheet.create({
   },
   smallButtonText: { color: '#334155', fontSize: 12, fontWeight: '900' },
   mapPickBtn: {
-    minHeight: 48,
+    minHeight: 42,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
+    marginTop: 9,
   },
   mapPickBtnText: { color: '#2563EB', fontSize: 14, fontWeight: '900' },
-  listItem: { borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 14, marginTop: 14 },
-  listTitle: { color: '#0F172A', fontSize: 16, fontWeight: '900' },
+  listItem: { borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 9, marginTop: 9 },
+  listTitle: { color: '#0F172A', fontSize: 15, fontWeight: '900' },
+  moreText: { color: '#64748B', fontSize: 12, fontWeight: '800', marginTop: 8 },
   modalRoot: { flex: 1, backgroundColor: '#F8FAFC' },
   modalHeader: {
     minHeight: 86,

@@ -15,17 +15,19 @@ type RebuildScreenProps = PropsWithChildren<{
   actionLabel?: string;
   onAction?: () => void;
   onSettings?: () => void;
+  bottomSpace?: 'tab' | 'compact' | 'none';
 }>;
 
-export function RebuildScreen({ title, subtitle, metrics = [], actionLabel, onAction, children }: RebuildScreenProps) {
+export function RebuildScreen({ title, subtitle, metrics = [], actionLabel, onAction, children, bottomSpace = 'tab' }: RebuildScreenProps) {
   const insets = useSafeAreaInsets();
-  const tabBarSpace = insets.bottom + 68;
+  const footerSpace =
+    bottomSpace === 'none' ? insets.bottom + 10 : bottomSpace === 'compact' ? insets.bottom + 54 : insets.bottom + 68;
 
   return (
     <View style={styles.screen}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: tabBarSpace }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: footerSpace }]}
         showsVerticalScrollIndicator={false}>
 
         <View style={styles.header}>

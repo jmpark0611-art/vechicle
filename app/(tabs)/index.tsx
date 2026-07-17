@@ -433,7 +433,7 @@ export default function TripScreen() {
   const activeStartOdometer = activeTrip?.startOdometer ?? selectedCurrentKm;
 
   return (
-    <RebuildScreen title="운행">
+    <RebuildScreen title="운행" bottomSpace="none">
       {isLoading ? (
         <LoadingCard label="운행 데이터를 불러오는 중" />
       ) : errorMessage ? (
@@ -649,8 +649,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFDFB',
     borderWidth: 1,
     borderColor: '#E8EAF7',
-    padding: 18,
-    marginBottom: 10,
+    padding: 14,
+    marginBottom: 6,
   },
   liveBadge: {
     flexDirection: 'row',
@@ -664,30 +664,30 @@ const styles = StyleSheet.create({
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#16A34A' },
   liveBadgeText: { color: '#047857', fontSize: 11, fontWeight: '900' },
   routePanel: {
-    minHeight: 58,
+    minHeight: 50,
     borderRadius: 18,
     backgroundColor: '#F6F8FE',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 14,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   routePoint: { color: '#1E2946', fontSize: 15, fontWeight: '900', flex: 1 },
   routeArrow: { color: '#7B86A8', fontSize: 18, fontWeight: '900', marginHorizontal: 10 },
-  statRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-  statCard: { flex: 1, borderRadius: 16, backgroundColor: '#F6F8FE', padding: 12 },
-  statLabel: { color: '#7B86A8', fontSize: 11, fontWeight: '900', marginBottom: 5 },
+  statRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  statCard: { flex: 1, borderRadius: 15, backgroundColor: '#F6F8FE', padding: 10 },
+  statLabel: { color: '#7B86A8', fontSize: 10, fontWeight: '900', marginBottom: 4 },
   statValue: { color: '#1E2946', fontSize: 13, fontWeight: '900' },
   obdStrip: {
-    minHeight: 42,
+    minHeight: 38,
     borderRadius: 15,
     backgroundColor: '#EFF6FF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    marginTop: 8,
+    marginTop: 5,
   },
   compactStatus: {
     minHeight: 34,
@@ -700,12 +700,12 @@ const styles = StyleSheet.create({
     marginTop: 7,
   },
   autoOdoBox: {
-    minHeight: 48,
+    minHeight: 42,
     borderRadius: 15,
     backgroundColor: '#F6F8FE',
     paddingHorizontal: 12,
     paddingVertical: 9,
-    marginTop: 10,
+    marginTop: 8,
   },
   autoOdoLabel: { color: '#7B86A8', fontSize: 12, fontWeight: '900', marginBottom: 3 },
   autoOdoValue: { color: '#1E2946', fontSize: 13, fontWeight: '900' },
@@ -714,11 +714,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0FDF8',
     borderWidth: 1,
     borderColor: '#CFF4E3',
-    padding: 15,
-    marginBottom: 10,
+    padding: 12,
+    marginBottom: 8,
   },
-  thanksTitle: { color: '#047857', fontSize: 18, fontWeight: '900' },
-  thanksSub: { color: '#588674', fontSize: 12, fontWeight: '900', marginTop: 4, marginBottom: 8 },
+  thanksTitle: { color: '#047857', fontSize: 17, fontWeight: '900' },
+  thanksSub: { color: '#588674', fontSize: 11, fontWeight: '900', marginTop: 3, marginBottom: 6 },
   summaryLine: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -726,11 +726,11 @@ const styles = StyleSheet.create({
     gap: 10,
     borderTopWidth: 1,
     borderTopColor: '#DDF7EB',
-    paddingTop: 7,
-    marginTop: 7,
+    paddingTop: 6,
+    marginTop: 6,
   },
-  summaryKey: { color: '#588674', fontSize: 11, fontWeight: '900', flexShrink: 0 },
-  summaryVal: { color: '#163B31', fontSize: 12, fontWeight: '900', flex: 1, textAlign: 'right' },
+  summaryKey: { color: '#588674', fontSize: 10, fontWeight: '900', flexShrink: 0 },
+  summaryVal: { color: '#163B31', fontSize: 11, fontWeight: '900', flex: 1, textAlign: 'right' },
   obdStripLabel: { color: '#52607D', fontSize: 12, fontWeight: '900' },
   obdStripValue: { color: '#1D4ED8', fontSize: 12, fontWeight: '900', flexShrink: 1, textAlign: 'right' },
   input: {

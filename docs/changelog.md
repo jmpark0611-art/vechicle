@@ -481,6 +481,16 @@
 - Note: standard OBD generally does not expose dashboard total odometer reliably; the app uses recorded trip odometer values as the durable source.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 compact mobile layout pass
+
+- Driver mode now hides the bottom tab bar completely instead of showing a single 운행 tab.
+- Shared `RebuildScreen` supports compact/no bottom spacing so driver, speed, and diagnosis screens waste less vertical space.
+- Role selection cards are taller and now place `운전자용` / `관리자용` badges to the right of each mode title.
+- Driver active-trip and completion-summary cards were tightened to reduce the large empty lower area.
+- Speed tab layout was compressed: smaller map, tighter inputs, no extra refresh button, and the zone list now previews only the first two zones with a remainder count.
+- Diagnosis tab layout was compressed: removed the extra bottom refresh button and reduced ECU card height.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-15 active trip button flow
 
 - Driver trip screen now has a clear active/inactive split.

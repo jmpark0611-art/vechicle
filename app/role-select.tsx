@@ -32,7 +32,10 @@ export default function RoleSelectScreen() {
           <Text style={styles.cardIconText}>▶️</Text>
         </View>
         <View style={styles.cardCopy}>
-          <Text style={styles.cardTitle}>운행 모드</Text>
+          <View style={styles.cardTitleRow}>
+            <Text style={styles.cardTitle}>운행 모드</Text>
+            <Text style={styles.roleBadge}>운전자용</Text>
+          </View>
           <Text style={styles.cardDesc}>운전자용 · 운행 시작과 종료</Text>
         </View>
       </Pressable>
@@ -42,7 +45,10 @@ export default function RoleSelectScreen() {
           <Text style={styles.cardIconText}>🛠️</Text>
         </View>
         <View style={styles.cardCopy}>
-          <Text style={styles.cardTitle}>수송부 모드</Text>
+          <View style={styles.cardTitleRow}>
+            <Text style={styles.cardTitle}>수송부 모드</Text>
+            <Text style={[styles.roleBadge, styles.commanderBadge]}>관리자용</Text>
+          </View>
           <Text style={styles.cardDesc}>관리자용 · 기록, 진단, 위치, 점검</Text>
         </View>
       </Pressable>
@@ -82,7 +88,7 @@ const styles = StyleSheet.create({
   title: { color: '#1E2946', fontSize: 25, fontWeight: '900', textAlign: 'center', marginTop: 2 },
   subtitle: { color: '#7180A3', fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 14 },
   card: {
-    minHeight: 128,
+    minHeight: 154,
     backgroundColor: '#FFFDFB',
     borderRadius: 24,
     borderWidth: 1,
@@ -110,6 +116,18 @@ const styles = StyleSheet.create({
   commanderIcon: { backgroundColor: '#EAFBF4' },
   cardIconText: { fontSize: 25 },
   cardCopy: { flex: 1, minWidth: 0 },
-  cardTitle: { color: '#1E2946', fontSize: 18, fontWeight: '900', marginBottom: 5 },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
+  cardTitle: { color: '#1E2946', fontSize: 20, fontWeight: '900', flexShrink: 0 },
+  roleBadge: {
+    color: '#3158E8',
+    fontSize: 12,
+    fontWeight: '900',
+    backgroundColor: '#EDF4FF',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    overflow: 'hidden',
+  },
+  commanderBadge: { color: '#13866F', backgroundColor: '#EAFBF4' },
   cardDesc: { color: '#7180A3', fontSize: 13, fontWeight: '700', lineHeight: 18 },
 });
