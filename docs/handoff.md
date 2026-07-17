@@ -337,6 +337,18 @@ npm.cmd run health
 - Important product note: ELM327/OBD does not reliably expose dashboard total odometer through a standard PID. For now, durable automatic reflection means app-recorded trip odometer values, not direct cluster odometer reading.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 handoff: internal driver card sizing
+
+- User clarified the issue: the outer active-trip card was enlarged, but the inner cards stayed short, creating empty white space.
+- Implemented in `app/(tabs)/index.tsx`:
+  - route panel min height increased,
+  - stat cards min height increased,
+  - OBD strip min height increased,
+  - auto-odometer panel min height increased,
+  - active-trip flexible spacer no longer consumes the remaining blank area,
+  - completion green summary card uses `flex: 1` and each summary row has a larger min height.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 handoff: larger driver and maintenance cards
 
 - User clarified the recent request was not just "fit more"; for the relevant screenshots the desired fix is larger text and taller cards.

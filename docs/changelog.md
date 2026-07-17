@@ -481,6 +481,14 @@
 - Note: standard OBD generally does not expose dashboard total odometer reliably; the app uses recorded trip odometer values as the durable source.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 internal driver card sizing
+
+- Fixed the previous driver layout mistake where only the outer card grew while the inner cards stayed short.
+- Active trip inner sections are now taller: route panel, stat cards, OBD strip, and auto-odometer panel all have larger vertical height.
+- Removed the oversized flexible blank spacer from the active trip card so the screen is filled by real content cards instead of empty space.
+- Completion summary green card now stretches vertically, and each summary row has a larger minimum height.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 larger driver and maintenance cards
 
 - Rechecked the recent user screenshots against the code.
