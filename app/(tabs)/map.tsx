@@ -73,11 +73,6 @@ export default function MapScreen() {
     setMapDraftRevision((current) => current + 1);
   }
 
-  function undoPolygonPoint() {
-    updatePolygonPoints(polygonPointsRef.current.slice(0, -1));
-    setMapDraftRevision((current) => current + 1);
-  }
-
   async function handleCreateZone() {
     const speedLimitKmh = Number(zoneLimit.trim());
 
@@ -129,33 +124,32 @@ export default function MapScreen() {
         <>
           <VehicleMap html={previewMapHtml} style={styles.map} />
 
-          <SectionCard title="속도구역 등록" body="큰 지도에서 경계점을 찍고 하단의 구역 저장 버튼을 누르세요.">
-            <TextInput
-              style={styles.input}
-              value={zoneName}
-              onChangeText={setZoneName}
-              placeholder="예: 본부대 정문"
-              placeholderTextColor="#94A3B8"
-            />
-            <TextInput
-              style={styles.input}
-              value={zoneLimit}
-              onChangeText={setZoneLimit}
-              placeholder="제한 km/h"
-              placeholderTextColor="#94A3B8"
-              keyboardType="number-pad"
-            />
+          <SectionCard title="속도구역 등록" body="구역명과 제한속도를 입력한 뒤 큰 지도에서 경계점을 찍으세요.">
+            <View style={styles.zoneInputRow}>
+              <TextInput
+                style={[styles.input, styles.zoneNameInput]}
+                value={zoneName}
+                onChangeText={setZoneName}
+                placeholder="구역명"
+                placeholderTextColor="#94A3B8"
+              />
+              <TextInput
+                style={[styles.input, styles.zoneLimitInput]}
+                value={zoneLimit}
+                onChangeText={setZoneLimit}
+                placeholder="km/h"
+                placeholderTextColor="#94A3B8"
+                keyboardType="number-pad"
+              />
+            </View>
             <View style={styles.draftToolbar}>
               <Text style={styles.draftCount}>꼭짓점 {polygonPoints.length}개</Text>
-              <Pressable style={styles.smallButton} onPress={undoPolygonPoint} disabled={polygonPoints.length === 0}>
-                <Text style={styles.smallButtonText}>되돌리기</Text>
-              </Pressable>
               <Pressable style={styles.smallButton} onPress={resetDraft}>
                 <Text style={styles.smallButtonText}>초기화</Text>
               </Pressable>
             </View>
             <Pressable style={styles.mapPickBtn} onPress={() => setIsPickerOpen(true)}>
-              <Text style={styles.mapPickBtnText}>큰 지도에서 구역 설정</Text>
+              <Text style={styles.mapPickBtnText}>구역 설정</Text>
             </Pressable>
           </SectionCard>
 
@@ -185,12 +179,9 @@ export default function MapScreen() {
                 </Pressable>
               </View>
 
-              <VehicleMap html={pickerMapHtml} style={styles.fullMap} onPolygonChange={updatePolygonPoints} />
+              <VehicleMap key={mapDraftRevision} html={pickerMapHtml} style={styles.fullMap} onPolygonChange={updatePolygonPoints} />
 
               <View style={styles.modalFooter}>
-                <Pressable style={styles.footerButton} onPress={undoPolygonPoint} disabled={polygonPoints.length === 0}>
-                  <Text style={styles.footerButtonText}>되돌리기</Text>
-                </Pressable>
                 <Pressable style={styles.footerButton} onPress={resetDraft}>
                   <Text style={styles.footerButtonText}>초기화</Text>
                 </Pressable>
@@ -208,6 +199,7 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
   map: { height: 260, borderRadius: 8, marginBottom: 14 },
+  zoneInputRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   input: {
     minHeight: 50,
     borderRadius: 12,
@@ -218,8 +210,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     paddingHorizontal: 14,
-    marginTop: 10,
   },
+  zoneNameInput: { flex: 1.5 },
+  zoneLimitInput: { flex: 0.8 },
   draftToolbar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
   draftCount: { flex: 1, color: '#0F172A', fontSize: 14, fontWeight: '900' },
   smallButton: {

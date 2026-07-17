@@ -20,7 +20,7 @@ export default function CommanderPinScreen() {
     const ok = await verifyPin(next);
     if (ok) {
       await setStoredRole('commander');
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/explore');
     } else {
       setShaking(true);
       setInput('');

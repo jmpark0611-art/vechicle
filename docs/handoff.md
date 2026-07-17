@@ -3,6 +3,13 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 tab header/location polish:
+  - `components/rebuild-screen.tsx` now renders a small icon pill header across tabs and makes the `운전자/수송부` role pill open mode settings; the old separate gear/radar-looking button is removed.
+  - Trip primary action no longer uses `marginTop: 'auto'`, reducing the large blank space above the tab bar.
+  - Commander PIN success routes to `/(tabs)/explore`, and `app/(tabs)/index.tsx` redirects commanders away from the trip screen if a cached route opens it.
+  - Location speed-zone form uses a one-line zone name/speed-limit input row, button text `구역 설정`, no undo buttons, and remounts the full map on reset so vertices clear reliably.
+  - Records currently show odometer total, odometer trip distance, GPS actual distance, OBD fuel percentage, and inferred refuel events in the detail popup/export; exact consumed-fuel quantity still depends on reliable OBD fuel-use PID support.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 speed-zone integer save fix:
   - User reported polygon zone save failing with `invalid input syntax for type integer: "470.8712088862511"`.
   - `lib/location-data.ts` now rounds computed polygon radius meters and speed-limit values before inserting into `speed_zones`, so deployed Supabase tables with integer columns accept the save.

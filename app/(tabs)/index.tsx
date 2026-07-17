@@ -144,7 +144,10 @@ export default function TripScreen() {
         setSavedBleDeviceName(device.name);
       }
     });
-    void getStoredRole().then(setRole);
+    void getStoredRole().then((nextRole) => {
+      setRole(nextRole);
+      if (nextRole === 'commander') router.replace('/(tabs)/explore');
+    });
   }, []);
 
   useEffect(() => {
@@ -295,7 +298,6 @@ export default function TripScreen() {
     <RebuildScreen
       title="운행"
       roleLabel={roleLabel}
-      onSettings={() => router.push('/mode-settings' as never)}
       actionLabel={isSaving ? '저장 중' : activeTrip ? '운행 종료' : '운행 시작'}
       onAction={handlePrimaryAction}>
       {isLoading ? (

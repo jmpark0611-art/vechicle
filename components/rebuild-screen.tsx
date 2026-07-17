@@ -1,6 +1,9 @@
-import { PropsWithChildren } from 'react';
+import { router } from 'expo-router';
+import { PropsWithChildren, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { getStoredRole, type AppRole } from '@/lib/role';
 
 type Metric = {
   label: string;
@@ -20,6 +23,25 @@ type RebuildScreenProps = PropsWithChildren<{
 export function RebuildScreen({ title, subtitle, roleLabel, metrics = [], actionLabel, onAction, onSettings, children }: RebuildScreenProps) {
   const insets = useSafeAreaInsets();
   const tabBarSpace = insets.bottom + 68;
+  const [storedRole, setStoredRole] = useState<AppRole | null>(null);
+  const resolvedRoleLabel = roleLabel ?? (storedRole === 'commander' ? '수송부' : storedRole === 'driver' ? '운전자' : undefined);
+  const titleIcon = useMemo(() => {
+    if (title === '운행') return '▶';
+    if (title === '기록') return '☰';
+    if (title === '진단') return '▣';
+    if (title === '위치') return '⌖';
+    if (title === '점검') return '✓';
+    return '•';
+  }, [title]);
+
+  useEffect(() => {
+    void getStoredRole().then(setStoredRole);
+  }, []);
+
+  function openModeSettings() {
+    if (onSettings) onSettings();
+    else router.push('/mode-settings' as never);
+  }
 
   return (
     <View style={styles.screen}>
@@ -30,18 +52,16 @@ export function RebuildScreen({ title, subtitle, roleLabel, metrics = [], action
 
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.title}>{title}</Text>
+            <View style={styles.titleMark}>
+              <Text style={styles.titleIcon}>{titleIcon}</Text>
+              <Text style={styles.title}>{title}</Text>
+            </View>
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
           </View>
           <View style={styles.headerRight}>
-            {roleLabel ? (
-              <View style={styles.rolePill}>
-                <Text style={styles.rolePillText}>{roleLabel}</Text>
-              </View>
-            ) : null}
-            {onSettings ? (
-              <Pressable style={styles.settingsBtn} onPress={onSettings} hitSlop={12}>
-                <Text style={styles.settingsBtnText}>⚙</Text>
+            {resolvedRoleLabel ? (
+              <Pressable style={styles.rolePill} onPress={openModeSettings} hitSlop={10}>
+                <Text style={styles.rolePillText}>{resolvedRoleLabel}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -113,9 +133,38 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     marginBottom: 8,
   },
-  headerLeft: { flex: 1 },
+  headerLeft: { flex: 1, minWidth: 0 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { color: '#536079', fontSize: 13, fontWeight: '900', letterSpacing: 0 },
+  titleMark: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFDFB',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E8EAF7',
+    paddingLeft: 6,
+    paddingRight: 12,
+    paddingVertical: 5,
+    shadowColor: '#B0B8D8',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  titleIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#EDF2FF',
+    color: '#4F6AE6',
+    fontSize: 13,
+    fontWeight: '900',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  title: { color: '#24304F', fontSize: 13, fontWeight: '900', letterSpacing: 0 },
   subtitle: { color: '#7180A3', fontSize: 12, fontWeight: '700', marginTop: 3 },
 
   rolePill: {
@@ -127,18 +176,6 @@ const styles = StyleSheet.create({
     borderColor: '#C7D2FE',
   },
   rolePillText: { color: '#4F6AE6', fontSize: 11, fontWeight: '900' },
-
-  settingsBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFDFB',
-    borderWidth: 1,
-    borderColor: '#E2E8F4',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingsBtnText: { fontSize: 16 },
 
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
   metricCard: {
@@ -196,7 +233,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 5 },
     elevation: 3,
-    marginTop: 'auto',
+    marginTop: 8,
   },
   primaryBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
 });

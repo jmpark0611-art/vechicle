@@ -1,5 +1,14 @@
 # 변경 이력
 
+## 2026-07-17 tab header and speed-zone form polish
+
+- Common tab headers now use a compact pill with a small icon mark instead of a plain text title.
+- The role pill opens mode settings directly, and the separate gear/radar-looking button was removed.
+- Commander PIN success now routes directly to the records tab, and the trip screen redirects commanders away if a cached route tries to open it.
+- Trip primary button no longer pushes itself to the bottom of the screen, reducing the large blank area on the trip tab.
+- Location speed-zone form now places zone name and speed limit on one row, renames the map button to `구역 설정`, removes undo buttons, and remounts the large map on reset so cleared vertices disappear reliably.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 speed-zone integer save fix
 
 - Polygon speed-zone save now rounds computed radius meters and speed-limit values before inserting into Supabase.
