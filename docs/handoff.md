@@ -3,6 +3,10 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 speed-zone integer save fix:
+  - User reported polygon zone save failing with `invalid input syntax for type integer: "470.8712088862511"`.
+  - `lib/location-data.ts` now rounds computed polygon radius meters and speed-limit values before inserting into `speed_zones`, so deployed Supabase tables with integer columns accept the save.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 visible UI refresh:
   - Mode selection now uses emoji icons (`🚐`, `▶️`, `🛠️`) instead of Korean letters in icon blocks.
   - Mode cards were visually refreshed with softer pastel surfaces and tighter copy.

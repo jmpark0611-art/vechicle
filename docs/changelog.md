@@ -1,5 +1,11 @@
 # 변경 이력
 
+## 2026-07-17 speed-zone integer save fix
+
+- Polygon speed-zone save now rounds computed radius meters and speed-limit values before inserting into Supabase.
+- This fixes production DBs where `speed_zones.radius_m` or `speed_limit_kmh` are integer columns and rejected decimal values like `470.8712088862511`.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 visible mode UI and trip spacing refresh
 
 - Mode selection screen now uses visual emoji icons instead of Korean letters inside the icon blocks.

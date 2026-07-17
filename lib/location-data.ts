@@ -108,6 +108,11 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+function toPositiveInteger(value: number, fallback = 1) {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(1, Math.round(value));
+}
+
 function distanceMeters(a: ZonePoint, b: ZonePoint) {
   const earthRadiusM = 6_371_000;
   const toRad = (value: number) => (value * Math.PI) / 180;
@@ -313,14 +318,16 @@ export async function createSpeedZone(input: CreateSpeedZoneInput): Promise<{ ok
   const radiusM = zoneKind === 'polygon'
     ? Math.max(1, ...polygonPoints.map((point) => distanceMeters(point, { latitude, longitude })))
     : input.radiusM;
+  const dbRadiusM = toPositiveInteger(radiusM);
+  const dbSpeedLimitKmh = toPositiveInteger(input.speedLimitKmh);
 
   const result = await withRequestTimeout(
     supabase.from('speed_zones').insert({
       name: input.name.trim(),
       latitude,
       longitude,
-      radius_m: radiusM,
-      speed_limit_kmh: input.speedLimitKmh,
+      radius_m: dbRadiusM,
+      speed_limit_kmh: dbSpeedLimitKmh,
       zone_kind: zoneKind,
       polygon_points: zoneKind === 'polygon' ? polygonPoints : null,
     }),
