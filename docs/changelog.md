@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-17 role selection polish and fleet alert tab
+
+- Mode selection first screen now uses the softer title `차량 운행관리`, larger mode cards, and more spacing between the title and mode guidance text.
+- Added a commander-only `알림` tab that gathers all vehicles needing periodic replacement or ECU-based inspection.
+- The new alert tab flags maintenance items within 1,000km/overdue and ECU values outside first-pass thresholds: DTC, coolant temperature, battery voltage, fuel level, engine load, fuel trims, and emissions readiness.
+- `교체완료` updates the replacement baseline, while `점검완료` acknowledges the current ECU value and shows the alert again if a different value is received later.
+
 ## 2026-07-17 VIN and emissions readiness OBD support
 
 - Extended OBD live data with inspection-oriented fields: VIN, readiness summary, DTC count, intake temperature, throttle, engine load, fuel trims, MAP pressure, and oxygen sensor voltage.

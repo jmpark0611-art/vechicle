@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 role selection / fleet alert tab:
+  - `app/role-select.tsx` now presents the app as `차량 운행관리`, with taller mode cards and more breathing room between title and guidance text.
+  - Added commander-only `app/(tabs)/alerts.tsx` and a matching `알림` bottom tab.
+  - The alert tab aggregates all vehicles with periodic replacement due/overdue items and ECU inspection alerts from the latest OBD snapshot.
+  - ECU alert thresholds are first-pass operational rules: DTC > 0, coolant >= 105°C, battery outside 12~15V, fuel <= 15%, engine load >= 90%, short/long fuel trim absolute value >= 20%, and emissions readiness not `준비 완료`.
+  - `교체완료` reuses the existing maintenance baseline save/sync path. `점검완료` stores an acknowledgement fingerprint locally, so the same ECU value is hidden but a changed value appears again.
 - 2026-07-17 VIN / emissions readiness OBD support:
   - `ObdLiveData` and `ObdReading` now include VIN, readiness summary, intake temp, throttle percent, engine load, MAP, short/long fuel trims, oxygen sensor voltage, and DTC count.
   - `lib/obd-ble.native.ts` polls inspection-related PIDs: `0101` readiness/DTC count, `0104`, `0106`, `0107`, `010B`, `010F`, `0111`, `0114`, and `0902` VIN.

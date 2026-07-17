@@ -23,7 +23,7 @@ export default function RoleSelectScreen() {
           <Text style={styles.logoText}>🚐</Text>
         </View>
         <Text style={styles.eyebrow}>Vehicle Operation</Text>
-        <Text style={styles.title}>차량운행시스템</Text>
+        <Text style={styles.title}>차량 운행관리</Text>
         <Text style={styles.subtitle}>사용할 모드를 선택하세요</Text>
       </View>
 
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   },
   hero: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 36,
   },
   logo: {
     width: 72,
@@ -79,16 +79,17 @@ const styles = StyleSheet.create({
   },
   logoText: { fontSize: 34 },
   eyebrow: { color: '#8A96B5', fontSize: 12, fontWeight: '900', marginBottom: 6 },
-  title: { color: '#1E2946', fontSize: 25, fontWeight: '900', textAlign: 'center' },
-  subtitle: { color: '#7180A3', fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 7 },
+  title: { color: '#1E2946', fontSize: 25, fontWeight: '900', textAlign: 'center', marginTop: 2 },
+  subtitle: { color: '#7180A3', fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 14 },
   card: {
-    minHeight: 104,
+    minHeight: 128,
     backgroundColor: '#FFFDFB',
     borderRadius: 24,
     borderWidth: 1,
     borderColor: '#E8EAF7',
-    padding: 18,
-    marginBottom: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
+    marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#A7B0D8',
