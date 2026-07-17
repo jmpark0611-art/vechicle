@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 
 export type MaintenanceKey =
+  | 'engineOilSet'
   | 'engineOil'
   | 'oilFilter'
   | 'airFilter'
@@ -49,10 +50,7 @@ const STORAGE_KEY = 'vehicle-maintenance-v1';
 const REQUEST_TIMEOUT_MS = 8_000;
 
 export const MAINTENANCE_ITEMS: MaintenanceItem[] = [
-  { key: 'engineOil', label: '엔진오일', intervalKm: 10000 },
-  { key: 'oilFilter', label: '오일필터', intervalKm: 10000 },
-  { key: 'airFilter', label: '에어필터', intervalKm: 15000 },
-  { key: 'fuelFilter', label: '연료필터', intervalKm: 30000 },
+  { key: 'engineOilSet', label: '엔진오일 세트', intervalKm: 10000 },
   { key: 'coolant', label: '냉각수', intervalKm: 40000 },
   { key: 'brakeOil', label: '브레이크오일', intervalKm: 40000 },
   { key: 'transmissionOil', label: '미션오일', intervalKm: 60000 },
@@ -64,6 +62,14 @@ export const MAINTENANCE_ITEMS: MaintenanceItem[] = [
   { key: 'sparkPlug', label: '점화플러그', intervalKm: 40000 },
   { key: 'timingBelt', label: '타이밍벨트', intervalKm: 100000 },
 ];
+
+const LEGACY_ENGINE_OIL_SET_KEYS: MaintenanceKey[] = ['engineOil', 'oilFilter', 'airFilter', 'fuelFilter'];
+
+function normalizeMaintenanceKey(value: string | null): MaintenanceKey | null {
+  if (!value) return null;
+  if (LEGACY_ENGINE_OIL_SET_KEYS.includes(value as MaintenanceKey)) return 'engineOilSet';
+  return MAINTENANCE_ITEMS.some((item) => item.key === value) ? (value as MaintenanceKey) : null;
+}
 
 function emptyState(): VehicleMaintenanceState {
   return { currentKm: null, completedKm: {}, updatedAt: null };
@@ -82,10 +88,6 @@ async function withRequestTimeout<T>(promise: PromiseLike<T>, label: string): Pr
       clearTimeout(timeoutId);
     }
   }
-}
-
-function isMaintenanceKey(value: string | null): value is MaintenanceKey {
-  return MAINTENANCE_ITEMS.some((item) => item.key === value);
 }
 
 function isMissingMaintenanceTable(error: { code?: string; message: string } | null) {
@@ -118,6 +120,15 @@ function normalizeState(value: unknown): VehicleMaintenanceState {
     const km = normalizeKm(completedSource[item.key]);
     if (km !== null) {
       completedKm[item.key] = km;
+    }
+  }
+
+  if (completedKm.engineOilSet === undefined) {
+    const legacyKm = LEGACY_ENGINE_OIL_SET_KEYS.map((key) => normalizeKm(completedSource[key])).filter(
+      (km): km is number => km !== null
+    );
+    if (legacyKm.length > 0) {
+      completedKm.engineOilSet = Math.max(...legacyKm);
     }
   }
 
@@ -167,7 +178,8 @@ export async function loadSyncedMaintenanceSnapshot(vehicleIds: string[]): Promi
 
   const merged: MaintenanceSnapshot = { ...localSnapshot };
   for (const row of (result.data ?? []) as MaintenanceRecordRow[]) {
-    if (!row.vehicle_id || !isMaintenanceKey(row.item_key)) {
+    const itemKey = normalizeMaintenanceKey(row.item_key);
+    if (!row.vehicle_id || !itemKey) {
       continue;
     }
     const completedKm = normalizeKm(row.completed_km);
@@ -176,7 +188,7 @@ export async function loadSyncedMaintenanceSnapshot(vehicleIds: string[]): Promi
     }
 
     const previous = merged[row.vehicle_id] ?? emptyState();
-    if (previous.completedKm[row.item_key] !== undefined) {
+    if (previous.completedKm[itemKey] !== undefined) {
       continue;
     }
 
@@ -184,7 +196,7 @@ export async function loadSyncedMaintenanceSnapshot(vehicleIds: string[]): Promi
       ...previous,
       completedKm: {
         ...previous.completedKm,
-        [row.item_key]: completedKm,
+        [itemKey]: completedKm,
       },
       updatedAt: previous.updatedAt ?? row.completed_at ?? new Date().toISOString(),
     };

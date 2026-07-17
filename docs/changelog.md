@@ -481,6 +481,14 @@
 - Note: standard OBD generally does not expose dashboard total odometer reliably; the app uses recorded trip odometer values as the durable source.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 diagnosis and maintenance balance fix
+
+- Diagnosis ECU cards were restored to a larger internal-card layout after user feedback that the diagnosis screen looked too shrunken.
+- Maintenance cards in the 정비 tab were reduced back toward the previous smaller size after user feedback that they became too large.
+- Grouped engine-oil related items into one `엔진오일 세트` item because engine oil, oil filter, air filter, and fuel filter are commonly handled together.
+- Added legacy migration so old engine-oil/filter completion km values can feed the new `engineOilSet` item.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 internal driver card sizing
 
 - Fixed the previous driver layout mistake where only the outer card grew while the inner cards stayed short.

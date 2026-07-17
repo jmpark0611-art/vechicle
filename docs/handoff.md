@@ -337,6 +337,19 @@ npm.cmd run health
 - Important product note: ELM327/OBD does not reliably expose dashboard total odometer through a standard PID. For now, durable automatic reflection means app-recorded trip odometer values, not direct cluster odometer reading.
 - Verification passed with `npm.cmd run verify`.
 
+# 2026-07-17 handoff: diagnosis and maintenance balance fix
+
+- User feedback:
+  - Diagnosis screen became too shrunken; ECU inner cards should fill the screen again.
+  - Maintenance cards became too large; revert closer to the previous compact card size.
+  - Engine oil, oil filter, air filter, and fuel filter are commonly replaced together and should be grouped.
+- Implemented:
+  - Diagnosis ECU card min height and typography increased again.
+  - Maintenance card height/text/button sizes reduced back.
+  - `MAINTENANCE_ITEMS` now exposes `엔진오일 세트` instead of four separate oil/filter cards.
+  - Legacy local/DB keys `engineOil`, `oilFilter`, `airFilter`, `fuelFilter` normalize to `engineOilSet`.
+- Verification passed with `npm.cmd run verify`.
+
 # 2026-07-17 handoff: internal driver card sizing
 
 - User clarified the issue: the outer active-trip card was enlarged, but the inner cards stayed short, creating empty white space.
