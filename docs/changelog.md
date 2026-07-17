@@ -600,6 +600,14 @@
 - Rewrote the 운행 and 기록 screen copy back to clean Korean in the touched files.
 - Simplified shared card styling in `components/rebuild-screen.tsx` to reduce the busy rounded-card look.
 - Verification passed with `npm.cmd run verify`.
+## 2026-07-18 unit selection for field test
+
+- Added 1862/5969 unit selection to the mode-selection screen, with persistent AsyncStorage storage and an edit button.
+- Driver and commander mode entry now requires a selected unit before continuing.
+- Vehicle, trip, odometer, and speed-zone reads/writes now use the selected `unit_code` when the Supabase schema supports it, with legacy fallback before migration is applied.
+- `docs/schema.sql` now includes `unit_code` columns/indexes for `vehicles`, `trips`, and `speed_zones`, plus seed rows for `1862부대` and `5969부대`.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-18 monthly log daily export
 
 - Records cards now show monthly-log metrics directly: odometer total, odometer trip distance, GPS actual distance, and fuel used.

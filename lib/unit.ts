@@ -6,6 +6,11 @@ const UNIT_NAME_KEY = 'app_unit_name';
 
 export type UnitRecord = { code: string; name: string };
 
+export const TEST_UNITS: UnitRecord[] = [
+  { code: '1862', name: '1862부대' },
+  { code: '5969', name: '5969부대' },
+];
+
 export async function getStoredUnitCode(): Promise<string | null> {
   return AsyncStorage.getItem(UNIT_CODE_KEY);
 }
@@ -29,11 +34,15 @@ export async function clearStoredUnit(): Promise<void> {
 }
 
 export async function fetchUnits(): Promise<UnitRecord[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('units')
     .select('code, name')
-    .order('name', { ascending: true });
-  return (data ?? []) as UnitRecord[];
+    .in('code', TEST_UNITS.map((unit) => unit.code))
+    .order('code', { ascending: true });
+  if (error || !data || data.length === 0) {
+    return TEST_UNITS;
+  }
+  return data as UnitRecord[];
 }
 
 export async function verifyCommanderPin(unitCode: string, pin: string): Promise<boolean> {

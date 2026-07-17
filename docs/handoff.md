@@ -513,6 +513,24 @@ npm.cmd run health
   - Apply the same `VehicleDropdown` pattern anywhere else that asks for a vehicle selection.
   - Keep the tab count small; prefer improving the existing 기록 screen over reintroducing 월장비운행증 as a separate tab.
   - Device-test APK after GitHub Actions finishes, especially tab navigation and trip start/end.
+## 2026-07-18 handoff: 1862/5969 unit separation
+
+- User will test in two units and requested unit separation.
+- Added persistent unit selection on `app/role-select.tsx`:
+  - Available units: `1862부대`, `5969부대`.
+  - The selected unit is saved in AsyncStorage via `lib/unit.ts`.
+  - Reopening the app keeps the selected unit.
+  - A `수정` button lets the user change units later.
+  - Driver/commander mode cannot proceed until a unit is selected.
+- Data separation work:
+  - `lib/readonly-data.ts` filters and writes `vehicles`/`trips` by selected `unit_code` when DB columns exist.
+  - `lib/location-data.ts` filters and writes speed zones by selected `unit_code` when DB columns exist.
+  - Legacy fallback remains so the app does not crash before Supabase migration is applied.
+- DB reminder:
+  - Apply latest `docs/schema.sql` before relying on true production separation.
+  - Required columns/indexes: `vehicles.unit_code`, `trips.unit_code`, `speed_zones.unit_code`, composite vehicle uniqueness by unit, and seed `units` rows.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-18 handoff: monthly log daily export
 
 - User said the requested 월장비운행증 changes were not reflected.

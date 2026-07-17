@@ -2,16 +2,24 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.vehicles (
   id uuid primary key default gen_random_uuid(),
+  unit_code text,
   vehicle_number text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create unique index if not exists vehicles_vehicle_number_key
-  on public.vehicles (vehicle_number);
+alter table public.vehicles add column if not exists unit_code text;
+
+drop index if exists vehicles_vehicle_number_key;
+create unique index if not exists vehicles_unit_vehicle_number_key
+  on public.vehicles (coalesce(unit_code, ''), vehicle_number);
+
+create index if not exists vehicles_unit_code_idx
+  on public.vehicles (unit_code);
 
 create table if not exists public.trips (
   id uuid primary key default gen_random_uuid(),
+  unit_code text,
   vehicle_id uuid references public.vehicles (id) on delete restrict,
   start_place text,
   end_place text,
@@ -36,6 +44,7 @@ create table if not exists public.trips (
 );
 
 -- Migration: add extended trip columns if they don't exist yet
+alter table public.trips add column if not exists unit_code text;
 alter table public.trips add column if not exists purpose text;
 alter table public.trips add column if not exists operator_name text;
 alter table public.trips add column if not exists operator_rank text;
@@ -48,6 +57,9 @@ alter table public.trips alter column vehicle_id drop not null;
 
 create index if not exists trips_status_start_time_idx
   on public.trips (status, start_time desc);
+
+create index if not exists trips_unit_code_start_time_idx
+  on public.trips (unit_code, start_time desc);
 
 create index if not exists trips_vehicle_id_start_time_idx
   on public.trips (vehicle_id, start_time desc);
@@ -82,6 +94,7 @@ create index if not exists maintenance_records_vehicle_item_completed_idx
 
 create table if not exists public.speed_zones (
   id uuid primary key default gen_random_uuid(),
+  unit_code text,
   name text not null,
   latitude double precision not null,
   longitude double precision not null,
@@ -102,6 +115,7 @@ create table if not exists public.speed_zones (
 
 alter table public.speed_zones add column if not exists zone_kind text not null default 'circle';
 alter table public.speed_zones add column if not exists polygon_points jsonb;
+alter table public.speed_zones add column if not exists unit_code text;
 
 do $$
 begin
@@ -131,6 +145,9 @@ end $$;
 
 create index if not exists speed_zones_name_idx
   on public.speed_zones (name);
+
+create index if not exists speed_zones_unit_code_idx
+  on public.speed_zones (unit_code);
 
 create index if not exists speed_zones_zone_kind_idx
   on public.speed_zones (zone_kind);
@@ -168,6 +185,14 @@ create table if not exists public.units (
   commander_pin text,
   created_at timestamptz not null default now()
 );
+
+insert into public.units (code, name, commander_pin)
+values
+  ('1862', '1862부대', '1862'),
+  ('5969', '5969부대', '1862')
+on conflict (code) do update
+set name = excluded.name,
+    commander_pin = excluded.commander_pin;
 
 alter table public.units enable row level security;
 

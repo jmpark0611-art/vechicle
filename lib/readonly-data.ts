@@ -1,8 +1,10 @@
 import { supabase, supabaseConfig } from './supabase';
+import { getStoredUnitCode } from './unit';
 
 export type VehicleSummary = {
   id: string;
   vehicleNumber: string;
+  unitCode: string | null;
   createdAt: string | null;
 };
 
@@ -57,11 +59,13 @@ async function withRequestTimeout<T>(promise: PromiseLike<T>, label: string): Pr
 type VehicleRow = {
   id: string;
   vehicle_number: string | null;
+  unit_code?: string | null;
   created_at: string | null;
 };
 
 type TripRow = {
   id: string;
+  unit_code?: string | null;
   vehicle_id: string | null;
   start_place: string | null;
   end_place: string | null;
@@ -92,6 +96,7 @@ function mapVehicle(row: VehicleRow): VehicleSummary {
   return {
     id: row.id,
     vehicleNumber: row.vehicle_number ?? '번호 없음',
+    unitCode: row.unit_code ?? null,
     createdAt: row.created_at,
   };
 }
@@ -117,11 +122,17 @@ function mapTrip(row: TripRow, vehicleById: Map<string, string>): TripSummary {
   };
 }
 
-const BASIC_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status';
-const EXTENDED_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status,purpose,operator_name,operator_rank,user_name,user_rank,start_odometer,end_odometer,daily_km';
+const BASIC_TRIP_SELECT = 'id,unit_code,vehicle_id,start_place,end_place,start_time,end_time,status';
+const EXTENDED_TRIP_SELECT = 'id,unit_code,vehicle_id,start_place,end_place,start_time,end_time,status,purpose,operator_name,operator_rank,user_name,user_rank,start_odometer,end_odometer,daily_km';
+const LEGACY_BASIC_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status';
+const LEGACY_EXTENDED_TRIP_SELECT = 'id,vehicle_id,start_place,end_place,start_time,end_time,status,purpose,operator_name,operator_rank,user_name,user_rank,start_odometer,end_odometer,daily_km';
 
 function tripSelect(includeExtended = true) {
   return includeExtended ? EXTENDED_TRIP_SELECT : BASIC_TRIP_SELECT;
+}
+
+function legacyTripSelect(includeExtended = true) {
+  return includeExtended ? LEGACY_EXTENDED_TRIP_SELECT : LEGACY_BASIC_TRIP_SELECT;
 }
 
 export function getSupabaseReadSource() {
@@ -129,17 +140,34 @@ export function getSupabaseReadSource() {
 }
 
 export async function fetchVehiclesReadOnly(limit = 20): Promise<VehicleSummary[]> {
-  const result = await withRequestTimeout(
-    supabase
-      .from('vehicles')
-      .select('id, vehicle_number, created_at')
-      .order('vehicle_number', { ascending: true })
-      .limit(limit),
+  const unitCode = await getStoredUnitCode();
+  let query = supabase
+    .from('vehicles')
+    .select('id, vehicle_number, unit_code, created_at')
+    .order('vehicle_number', { ascending: true })
+    .limit(limit);
+  if (unitCode) query = query.eq('unit_code', unitCode);
+
+  let result = await withRequestTimeout(
+    query,
     '차량 목록'
-  );
+  ) as QueryResult<VehicleRow[]>;
 
   if (result.error) {
-    throw new Error(result.error.message);
+    if (!isMissingColumnError(result.error)) {
+      throw new Error(result.error.message);
+    }
+    result = await withRequestTimeout(
+      supabase
+        .from('vehicles')
+        .select('id, vehicle_number, created_at')
+        .order('vehicle_number', { ascending: true })
+        .limit(limit),
+      '차량 목록'
+    ) as QueryResult<VehicleRow[]>;
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
   }
 
   return ((result.data ?? []) as VehicleRow[]).map(mapVehicle);
@@ -147,21 +175,35 @@ export async function fetchVehiclesReadOnly(limit = 20): Promise<VehicleSummary[
 
 export async function createVehicle(vehicleNumber: string): Promise<VehicleSummary> {
   const trimmed = vehicleNumber.trim();
+  const unitCode = await getStoredUnitCode();
   if (!trimmed) {
     throw new Error('차량번호를 입력해 주세요.');
   }
 
-  const result = await withRequestTimeout(
+  let result = await withRequestTimeout(
     supabase
       .from('vehicles')
-      .insert({ vehicle_number: trimmed })
-      .select('id, vehicle_number, created_at')
+      .insert({ vehicle_number: trimmed, unit_code: unitCode })
+      .select('id, vehicle_number, unit_code, created_at')
       .single(),
     '차량 등록'
   ) as QueryResult<VehicleRow>;
 
   if (result.error) {
-    throw new Error(result.error.message);
+    if (!isMissingColumnError(result.error)) {
+      throw new Error(result.error.message);
+    }
+    result = await withRequestTimeout(
+      supabase
+        .from('vehicles')
+        .insert({ vehicle_number: unitCode ? `${unitCode}-${trimmed}` : trimmed })
+        .select('id, vehicle_number, created_at')
+        .single(),
+      '차량 등록'
+    ) as QueryResult<VehicleRow>;
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
   }
 
   return mapVehicle(result.data as VehicleRow);
@@ -186,7 +228,17 @@ export async function deleteVehicleAndTrips(vehicleId: string): Promise<void> {
 }
 
 async function fetchTripsWithSelect(limit: number, activeOnly: boolean, includeExtended: boolean) {
+  const unitCode = await getStoredUnitCode();
   let query = supabase.from('trips').select(tripSelect(includeExtended));
+  if (unitCode) query = query.eq('unit_code', unitCode);
+  if (activeOnly) {
+    query = query.eq('status', 'in_progress');
+  }
+  return withRequestTimeout(query.order('start_time', { ascending: false }).limit(limit), activeOnly ? '진행 중 운행' : '운행 기록');
+}
+
+async function fetchLegacyTripsWithSelect(limit: number, activeOnly: boolean, includeExtended: boolean) {
+  let query = supabase.from('trips').select(legacyTripSelect(includeExtended));
   if (activeOnly) {
     query = query.eq('status', 'in_progress');
   }
@@ -203,7 +255,15 @@ async function fetchTripRows(limit: number, activeOnly: boolean): Promise<TripRo
     throw new Error(extended.error.message);
   }
 
-  const basic = await fetchTripsWithSelect(limit, activeOnly, false);
+  const legacyExtended = await fetchLegacyTripsWithSelect(limit, activeOnly, true);
+  if (!legacyExtended.error) {
+    return (legacyExtended.data ?? []) as unknown as TripRow[];
+  }
+  if (!isMissingColumnError(legacyExtended.error)) {
+    throw new Error(legacyExtended.error.message);
+  }
+
+  const basic = await fetchLegacyTripsWithSelect(limit, activeOnly, false);
   if (basic.error) {
     throw new Error(basic.error.message);
   }
@@ -228,22 +288,37 @@ export async function fetchLatestVehicleOdometers(vehicleIds: string[]): Promise
     return {};
   }
 
-  const result = await withRequestTimeout(
-    supabase
+  const unitCode = await getStoredUnitCode();
+  let query = supabase
       .from('trips')
-      .select('vehicle_id,start_odometer,end_odometer,start_time,end_time')
+      .select('vehicle_id,unit_code,start_odometer,end_odometer,start_time,end_time')
       .in('vehicle_id', vehicleIds)
       .order('end_time', { ascending: false, nullsFirst: false })
       .order('start_time', { ascending: false })
-      .limit(500),
+      .limit(500);
+  if (unitCode) query = query.eq('unit_code', unitCode);
+
+  let result = await withRequestTimeout(
+    query,
     '차량 계기판 기록'
-  );
+  ) as QueryResult<TripRow[]>;
 
   if (result.error) {
     if (isMissingColumnError(result.error)) {
-      return {};
+      result = await withRequestTimeout(
+        supabase
+          .from('trips')
+          .select('vehicle_id,start_odometer,end_odometer,start_time,end_time')
+          .in('vehicle_id', vehicleIds)
+          .order('end_time', { ascending: false, nullsFirst: false })
+          .order('start_time', { ascending: false })
+          .limit(500),
+        '차량 계기판 기록'
+      ) as QueryResult<TripRow[]>;
+      if (result.error) return {};
+    } else {
+      throw new Error(result.error.message);
     }
-    throw new Error(result.error.message);
   }
 
   const latest: Record<string, number> = {};
@@ -284,7 +359,9 @@ async function insertBasicTrip(payload: Record<string, string | number | null>) 
 
 export async function startManualTrip(input: ManualTripInput): Promise<TripSummary> {
   const now = new Date().toISOString();
+  const unitCode = await getStoredUnitCode();
   const basePayload = {
+    unit_code: unitCode,
     vehicle_id: input.vehicleId,
     start_place: input.startPlace.trim(),
     end_place: input.endPlace.trim(),
@@ -303,7 +380,8 @@ export async function startManualTrip(input: ManualTripInput): Promise<TripSumma
 
   let result = await insertTrip(extendedPayload);
   if (result.error && isMissingColumnError(result.error)) {
-    result = await insertBasicTrip(basePayload);
+    const { unit_code: _unitCode, ...legacyBasePayload } = basePayload;
+    result = await insertBasicTrip(legacyBasePayload);
   }
 
   if (result.error) {
@@ -335,14 +413,18 @@ export async function fetchMonthlyTrips(vehicleId: string, year: number, month: 
   const from = new Date(year, month - 1, 1).toISOString();
   const to = new Date(year, month, 1).toISOString();
 
-  const extended = await withRequestTimeout(
-    supabase
+  const unitCode = await getStoredUnitCode();
+  let monthlyQuery = supabase
       .from('trips')
-      .select('id,start_time,end_time,start_place,end_place,status,purpose,operator_name,operator_rank,user_name,user_rank,start_odometer,end_odometer,daily_km')
+      .select('id,unit_code,start_time,end_time,start_place,end_place,status,purpose,operator_name,operator_rank,user_name,user_rank,start_odometer,end_odometer,daily_km')
       .eq('vehicle_id', vehicleId)
       .gte('start_time', from)
       .lt('start_time', to)
-      .order('start_time', { ascending: true }),
+      .order('start_time', { ascending: true });
+  if (unitCode) monthlyQuery = monthlyQuery.eq('unit_code', unitCode);
+
+  const extended = await withRequestTimeout(
+    monthlyQuery,
     '월 운행증'
   );
 

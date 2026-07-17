@@ -1,5 +1,6 @@
 import { fetchActiveTrips, type TripSummary } from './readonly-data';
 import { supabase } from './supabase';
+import { getStoredUnitCode } from './unit';
 
 export type VehiclePosition = {
   tripId: string;
@@ -63,6 +64,7 @@ type GpsPointRow = {
 
 type SpeedZoneRow = {
   id: string;
+  unit_code?: string | null;
   name: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -241,15 +243,19 @@ async function fetchLatestPoint(trip: TripSummary): Promise<VehiclePosition | nu
 }
 
 async function fetchSpeedZones(): Promise<{ zones: SpeedZone[]; message: string }> {
+  const unitCode = await getStoredUnitCode();
+  let zoneQuery = supabase
+    .from('speed_zones')
+    .select('id,unit_code,name,latitude,longitude,radius_m,speed_limit_kmh,zone_kind,polygon_points')
+    .order('name', { ascending: true })
+    .limit(100);
+  if (unitCode) zoneQuery = zoneQuery.eq('unit_code', unitCode);
+
   let result: {
     data: unknown[] | null;
     error: { code?: string; message: string } | null;
   } = await withRequestTimeout(
-    supabase
-      .from('speed_zones')
-      .select('id,name,latitude,longitude,radius_m,speed_limit_kmh,zone_kind,polygon_points')
-      .order('name', { ascending: true })
-      .limit(100),
+    zoneQuery,
     '제한속도 구역'
   );
 
@@ -310,6 +316,7 @@ export async function fetchLocationSnapshot(): Promise<LocationSnapshot> {
 }
 
 export async function createSpeedZone(input: CreateSpeedZoneInput): Promise<{ ok: boolean; message: string }> {
+  const unitCode = await getStoredUnitCode();
   const zoneKind = input.zoneKind === 'polygon' ? 'polygon' : 'circle';
   const polygonPoints = zoneKind === 'polygon' ? normalizePolygonPoints(input.polygonPoints) : [];
   const center = zoneKind === 'polygon' ? polygonCenter(polygonPoints) : null;
@@ -323,6 +330,7 @@ export async function createSpeedZone(input: CreateSpeedZoneInput): Promise<{ ok
 
   const result = await withRequestTimeout(
     supabase.from('speed_zones').insert({
+      unit_code: unitCode,
       name: input.name.trim(),
       latitude,
       longitude,
