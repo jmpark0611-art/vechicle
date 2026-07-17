@@ -3,6 +3,7 @@ import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'reac
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
+import { showLiveEcuAlertPopup } from '@/lib/fleet-alerts';
 import {
   completeMaintenanceItem,
   getRemainingKm,
@@ -100,8 +101,10 @@ export default function VehiclesScreen() {
   const [newVehicleKm, setNewVehicleKm] = useState('');
   const lastSaveAtRef = useRef(0);
   const selectedVehicleIdRef = useRef<string | null>(null);
+  const vehiclesRef = useRef<VehicleSummary[]>([]);
 
   selectedVehicleIdRef.current = selectedVehicleId;
+  vehiclesRef.current = vehicles;
 
   const selectedVehicle = useMemo(
     () => vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? vehicles[0] ?? null,
@@ -156,6 +159,10 @@ export default function VehiclesScreen() {
         if (!vehicleId) return;
 
         try {
+          const vehicle = vehiclesRef.current.find((item) => item.id === vehicleId);
+          if (vehicle) {
+            void showLiveEcuAlertPopup(vehicle, data);
+          }
           const reading = liveToReading(vehicleId, data);
           setObdSnapshot((current) => ({ ...current, [vehicleId]: reading }));
           const now = Date.now();

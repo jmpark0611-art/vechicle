@@ -6,6 +6,7 @@
 - Added a commander-only `알림` tab that gathers all vehicles needing periodic replacement or ECU-based inspection.
 - The new alert tab flags maintenance items within 1,000km/overdue and ECU values outside first-pass thresholds: DTC, coolant temperature, battery voltage, fuel level, engine load, fuel trims, and emissions readiness.
 - `교체완료` updates the replacement baseline, while `점검완료` acknowledges the current ECU value and shows the alert again if a different value is received later.
+- Commander diagnosis mode now also shows an automatic phone alert when newly received OBD live data crosses an ECU threshold; driver trip mode does not show these maintenance popups.
 
 ## 2026-07-17 VIN and emissions readiness OBD support
 
