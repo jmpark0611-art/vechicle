@@ -3,6 +3,13 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 trip completion auto summary:
+  - Active trip UI removed manual destination odometer input.
+  - Completion saves a final GPS point, reads GPS trip distance, and estimates end odometer as start odometer + GPS distance when no direct OBD odometer PID is available.
+  - Trip completion shows a `안전운행해주셔서 감사합니다` summary card with monthly log fields: vehicle, route, start/end time, odometer total/trip distance, GPS distance, fuel used, purpose, operator, and user.
+  - Fuel used is percentage-based from OBD fuel start/end values when available; exact liters still require vehicle tank capacity or a reliable fuel-use PID.
+  - Full-screen location map modal now applies safe-area top padding to avoid title/status overlap.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 tab title only / compact trip form:
   - Removed top-right role/mode switching pill from the common header; mode changes should happen only through explicit role selection flows.
   - Common header now displays only the active tab name in a larger blue title, not `차량운행시스템`.

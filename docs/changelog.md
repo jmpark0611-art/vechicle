@@ -1,5 +1,14 @@
 # 변경 이력
 
+## 2026-07-17 trip completion auto summary
+
+- Active trip screen no longer asks for manual end odometer input.
+- Trip completion now saves a final GPS point, calculates actual GPS movement distance, and estimates end odometer from start odometer plus GPS distance when a direct OBD odometer value is unavailable.
+- After trip completion, the trip tab shows `안전운행해주셔서 감사합니다` with the monthly equipment operation log fields: vehicle, route, times, odometer total/trip distance, GPS distance, fuel used, purpose, operator, and user.
+- Fuel used is shown as OBD fuel percentage difference when start/end OBD fuel data exists.
+- Full-screen speed-zone map modal now respects the device safe area to avoid status-bar/header overlap.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 tab title only and compact trip form
 
 - Removed the top-right role/mode switching pill from all tabs.

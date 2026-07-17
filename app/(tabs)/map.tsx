@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, Vibration, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleMap } from '@/components/vehicle-map';
@@ -7,6 +8,7 @@ import { createSpeedZone, fetchLocationSnapshot, type LocationSnapshot, type Zon
 import { generateVehicleMapHtml } from '@/lib/map-html';
 
 export default function MapScreen() {
+  const insets = useSafeAreaInsets();
   const [snapshot, setSnapshot] = useState<LocationSnapshot>({ positions: [], zones: [], alerts: [], message: '대기' });
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingZone, setIsSavingZone] = useState(false);
@@ -169,7 +171,7 @@ export default function MapScreen() {
 
           <Modal visible={isPickerOpen} animationType="slide" onRequestClose={() => setIsPickerOpen(false)}>
             <View style={styles.modalRoot}>
-              <View style={styles.modalHeader}>
+              <View style={[styles.modalHeader, { paddingTop: insets.top + 12 }]}>
                 <View>
                   <Text style={styles.modalTitle}>구역 설정</Text>
                   <Text style={styles.modalSubtitle}>지도 탭으로 경계점 추가 · 꼭짓점 {polygonPoints.length}개</Text>

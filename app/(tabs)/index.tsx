@@ -4,7 +4,7 @@ import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 
 import { LoadingCard, RebuildScreen, SectionCard } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
-import { saveCurrentGpsPoint } from '@/lib/gps-data';
+import { fetchTripGpsDistances, saveCurrentGpsPoint } from '@/lib/gps-data';
 import {
   getVehicleMaintenanceState,
   loadSyncedMaintenanceSnapshot,
@@ -46,6 +46,20 @@ function parseKm(value: string) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
+type CompletionSummary = {
+  vehicleNumber: string;
+  route: string;
+  startTime: string;
+  endTime: string;
+  totalOdometer: string;
+  tripDistance: string;
+  gpsDistance: string;
+  fuelUsed: string;
+  purpose: string;
+  operator: string;
+  user: string;
+};
+
 export default function TripScreen() {
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [activeTrips, setActiveTrips] = useState<TripSummary[]>([]);
@@ -59,7 +73,7 @@ export default function TripScreen() {
   const [startPlace, setStartPlace] = useState('본부대');
   const [endPlace, setEndPlace] = useState('');
   const [startOdometer, setStartOdometer] = useState('');
-  const [endOdometers, setEndOdometers] = useState<Record<string, string>>({});
+  const [lastCompletion, setLastCompletion] = useState<CompletionSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -71,6 +85,7 @@ export default function TripScreen() {
 
   const activeTripsRef = useRef<TripSummary[]>([]);
   const obdLiveRef = useRef<ObdLiveData | null>(null);
+  const tripStartFuelRef = useRef<Record<string, number | null>>({});
   const obdSaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gpsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -210,6 +225,8 @@ export default function TripScreen() {
         startOdometer: parseKm(startOdometer) ?? selectedCurrentKm ?? undefined,
       });
       setActiveTrips([trip]);
+      tripStartFuelRef.current[trip.id] = typeof obdLiveData?.fuelPercent === 'number' ? obdLiveData.fuelPercent : null;
+      setLastCompletion(null);
       setPurpose('');
       setEndPlace('');
 
@@ -238,7 +255,7 @@ export default function TripScreen() {
     try {
       await cancelManualTrip(trip.id);
       setActiveTrips([]);
-      setEndOdometers({});
+      delete tripStartFuelRef.current[trip.id];
       stopGpsTimer();
     } catch (error) {
       Alert.alert('취소 실패', error instanceof Error ? error.message : '운행을 취소하지 못했습니다.');
@@ -249,29 +266,54 @@ export default function TripScreen() {
 
   async function handleCompleteTrip(trip: TripSummary) {
     const finalEndPlace = endPlace.trim() || trip.endPlace || '목적지 미입력';
-    const endOdo = parseKm(endOdometers[trip.id] ?? '');
     const startOdo = trip.startOdometer ?? parseKm(startOdometer);
     setIsSaving(true);
     try {
       if (isObdConnected && obdLiveData && trip.vehicleId) await saveTripObdLog(trip.vehicleId, trip.id, obdLiveData);
-      await completeManualTrip(trip.id, finalEndPlace, endOdo, startOdo);
-      if (trip.vehicleId && endOdo !== undefined) {
-        const nextSnapshot = await setVehicleCurrentKm(trip.vehicleId, endOdo);
+      const gpsResult = await saveCurrentGpsPoint(trip.id);
+      const gpsDistances = await fetchTripGpsDistances([trip.id]);
+      const gpsDistanceKm = gpsDistances[trip.id] ?? 0;
+      const autoEndOdo =
+        startOdo !== undefined && gpsDistanceKm > 0
+          ? Math.round(startOdo + gpsDistanceKm)
+          : selectedCurrentKm !== null
+            ? Math.round(selectedCurrentKm)
+            : undefined;
+      await completeManualTrip(trip.id, finalEndPlace, autoEndOdo, startOdo);
+      if (trip.vehicleId && autoEndOdo !== undefined) {
+        const nextSnapshot = await setVehicleCurrentKm(trip.vehicleId, autoEndOdo);
         setMaintenanceSnapshot(nextSnapshot);
       }
-      const gpsResult = await saveCurrentGpsPoint(trip.id);
+      const startFuel = tripStartFuelRef.current[trip.id];
+      const endFuel = typeof obdLiveData?.fuelPercent === 'number' ? obdLiveData.fuelPercent : null;
+      const fuelUsed = startFuel !== null && endFuel !== null && startFuel >= endFuel
+        ? `${Math.round((startFuel - endFuel) * 10) / 10}%`
+        : '-';
+      setLastCompletion({
+        vehicleNumber: trip.vehicleNumber,
+        route: `${trip.startPlace ?? '-'} → ${finalEndPlace}`,
+        startTime: formatTime(trip.startTime),
+        endTime: formatTime(new Date().toISOString()),
+        totalOdometer: formatKm(autoEndOdo),
+        tripDistance: autoEndOdo !== undefined && startOdo !== undefined && autoEndOdo >= startOdo ? `${Math.round(autoEndOdo - startOdo).toLocaleString('ko-KR')} km` : '-',
+        gpsDistance: gpsDistanceKm > 0 ? `${gpsDistanceKm.toLocaleString('ko-KR')} km` : '-',
+        fuelUsed,
+        purpose: trip.purpose || purpose || '-',
+        operator: [trip.operatorRank, trip.operatorName].filter(Boolean).join(' ') || [operatorRank, operatorName].filter(Boolean).join(' ') || '-',
+        user: [trip.userRank, trip.userName].filter(Boolean).join(' ') || [sameUser ? operatorRank : userRank, sameUser ? operatorName : userName].filter(Boolean).join(' ') || '-',
+      });
       setActiveTrips([]);
       setPurpose('');
       setEndPlace('');
       setStartOdometer('');
-      setEndOdometers({});
+      delete tripStartFuelRef.current[trip.id];
       obdBle.stopPolling();
       void obdBle.disconnect();
       stopObdSaveTimer();
       stopGpsTimer();
       setIsObdConnected(false);
       setObdLiveData(null);
-      Alert.alert('운행 종료', `${trip.vehicleNumber} 운행을 종료했습니다.\n${gpsResult.message}`);
+      Alert.alert('운행 종료', `안전운행해주셔서 감사합니다.\n${gpsResult.message}`);
     } catch (error) {
       Alert.alert('운행 종료 실패', error instanceof Error ? error.message : '운행을 종료하지 못했습니다.');
     } finally {
@@ -327,14 +369,12 @@ export default function TripScreen() {
             <Text style={styles.obdStripLabel}>OBD</Text>
             <Text style={styles.obdStripValue}>{obdLabel}</Text>
           </View>
-          <TextInput
-            style={styles.input}
-            value={endOdometers[activeTrip.id] ?? ''}
-            onChangeText={(value) => setEndOdometers((current) => ({ ...current, [activeTrip.id]: value }))}
-            placeholder="도착 계기판 km"
-            placeholderTextColor="#94A3B8"
-            keyboardType="number-pad"
-          />
+          <View style={styles.autoOdoBox}>
+            <Text style={styles.autoOdoLabel}>도착 계기판 자동</Text>
+            <Text style={styles.autoOdoValue}>
+              {activeTrip.startOdometer !== null ? `${Math.round(activeTrip.startOdometer).toLocaleString('ko-KR')}km + GPS 이동거리` : 'OBD/GPS 기준 자동 저장'}
+            </Text>
+          </View>
           <View style={styles.actionRow}>
             <Pressable style={styles.cancelBtnWide} onPress={() => void handleCancelTrip(activeTrip)} disabled={isSaving}>
               <Text style={styles.cancelBtnText}>취소</Text>
@@ -346,6 +386,22 @@ export default function TripScreen() {
         </View>
       ) : (
         <>
+        {lastCompletion ? (
+          <View style={styles.thanksCard}>
+            <Text style={styles.thanksTitle}>안전운행해주셔서 감사합니다</Text>
+            <Text style={styles.thanksSub}>월장비운행증 반영 요소</Text>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>차량</Text><Text style={styles.summaryVal}>{lastCompletion.vehicleNumber}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>경로</Text><Text style={styles.summaryVal}>{lastCompletion.route}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>출발/도착</Text><Text style={styles.summaryVal}>{lastCompletion.startTime} / {lastCompletion.endTime}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>계기판 총 주행거리</Text><Text style={styles.summaryVal}>{lastCompletion.totalOdometer}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>계기판 운행거리</Text><Text style={styles.summaryVal}>{lastCompletion.tripDistance}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>실제 이동거리</Text><Text style={styles.summaryVal}>{lastCompletion.gpsDistance}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>소모 유류</Text><Text style={styles.summaryVal}>{lastCompletion.fuelUsed}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행목적</Text><Text style={styles.summaryVal}>{lastCompletion.purpose}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행자</Text><Text style={styles.summaryVal}>{lastCompletion.operator}</Text></View>
+            <View style={styles.summaryLine}><Text style={styles.summaryKey}>사용자</Text><Text style={styles.summaryVal}>{lastCompletion.user}</Text></View>
+          </View>
+        ) : null}
         <View style={styles.heroCard}>
           <View>
             <Text style={styles.kicker}>오늘 운행</Text>
@@ -529,6 +585,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     marginTop: 7,
   },
+  autoOdoBox: {
+    minHeight: 48,
+    borderRadius: 15,
+    backgroundColor: '#F6F8FE',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginTop: 10,
+  },
+  autoOdoLabel: { color: '#7B86A8', fontSize: 12, fontWeight: '900', marginBottom: 3 },
+  autoOdoValue: { color: '#1E2946', fontSize: 13, fontWeight: '900' },
+  thanksCard: {
+    borderRadius: 22,
+    backgroundColor: '#F0FDF8',
+    borderWidth: 1,
+    borderColor: '#CFF4E3',
+    padding: 15,
+    marginBottom: 10,
+  },
+  thanksTitle: { color: '#047857', fontSize: 18, fontWeight: '900' },
+  thanksSub: { color: '#588674', fontSize: 12, fontWeight: '900', marginTop: 4, marginBottom: 8 },
+  summaryLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#DDF7EB',
+    paddingTop: 7,
+    marginTop: 7,
+  },
+  summaryKey: { color: '#588674', fontSize: 11, fontWeight: '900', flexShrink: 0 },
+  summaryVal: { color: '#163B31', fontSize: 12, fontWeight: '900', flex: 1, textAlign: 'right' },
   obdStripLabel: { color: '#52607D', fontSize: 12, fontWeight: '900' },
   obdStripValue: { color: '#1D4ED8', fontSize: 12, fontWeight: '900', flexShrink: 1, textAlign: 'right' },
   input: {
