@@ -600,6 +600,13 @@
 - Rewrote the 운행 and 기록 screen copy back to clean Korean in the touched files.
 - Simplified shared card styling in `components/rebuild-screen.tsx` to reduce the busy rounded-card look.
 - Verification passed with `npm.cmd run verify`.
+## 2026-07-18 unit filter transition fallback
+
+- Fixed a transition issue after adding unit selection: existing test rows with `unit_code = null` were hidden, making tabs look changed or empty.
+- Vehicle, trip, odometer, monthly-log, and speed-zone reads now include both the selected unit and legacy unassigned rows during migration.
+- New writes still store the selected `unit_code` when the DB column exists.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-18 unit selection for field test
 
 - Added 1862/5969 unit selection to the mode-selection screen, with persistent AsyncStorage storage and an edit button.

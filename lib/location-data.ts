@@ -249,7 +249,7 @@ async function fetchSpeedZones(): Promise<{ zones: SpeedZone[]; message: string 
     .select('id,unit_code,name,latitude,longitude,radius_m,speed_limit_kmh,zone_kind,polygon_points')
     .order('name', { ascending: true })
     .limit(100);
-  if (unitCode) zoneQuery = zoneQuery.eq('unit_code', unitCode);
+  if (unitCode) zoneQuery = zoneQuery.or(`unit_code.eq.${unitCode},unit_code.is.null`);
 
   let result: {
     data: unknown[] | null;

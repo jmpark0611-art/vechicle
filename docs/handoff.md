@@ -513,6 +513,17 @@ npm.cmd run health
   - Apply the same `VehicleDropdown` pattern anywhere else that asks for a vehicle selection.
   - Keep the tab count small; prefer improving the existing 기록 screen over reintroducing 월장비운행증 as a separate tab.
   - Device-test APK after GitHub Actions finishes, especially tab navigation and trip start/end.
+## 2026-07-18 handoff: unit filter transition fallback
+
+- User reported that tabs looked different after adding unit selection.
+- Cause: selected-unit filters hid existing test data because existing `vehicles`, `trips`, and `speed_zones` rows do not yet have `unit_code`.
+- Fix:
+  - Reads now include `unit_code = selected unit OR unit_code IS NULL` during the migration period.
+  - New writes still attach the selected `unit_code` when the DB schema supports it.
+  - This restores existing data visibility while still allowing new 1862/5969 data to be separated.
+- Important follow-up: after Supabase schema/data migration, backfill old rows to the correct unit and then the fallback can be tightened if needed.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-18 handoff: 1862/5969 unit separation
 
 - User will test in two units and requested unit separation.

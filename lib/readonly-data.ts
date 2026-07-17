@@ -146,7 +146,7 @@ export async function fetchVehiclesReadOnly(limit = 20): Promise<VehicleSummary[
     .select('id, vehicle_number, unit_code, created_at')
     .order('vehicle_number', { ascending: true })
     .limit(limit);
-  if (unitCode) query = query.eq('unit_code', unitCode);
+  if (unitCode) query = query.or(`unit_code.eq.${unitCode},unit_code.is.null`);
 
   let result = await withRequestTimeout(
     query,
@@ -230,7 +230,7 @@ export async function deleteVehicleAndTrips(vehicleId: string): Promise<void> {
 async function fetchTripsWithSelect(limit: number, activeOnly: boolean, includeExtended: boolean) {
   const unitCode = await getStoredUnitCode();
   let query = supabase.from('trips').select(tripSelect(includeExtended));
-  if (unitCode) query = query.eq('unit_code', unitCode);
+  if (unitCode) query = query.or(`unit_code.eq.${unitCode},unit_code.is.null`);
   if (activeOnly) {
     query = query.eq('status', 'in_progress');
   }
@@ -296,7 +296,7 @@ export async function fetchLatestVehicleOdometers(vehicleIds: string[]): Promise
       .order('end_time', { ascending: false, nullsFirst: false })
       .order('start_time', { ascending: false })
       .limit(500);
-  if (unitCode) query = query.eq('unit_code', unitCode);
+  if (unitCode) query = query.or(`unit_code.eq.${unitCode},unit_code.is.null`);
 
   let result = await withRequestTimeout(
     query,
@@ -421,7 +421,7 @@ export async function fetchMonthlyTrips(vehicleId: string, year: number, month: 
       .gte('start_time', from)
       .lt('start_time', to)
       .order('start_time', { ascending: true });
-  if (unitCode) monthlyQuery = monthlyQuery.eq('unit_code', unitCode);
+  if (unitCode) monthlyQuery = monthlyQuery.or(`unit_code.eq.${unitCode},unit_code.is.null`);
 
   const extended = await withRequestTimeout(
     monthlyQuery,
