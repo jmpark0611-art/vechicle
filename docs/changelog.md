@@ -1,5 +1,11 @@
 # 변경 이력
 
+## 2026-07-17 compact diagnosis cards
+
+- Diagnosis detail header now uses one horizontal bar for vehicle number and current km instead of a separate rounded title/current block.
+- ECU and maintenance cards are shorter rectangular cards instead of tall square cards.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 automatic OBD retry on trip screen
 
 - Trip screen OBD status now shows real automatic connection states instead of a static `대기` label.

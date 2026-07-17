@@ -3,6 +3,10 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 compact diagnosis cards:
+  - Diagnosis selected-vehicle area now uses a single horizontal info bar with vehicle number, `현재 기준`, and current km.
+  - ECU/maintenance cards changed from square cards to shorter rectangular cards to reduce vertical scrolling.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 automatic OBD retry on trip screen:
   - Trip screen now displays actual OBD auto-connection state instead of a fixed `대기` label.
   - While a trip is active, it automatically connects to the saved OBD device.

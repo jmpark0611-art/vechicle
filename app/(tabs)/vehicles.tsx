@@ -329,10 +329,12 @@ export default function VehiclesScreen() {
           </SectionCard>
 
           {selectedVehicle && selectedState ? (
-            <SectionCard title={selectedVehicle.vehicleNumber}>
-              <View style={styles.currentKmPill}>
-                <Text style={styles.currentKmLabel}>현재 기준</Text>
-                <Text style={styles.currentKmValue}>{formatKm(selectedState.currentKm)}</Text>
+            <SectionCard title="">
+              <View style={styles.vehicleInfoBar}>
+                <Text style={styles.vehicleInfoNumber}>{selectedVehicle.vehicleNumber}</Text>
+                <View style={styles.vehicleInfoDivider} />
+                <Text style={styles.vehicleInfoLabel}>현재 기준</Text>
+                <Text style={styles.vehicleInfoValue}>{formatKm(selectedState.currentKm)}</Text>
               </View>
               <Text style={styles.groupTitle}>ECU 감지 정보</Text>
               <View style={styles.grid}>
@@ -409,33 +411,34 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   connectBtnText: { color: '#13866F', fontSize: 12, fontWeight: '900' },
-  currentKmPill: {
-    minHeight: 40,
+  vehicleInfoBar: {
+    minHeight: 44,
     borderRadius: 14,
     backgroundColor: '#F6F8FE',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 12,
-    marginTop: 10,
+    gap: 10,
   },
-  currentKmLabel: { color: '#7B86A8', fontSize: 12, fontWeight: '900' },
-  currentKmValue: { color: '#1E2946', fontSize: 13, fontWeight: '900' },
-  groupTitle: { color: '#52607D', fontSize: 13, fontWeight: '900', marginTop: 14, marginBottom: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
+  vehicleInfoNumber: { color: '#1E2946', fontSize: 17, fontWeight: '900' },
+  vehicleInfoDivider: { width: 1, height: 18, backgroundColor: '#E1E6F3' },
+  vehicleInfoLabel: { color: '#7B86A8', fontSize: 12, fontWeight: '900' },
+  vehicleInfoValue: { color: '#1E2946', fontSize: 13, fontWeight: '900', marginLeft: 'auto' },
+  groupTitle: { color: '#52607D', fontSize: 13, fontWeight: '900', marginTop: 12, marginBottom: 0 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 },
   squareCard: {
     width: '48%',
-    aspectRatio: 1,
-    borderRadius: 18,
+    minHeight: 122,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.72)',
-    padding: 12,
+    padding: 11,
     justifyContent: 'space-between',
   },
   squareCardBad: { borderColor: '#FFC6C6', backgroundColor: '#FFEAEA' },
   squareCardWarn: { borderColor: '#FFE2A8' },
   cardTitle: { color: '#52607D', fontSize: 12, fontWeight: '900' },
-  cardValue: { color: '#222B45', fontSize: 20, fontWeight: '900', lineHeight: 24 },
+  cardValue: { color: '#222B45', fontSize: 18, fontWeight: '900', lineHeight: 22 },
   cardDetail: { color: '#7180A3', fontSize: 11, fontWeight: '800' },
   cardAction: {
     minHeight: 30,
