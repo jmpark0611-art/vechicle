@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-17 VIN and emissions readiness OBD support
+
+- Extended OBD live data with inspection-oriented fields: VIN, readiness summary, DTC count, intake temperature, throttle, engine load, fuel trims, MAP pressure, and oxygen sensor voltage.
+- Native BLE OBD polling now requests additional ELM327 PIDs including `0101`, `0104`, `0106`, `0107`, `010B`, `010F`, `0111`, `0114`, and `0902`.
+- Diagnosis cards now show received values for these fields instead of fixed placeholders when the vehicle/adapter supports them.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 expanded diagnosis and maintenance cards
 
 - Removed the duplicated square `ECU 상태` card because the horizontal `ECU 감지 상태` bar already shows that information.

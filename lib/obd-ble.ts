@@ -163,10 +163,37 @@ export type ObdLiveData = {
   coolantC: number | null;
   batteryV: number | null;
   fuelPercent: number | null;
+  intakeTempC: number | null;
+  throttlePercent: number | null;
+  engineLoadPercent: number | null;
+  mapKpa: number | null;
+  shortFuelTrimPercent: number | null;
+  longFuelTrimPercent: number | null;
+  oxygenSensorV: number | null;
+  dtcCount: number | null;
+  vin: string | null;
+  readinessSummary: string | null;
   profile: string | null;
 };
 
-const EMPTY_LIVE: ObdLiveData = { rpm: null, speedKmh: null, coolantC: null, batteryV: null, fuelPercent: null, profile: null };
+const EMPTY_LIVE: ObdLiveData = {
+  rpm: null,
+  speedKmh: null,
+  coolantC: null,
+  batteryV: null,
+  fuelPercent: null,
+  intakeTempC: null,
+  throttlePercent: null,
+  engineLoadPercent: null,
+  mapKpa: null,
+  shortFuelTrimPercent: null,
+  longFuelTrimPercent: null,
+  oxygenSensorV: null,
+  dtcCount: null,
+  vin: null,
+  readinessSummary: null,
+  profile: null,
+};
 
 type ObdCallbacksStub = {
   onData: (data: ObdLiveData) => void;

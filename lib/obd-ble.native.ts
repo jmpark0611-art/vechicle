@@ -74,6 +74,65 @@ function parseSpeed(response: string): number | null {
   return parseInt(m[1], 16);
 }
 
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function parseSingleBytePid(response: string, pid: string): number | null {
+  const m = response.replace(/\s/g, '').match(new RegExp(`41${pid}([0-9A-Fa-f]{2})`, 'i'));
+  if (!m) return null;
+  return parseInt(m[1], 16);
+}
+
+function parsePercentPid(response: string, pid: string): number | null {
+  const value = parseSingleBytePid(response, pid);
+  return value === null ? null : round1((value * 100) / 255);
+}
+
+function parseSignedTrimPid(response: string, pid: string): number | null {
+  const value = parseSingleBytePid(response, pid);
+  return value === null ? null : round1((value - 128) * 100 / 128);
+}
+
+function parseOxygenSensorVoltage(response: string): number | null {
+  const m = response.replace(/\s/g, '').match(/4114([0-9A-Fa-f]{2})[0-9A-Fa-f]{2}/i);
+  if (!m) return null;
+  return round1(parseInt(m[1], 16) / 200);
+}
+
+function parseDtcCountAndReadiness(response: string): { dtcCount: number | null; readinessSummary: string | null } {
+  const m = response.replace(/\s/g, '').match(/4101([0-9A-Fa-f]{8})/i);
+  if (!m) return { dtcCount: null, readinessSummary: null };
+  const a = parseInt(m[1].slice(0, 2), 16);
+  const b = parseInt(m[1].slice(2, 4), 16);
+  const c = parseInt(m[1].slice(4, 6), 16);
+  const d = parseInt(m[1].slice(6, 8), 16);
+  const dtcCount = a & 0x7f;
+  const unsupported = (b | c | d) === 0;
+  const incompleteCount = unsupported ? 0 : [b, c, d].reduce((sum, byte) => {
+    let next = sum;
+    for (let bit = 0; bit < 8; bit += 1) {
+      if ((byte & (1 << bit)) !== 0) next += 1;
+    }
+    return next;
+  }, 0);
+  const readinessSummary = incompleteCount === 0 ? '준비 완료' : `미완료 ${incompleteCount}개`;
+  return { dtcCount, readinessSummary };
+}
+
+function parseVin(response: string): string | null {
+  const hex = response
+    .replace(/\s/g, '')
+    .replace(/SEARCHING|BUSINIT|OK|>/gi, '')
+    .match(/[0-9A-Fa-f]{2}/g);
+  if (!hex) return null;
+  const bytes = hex.map((part) => parseInt(part, 16));
+  const start = bytes.findIndex((_, index) => bytes[index] === 0x49 && bytes[index + 1] === 0x02);
+  const vinBytes = (start >= 0 ? bytes.slice(start + 3) : bytes).filter((byte) => byte >= 0x20 && byte <= 0x7e);
+  const vin = String.fromCharCode(...vinBytes).replace(/[^A-HJ-NPR-Z0-9]/gi, '').slice(-17);
+  return vin.length >= 11 ? vin : null;
+}
+
 function deviceName(device: { name?: string | null; localName?: string | null }) {
   return device.localName || device.name || '이름 없는 BLE 장치';
 }
@@ -529,6 +588,16 @@ export type ObdLiveData = {
   coolantC: number | null;
   batteryV: number | null;
   fuelPercent: number | null;
+  intakeTempC: number | null;
+  throttlePercent: number | null;
+  engineLoadPercent: number | null;
+  mapKpa: number | null;
+  shortFuelTrimPercent: number | null;
+  longFuelTrimPercent: number | null;
+  oxygenSensorV: number | null;
+  dtcCount: number | null;
+  vin: string | null;
+  readinessSummary: string | null;
   profile: string | null;
 };
 
@@ -547,7 +616,24 @@ type CharRef = {
   writeWithoutResponse(v: string): Promise<unknown>;
 };
 
-const EMPTY_LIVE: ObdLiveData = { rpm: null, speedKmh: null, coolantC: null, batteryV: null, fuelPercent: null, profile: null };
+const EMPTY_LIVE: ObdLiveData = {
+  rpm: null,
+  speedKmh: null,
+  coolantC: null,
+  batteryV: null,
+  fuelPercent: null,
+  intakeTempC: null,
+  throttlePercent: null,
+  engineLoadPercent: null,
+  mapKpa: null,
+  shortFuelTrimPercent: null,
+  longFuelTrimPercent: null,
+  oxygenSensorV: null,
+  dtcCount: null,
+  vin: null,
+  readinessSummary: null,
+  profile: null,
+};
 
 class ObdBleConnection {
   private _mgr: import('react-native-ble-plx').BleManager | null = null;
@@ -682,9 +768,52 @@ class ObdBleConnection {
       // Slow PIDs every 5 cycles (~10 s at 2 s interval)
       if (this._slowIdx % 5 === 0) {
         try {
+          const readinessResp = await this._cmd('0101', 3000);
+          const parsed = parseDtcCountAndReadiness(readinessResp);
+          this._live.dtcCount = parsed.dtcCount;
+          this._live.readinessSummary = parsed.readinessSummary;
+        } catch { /* non-critical */ }
+
+        try {
           const coolResp = await this._cmd('0105', 3000);
           const m = coolResp.replace(/\s/g, '').match(/4105([0-9A-Fa-f]{2})/i);
           if (m) this._live.coolantC = parseInt(m[1], 16) - 40;
+        } catch { /* non-critical */ }
+
+        try {
+          const loadResp = await this._cmd('0104', 3000);
+          this._live.engineLoadPercent = parsePercentPid(loadResp, '04');
+        } catch { /* non-critical */ }
+
+        try {
+          const trimResp = await this._cmd('0106', 3000);
+          this._live.shortFuelTrimPercent = parseSignedTrimPid(trimResp, '06');
+        } catch { /* non-critical */ }
+
+        try {
+          const trimResp = await this._cmd('0107', 3000);
+          this._live.longFuelTrimPercent = parseSignedTrimPid(trimResp, '07');
+        } catch { /* non-critical */ }
+
+        try {
+          const mapResp = await this._cmd('010B', 3000);
+          this._live.mapKpa = parseSingleBytePid(mapResp, '0B');
+        } catch { /* non-critical */ }
+
+        try {
+          const intakeResp = await this._cmd('010F', 3000);
+          const raw = parseSingleBytePid(intakeResp, '0F');
+          this._live.intakeTempC = raw === null ? null : raw - 40;
+        } catch { /* non-critical */ }
+
+        try {
+          const oxygenResp = await this._cmd('0114', 3000);
+          this._live.oxygenSensorV = parseOxygenSensorVoltage(oxygenResp);
+        } catch { /* non-critical */ }
+
+        try {
+          const throttleResp = await this._cmd('0111', 3000);
+          this._live.throttlePercent = parsePercentPid(throttleResp, '11');
         } catch { /* non-critical */ }
 
         try {
@@ -698,6 +827,13 @@ class ObdBleConnection {
           const m = rvResp.match(/(\d+\.\d+)\s*V/i);
           if (m) this._live.batteryV = parseFloat(m[1]);
         } catch { /* non-critical */ }
+
+        if (!this._live.vin && this._slowIdx % 30 === 0) {
+          try {
+            const vinResp = await this._cmd('0902', 5000);
+            this._live.vin = parseVin(vinResp);
+          } catch { /* non-critical */ }
+        }
       }
 
       this._slowIdx++;

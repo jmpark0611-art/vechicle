@@ -61,14 +61,26 @@ function isDue(remainingKm: number | null) {
 }
 
 function liveToReading(vehicleId: string, data: ObdLiveData): ObdReading {
-  return buildObdReading(vehicleId, {
+  return {
+    ...buildObdReading(vehicleId, {
     ...EMPTY_OBD_INPUT,
     rpm: data.rpm === null ? '' : String(data.rpm),
     speedKmh: data.speedKmh === null ? '' : String(data.speedKmh),
     coolantTempC: data.coolantC === null ? '' : String(data.coolantC),
     batteryVoltage: data.batteryV === null ? '' : String(data.batteryV),
     fuelPercent: data.fuelPercent === null ? '' : String(data.fuelPercent),
-  });
+    dtcCount: data.dtcCount === null ? '' : String(data.dtcCount),
+    }),
+    intakeTempC: data.intakeTempC,
+    throttlePercent: data.throttlePercent,
+    engineLoadPercent: data.engineLoadPercent,
+    mapKpa: data.mapKpa,
+    shortFuelTrimPercent: data.shortFuelTrimPercent,
+    longFuelTrimPercent: data.longFuelTrimPercent,
+    oxygenSensorV: data.oxygenSensorV,
+    vin: data.vin,
+    readinessSummary: data.readinessSummary,
+  };
 }
 
 export default function VehiclesScreen() {
@@ -276,14 +288,22 @@ export default function VehiclesScreen() {
         { title: '배터리', value: selectedObd?.batteryVoltage == null ? '-' : `${selectedObd.batteryVoltage}V`, detail: '전압 상태', tone: selectedObd?.batteryVoltage != null && selectedObd.batteryVoltage < 12 ? 'bad' : 'ok' },
         { title: '연료 잔량', value: selectedObd?.fuelPercent == null ? '-' : `${selectedObd.fuelPercent}%`, detail: '증가 시 주유 추정', tone: selectedObd?.fuelPercent != null && selectedObd.fuelPercent < 20 ? 'warn' : 'ok' },
         { title: '고장 코드', value: selectedObd?.dtcCount == null ? '-' : `${selectedObd.dtcCount}건`, detail: 'DTC 감지', tone: selectedObd?.dtcCount ? 'bad' : 'ok' },
-        { title: '흡기 온도', value: '미수신', detail: 'PID 010F 확장', tone: 'wait' },
-        { title: '스로틀', value: '미수신', detail: 'PID 0111 확장', tone: 'wait' },
-        { title: '엔진 부하', value: '미수신', detail: 'PID 0104 확장', tone: 'wait' },
-        { title: '연료 트림', value: '미수신', detail: '단기/장기 보정', tone: 'wait' },
-        { title: 'MAP 압력', value: '미수신', detail: '흡기 매니폴드', tone: 'wait' },
-        { title: '산소 센서', value: '미수신', detail: 'O2 센서 값', tone: 'wait' },
-        { title: 'VIN', value: '미수신', detail: '차대번호', tone: 'wait' },
-        { title: '배출 준비', value: '미수신', detail: 'Readiness', tone: 'wait' },
+        { title: '흡기 온도', value: selectedObd?.intakeTempC == null ? '미수신' : `${selectedObd.intakeTempC}°C`, detail: 'PID 010F', tone: 'ok' },
+        { title: '스로틀', value: selectedObd?.throttlePercent == null ? '미수신' : `${selectedObd.throttlePercent}%`, detail: '액셀 개폐율', tone: 'ok' },
+        { title: '엔진 부하', value: selectedObd?.engineLoadPercent == null ? '미수신' : `${selectedObd.engineLoadPercent}%`, detail: 'Engine Load', tone: 'ok' },
+        {
+          title: '연료 트림',
+          value:
+            selectedObd?.shortFuelTrimPercent == null && selectedObd?.longFuelTrimPercent == null
+              ? '미수신'
+              : `${selectedObd.shortFuelTrimPercent ?? '-'} / ${selectedObd.longFuelTrimPercent ?? '-'}%`,
+          detail: '단기 / 장기',
+          tone: 'ok',
+        },
+        { title: 'MAP 압력', value: selectedObd?.mapKpa == null ? '미수신' : `${selectedObd.mapKpa}kPa`, detail: '흡기 매니폴드', tone: 'ok' },
+        { title: '산소 센서', value: selectedObd?.oxygenSensorV == null ? '미수신' : `${selectedObd.oxygenSensorV}V`, detail: 'O2 센서 1', tone: 'ok' },
+        { title: 'VIN', value: selectedObd?.vin ?? '미수신', detail: '차대번호', tone: selectedObd?.vin ? 'ok' : 'wait' },
+        { title: '배출 준비', value: selectedObd?.readinessSummary ?? '미수신', detail: 'Readiness', tone: selectedObd?.readinessSummary === '준비 완료' ? 'ok' : 'warn' },
       ]
     : [];
   const maintenanceCards = selectedVehicle && selectedState

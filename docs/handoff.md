@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-17 VIN / emissions readiness OBD support:
+  - `ObdLiveData` and `ObdReading` now include VIN, readiness summary, intake temp, throttle percent, engine load, MAP, short/long fuel trims, oxygen sensor voltage, and DTC count.
+  - `lib/obd-ble.native.ts` polls inspection-related PIDs: `0101` readiness/DTC count, `0104`, `0106`, `0107`, `010B`, `010F`, `0111`, `0114`, and `0902` VIN.
+  - `app/(tabs)/vehicles.tsx` now shows real values for those fields when supported, otherwise `미수신`.
+  - Supabase schema has not yet been extended for the new extra OBD columns; current DB writes remain on existing stable columns, while local snapshot/UI can carry the extended fields.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 expanded diagnosis / maintenance:
   - Removed the duplicated square `ECU 상태` card from `app/(tabs)/vehicles.tsx`; the top horizontal ECU status bar remains.
   - Diagnosis cards now show live-supported OBD fields first: RPM, OBD speed, coolant, battery, fuel, and DTC count.

@@ -11,6 +11,15 @@ export type ObdReading = {
   batteryVoltage: number | null;
   fuelPercent: number | null;
   dtcCount: number | null;
+  intakeTempC: number | null;
+  throttlePercent: number | null;
+  engineLoadPercent: number | null;
+  mapKpa: number | null;
+  shortFuelTrimPercent: number | null;
+  longFuelTrimPercent: number | null;
+  oxygenSensorV: number | null;
+  vin: string | null;
+  readinessSummary: string | null;
   recordedAt: string;
 };
 
@@ -112,6 +121,15 @@ function normalizeReading(value: unknown, vehicleId: string): ObdReading | null 
     batteryVoltage: normalizeNumber(source.batteryVoltage),
     fuelPercent: normalizeNumber(source.fuelPercent),
     dtcCount: normalizeNumber(source.dtcCount),
+    intakeTempC: normalizeNumber(source.intakeTempC),
+    throttlePercent: normalizeNumber(source.throttlePercent),
+    engineLoadPercent: normalizeNumber(source.engineLoadPercent),
+    mapKpa: normalizeNumber(source.mapKpa),
+    shortFuelTrimPercent: normalizeNumber(source.shortFuelTrimPercent),
+    longFuelTrimPercent: normalizeNumber(source.longFuelTrimPercent),
+    oxygenSensorV: normalizeNumber(source.oxygenSensorV),
+    vin: typeof source.vin === 'string' ? source.vin : null,
+    readinessSummary: typeof source.readinessSummary === 'string' ? source.readinessSummary : null,
     recordedAt: typeof source.recordedAt === 'string' ? source.recordedAt : new Date().toISOString(),
   };
 }
@@ -129,6 +147,15 @@ function rowToReading(row: ObdLogRow): ObdReading | null {
     batteryVoltage: normalizeNumber(row.battery_voltage),
     fuelPercent: normalizeNumber(row.fuel_level_percent ?? row.fuel_percent),
     dtcCount: normalizeNumber(row.dtc_count),
+    intakeTempC: null,
+    throttlePercent: null,
+    engineLoadPercent: null,
+    mapKpa: null,
+    shortFuelTrimPercent: null,
+    longFuelTrimPercent: null,
+    oxygenSensorV: null,
+    vin: null,
+    readinessSummary: null,
     recordedAt: row.recorded_at ?? new Date().toISOString(),
   };
 }
@@ -157,6 +184,15 @@ export function buildObdReading(vehicleId: string, input: ObdInput): ObdReading 
     batteryVoltage: parseOptionalNumber(input.batteryVoltage, '배터리 전압'),
     fuelPercent: parseOptionalNumber(input.fuelPercent, '연료 잔량'),
     dtcCount: parseOptionalNumber(input.dtcCount, '고장 코드 수'),
+    intakeTempC: null,
+    throttlePercent: null,
+    engineLoadPercent: null,
+    mapKpa: null,
+    shortFuelTrimPercent: null,
+    longFuelTrimPercent: null,
+    oxygenSensorV: null,
+    vin: null,
+    readinessSummary: null,
     recordedAt: new Date().toISOString(),
   };
 
