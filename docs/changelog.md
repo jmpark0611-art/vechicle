@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-18 OBD BLE stale-device reconnect
+
+- Diagnosis `단말기 연결` no longer shows raw BLE disconnect errors such as `Device ... was disconnected` as the primary status.
+- If a previously saved OBD BLE device fails to connect, the app now disconnects, scans again, remembers the best OBD/VLink candidate, and retries connection once automatically.
+- Final failure messages are normalized into Korean guidance so testers know to check Android-VLink power/Bluetooth state and retry.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 role selection polish and fleet alert tab
 
 - Renamed the commander `알림` tab to `정비` because it now combines fleet alerts with vehicle-specific maintenance settings.

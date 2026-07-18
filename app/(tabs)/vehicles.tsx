@@ -17,6 +17,7 @@ import {
   obdBle,
   saveSelectedObdBleDevice,
   scanForObdBleDevices,
+  type ObdBleDevice,
   type ObdLiveData,
 } from '@/lib/obd-ble';
 import {
@@ -28,6 +29,37 @@ import {
 } from '@/lib/readonly-data';
 
 const ECU_COLORS = ['#EAF2FF', '#EAFBF4', '#FFF4DE', '#F1ECFF', '#FFEFF3'];
+
+function formatObdStatusMessage(message: string) {
+  if (/was disconnected|disconnected|connection was closed|device .* disconnected/i.test(message)) {
+    return '단말기 연결 해제';
+  }
+  if (/cancelled|canceled|timeout|timed out/i.test(message)) {
+    return '단말기 응답 지연';
+  }
+  if (/failed|fail/i.test(message)) {
+    return '단말기 연결 실패';
+  }
+  return message;
+}
+
+function buildObdFailureMessage(message: string) {
+  const detail = formatObdStatusMessage(message);
+  if (detail !== message) {
+    return `${detail}\n\nAndroid-VLink 전원이 켜져 있고 휴대폰 블루투스 목록에 연결 가능한 상태인지 확인한 뒤 다시 시도해 주세요.`;
+  }
+  return message;
+}
+
+async function scanAndRememberObdDevice(): Promise<ObdBleDevice | null> {
+  const scan = await scanForObdBleDevices();
+  if (!scan.ok || scan.devices.length === 0) {
+    return null;
+  }
+  const device = scan.devices.find((item) => /vlink|obd|elm/i.test(item.name)) ?? scan.devices[0];
+  await saveSelectedObdBleDevice(device);
+  return device;
+}
 
 function liveToReading(vehicleId: string, data: ObdLiveData): ObdReading {
   return {
@@ -124,7 +156,7 @@ export default function VehiclesScreen() {
           // Empty OBD frames can arrive while the adapter is warming up.
         }
       },
-      onStatus: setObdStatus,
+      onStatus: (message) => setObdStatus(formatObdStatusMessage(message)),
       onDisconnect: () => setObdStatus('단말기 연결 해제'),
     });
 
@@ -147,28 +179,42 @@ export default function VehiclesScreen() {
     setIsConnecting(true);
     try {
       let device = await loadSelectedObdBleDevice();
+      const hadSavedDevice = Boolean(device);
       if (!device) {
-        const scan = await scanForObdBleDevices();
-        if (!scan.ok || scan.devices.length === 0) {
-          Alert.alert('단말기 검색 실패', scan.message);
+        setObdStatus('OBD 단말기 자동 검색 중');
+        device = await scanAndRememberObdDevice();
+        if (!device) {
+          Alert.alert('단말기 검색 실패', 'Android-VLink 전원과 휴대폰 블루투스 연결 상태를 확인한 뒤 다시 시도해 주세요.');
+          setObdStatus('단말기 미검색');
           return;
         }
-        device = scan.devices[0];
-        await saveSelectedObdBleDevice(device);
       }
 
       setObdStatus(`${device.name} 연결 중`);
-      const result = await obdBle.connect(device.id);
+      let result = await obdBle.connect(device.id);
+      if (!result.ok && hadSavedDevice) {
+        setObdStatus('저장된 단말기 연결 실패 · 재검색 중');
+        await obdBle.disconnect();
+        const retryDevice = await scanAndRememberObdDevice();
+        if (retryDevice) {
+          device = retryDevice;
+          setObdStatus(`${device.name} 재연결 중`);
+          result = await obdBle.connect(device.id);
+        }
+      }
+
       if (!result.ok) {
-        Alert.alert('단말기 연결 실패', result.message);
-        setObdStatus(result.message);
+        Alert.alert('단말기 연결 실패', buildObdFailureMessage(result.message));
+        setObdStatus('단말기 연결 실패 · 다시 시도 필요');
         return;
       }
       obdBle.startPolling(2000);
       setObdStatus(`${device.name} 연결됨`);
-      Alert.alert('단말기 연결', `${device.name}\n${result.message}`);
+      Alert.alert('단말기 연결', `${device.name}\n연결되었습니다.`);
     } catch (error) {
-      Alert.alert('단말기 연결 실패', error instanceof Error ? error.message : '연결 중 오류가 발생했습니다.');
+      const message = error instanceof Error ? error.message : '연결 중 오류가 발생했습니다.';
+      Alert.alert('단말기 연결 실패', buildObdFailureMessage(message));
+      setObdStatus('단말기 연결 실패 · 다시 시도 필요');
     } finally {
       setIsConnecting(false);
     }

@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-18 OBD BLE stale-device reconnect:
+  - User reported diagnosis `단말기 연결 실패` with raw native BLE message `Device 7E:57:58:E1:03:3D was disconnected`.
+  - `app/(tabs)/vehicles.tsx` now formats disconnect/timeout/failure status into Korean operator text.
+  - Diagnosis connection now handles stale saved BLE device IDs: try saved device, on failure disconnect, scan again, save the best OBD/VLink candidate, and retry once before showing final guidance.
+  - Final failure status is `단말기 연결 실패 · 다시 시도 필요` instead of the raw BLE exception.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 role selection / fleet alert tab:
   - Commander tab label changed from `알림` to `정비`.
   - Periodic replacement cards were removed from `app/(tabs)/vehicles.tsx` and moved to `app/(tabs)/alerts.tsx` under `차량 설정`, below the alert list. Diagnosis now focuses on ECU/OBD sensor information.
