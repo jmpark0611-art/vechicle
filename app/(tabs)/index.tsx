@@ -15,15 +15,18 @@ import {
 } from '@/lib/maintenance-data';
 import { buildObdReadingFromLiveData, saveLocalObdReading, saveTripObdLog } from '@/lib/obd-data';
 import {
+  getVehicleNumberForObdDevice,
   loadSelectedObdBleDevice,
   obdBle,
   saveSelectedObdBleDevice,
   scanForObdBleDevices,
+  type ObdBleDevice,
   type ObdLiveData,
 } from '@/lib/obd-ble';
 import {
   cancelManualTrip,
   completeManualTrip,
+  createVehicle,
   fetchActiveTrips,
   fetchLatestVehicleOdometers,
   fetchVehiclesReadOnly,
@@ -120,6 +123,40 @@ export default function TripScreen() {
     ? getVehicleMaintenanceState(maintenanceSnapshot, selectedVehicleId).currentKm
     : null;
 
+  const selectVehicleForObdDevice = useCallback(async (device: ObdBleDevice, sourceVehicles = vehicles) => {
+    const vehicleNumber = getVehicleNumberForObdDevice(device);
+    if (!vehicleNumber) return null;
+
+    const existing = sourceVehicles.find((vehicle) => vehicle.vehicleNumber.toLowerCase() === vehicleNumber.toLowerCase());
+    if (existing) {
+      setSelectedVehicleId(existing.id);
+      return existing;
+    }
+
+    try {
+      const created = await createVehicle(vehicleNumber);
+      setVehicles((current) => {
+        const alreadyExists = current.some((vehicle) => vehicle.id === created.id || vehicle.vehicleNumber.toLowerCase() === vehicleNumber.toLowerCase());
+        return alreadyExists ? current : [...current, created].sort((a, b) => a.vehicleNumber.localeCompare(b.vehicleNumber, 'ko-KR'));
+      });
+      setSelectedVehicleId(created.id);
+      return created;
+    } catch {
+      try {
+        const nextVehicles = await fetchVehiclesReadOnly(200);
+        const existingAfterReload = nextVehicles.find((vehicle) => vehicle.vehicleNumber.toLowerCase() === vehicleNumber.toLowerCase());
+        setVehicles(nextVehicles);
+        if (existingAfterReload) {
+          setSelectedVehicleId(existingAfterReload.id);
+          return existingAfterReload;
+        }
+      } catch {
+        // Keep OBD connection flow running even if vehicle auto-registration lookup fails.
+      }
+      return null;
+    }
+  }, [vehicles]);
+
   const stopObdSaveTimer = useCallback(() => {
     if (obdSaveTimerRef.current !== null) {
       clearInterval(obdSaveTimerRef.current);
@@ -177,6 +214,7 @@ export default function TripScreen() {
         const device = scan.devices[0];
         const namedDevice = { ...device, name: displayObdDeviceName(device.name, currentVehicleNumber) };
         await saveSelectedObdBleDevice(namedDevice);
+        await selectVehicleForObdDevice(namedDevice);
         deviceId = device.id;
         deviceName = namedDevice.name;
         setSavedBleDeviceId(device.id);
@@ -202,7 +240,7 @@ export default function TripScreen() {
     } finally {
       setIsObdConnecting(false);
     }
-  }, [currentVehicleNumber, isObdConnected, isObdConnecting, savedBleDeviceId, savedBleDeviceName, startObdSaveTimer, stopObdRetryTimer]);
+  }, [currentVehicleNumber, isObdConnected, isObdConnecting, savedBleDeviceId, savedBleDeviceName, selectVehicleForObdDevice, startObdSaveTimer, stopObdRetryTimer]);
 
   useEffect(() => {
     obdBle.setCallbacks({
@@ -254,12 +292,13 @@ export default function TripScreen() {
         const deviceName = displayObdDeviceName(device.name, currentVehicleNumber);
         setSavedBleDeviceName(deviceName);
         setObdStatus(`${deviceName} 자동연결 준비`);
+        void selectVehicleForObdDevice(device);
       }
     });
     void getStoredRole().then((nextRole) => {
       if (nextRole === 'commander') router.replace('/(tabs)/explore');
     });
-  }, [currentVehicleNumber]);
+  }, [currentVehicleNumber, selectVehicleForObdDevice]);
 
   useEffect(() => {
     if (sameUser) {

@@ -13,6 +13,7 @@ import {
 } from '@/lib/maintenance-data';
 import { buildObdReading, EMPTY_OBD_INPUT, loadSyncedObdSnapshot, saveObdReading, type ObdReading, type ObdSnapshot } from '@/lib/obd-data';
 import {
+  getVehicleNumberForObdDevice,
   loadSelectedObdBleDevice,
   obdBle,
   saveSelectedObdBleDevice,
@@ -118,6 +119,40 @@ export default function VehiclesScreen() {
     [selectedVehicleId, vehicles]
   );
 
+  const selectVehicleForObdDevice = useCallback(async (device: ObdBleDevice, sourceVehicles = vehicles) => {
+    const vehicleNumber = getVehicleNumberForObdDevice(device);
+    if (!vehicleNumber) return null;
+
+    const existing = sourceVehicles.find((vehicle) => vehicle.vehicleNumber.toLowerCase() === vehicleNumber.toLowerCase());
+    if (existing) {
+      setSelectedVehicleId(existing.id);
+      return existing;
+    }
+
+    try {
+      const created = await createVehicle(vehicleNumber);
+      setVehicles((current) => {
+        const alreadyExists = current.some((vehicle) => vehicle.id === created.id || vehicle.vehicleNumber.toLowerCase() === vehicleNumber.toLowerCase());
+        return alreadyExists ? current : [...current, created].sort((a, b) => a.vehicleNumber.localeCompare(b.vehicleNumber, 'ko-KR'));
+      });
+      setSelectedVehicleId(created.id);
+      return created;
+    } catch {
+      try {
+        const nextVehicles = await fetchVehiclesReadOnly(200);
+        const existingAfterReload = nextVehicles.find((vehicle) => vehicle.vehicleNumber.toLowerCase() === vehicleNumber.toLowerCase());
+        setVehicles(nextVehicles);
+        if (existingAfterReload) {
+          setSelectedVehicleId(existingAfterReload.id);
+          return existingAfterReload;
+        }
+      } catch {
+        // Keep OBD connection flow running even if vehicle auto-registration lookup fails.
+      }
+      return null;
+    }
+  }, [vehicles]);
+
   const loadVehicles = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -198,6 +233,7 @@ export default function VehiclesScreen() {
         }
       }
 
+      await selectVehicleForObdDevice(device);
       setObdStatus(`${device.name} 연결 중`);
       let result = await obdBle.connect(device.id);
       if (!result.ok && hadSavedDevice) {
@@ -206,6 +242,7 @@ export default function VehiclesScreen() {
         const retryDevice = await scanAndRememberObdDevice(selectedVehicle.vehicleNumber);
         if (retryDevice) {
           device = retryDevice;
+          await selectVehicleForObdDevice(device);
           setObdStatus(`${device.name} 재연결 중`);
           result = await obdBle.connect(device.id);
         }

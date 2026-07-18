@@ -29,6 +29,11 @@ function applyDeviceAlias(device: ObdBleDevice): ObdBleDevice {
   return alias ? { ...device, name: alias } : device;
 }
 
+export function getVehicleNumberForObdDevice(device: ObdBleDevice | null | undefined): string | null {
+  if (!device) return null;
+  return DEVICE_ALIASES[device.id] ?? null;
+}
+
 function isLikelyObdDevice(device: { name?: string | null; localName?: string | null; serviceUUIDs?: string[] | null }) {
   const name = deviceName(device).toLowerCase();
   const serviceText = (device.serviceUUIDs ?? []).join(' ').toLowerCase();

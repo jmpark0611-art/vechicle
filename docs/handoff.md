@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-18 1862-Test device-to-vehicle matching:
+  - User clarified the registered vehicle number should match the known test adapter name, so the active vehicle should be `1862-Test`, not `222`.
+  - `getVehicleNumberForObdDevice()` now exposes the known adapter-to-vehicle alias from `lib/obd-ble.native.ts` and `lib/obd-ble.ts`.
+  - Driver and diagnosis screens now select the matching `1862-Test` vehicle when the saved/scanned adapter ID is `7E:57:58:E1:03:3D`.
+  - If `1862-Test` is not registered yet, the app attempts to create it and select it; if creation hits an existing row, it reloads vehicles and selects the existing `1862-Test` row.
+  - This is still a field-test shortcut. Long-term, move adapter mapping to a DB-backed `obd_devices` table keyed by `unit_code + vehicle_id + device_id`.
 - 2026-07-18 OBD BLE stale-device reconnect:
   - User reported diagnosis `단말기 연결 실패` with raw native BLE message `Device 7E:57:58:E1:03:3D was disconnected`.
   - `app/(tabs)/vehicles.tsx` now formats disconnect/timeout/failure status into Korean operator text.

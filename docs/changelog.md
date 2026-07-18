@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-18 1862-Test device-to-vehicle matching
+
+- Known BLE adapter `7E:57:58:E1:03:3D` still displays as `1862-Test`.
+- Driver and diagnosis flows now treat that alias as the vehicle number too.
+- When the saved/scanned adapter is `1862-Test`, the app selects the registered `1862-Test` vehicle; if it does not exist, it attempts to create it and select it.
+- Duplicate/create fallback reloads the vehicle list and selects the existing `1862-Test` vehicle when present.
+
 ## 2026-07-18 OBD BLE stale-device reconnect
 
 - Diagnosis `단말기 연결` no longer shows raw BLE disconnect errors such as `Device ... was disconnected` as the primary status.
