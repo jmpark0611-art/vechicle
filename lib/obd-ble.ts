@@ -15,7 +15,7 @@ export type ObdBleScanResult = {
 };
 
 const SELECTED_DEVICE_KEY = 'vehicle-obd-ble-selected-device-v1';
-const DEFAULT_SCAN_MS = 8_000;
+const DEFAULT_SCAN_MS = 3_000;
 
 function deviceName(device: { name?: string | null; localName?: string | null }) {
   return device.localName || device.name || '이름 없는 BLE 장치';
@@ -25,6 +25,12 @@ function isLikelyObdDevice(device: { name?: string | null; localName?: string | 
   const name = deviceName(device).toLowerCase();
   const serviceText = (device.serviceUUIDs ?? []).join(' ').toLowerCase();
   return /obd|elm|vlink|v-link|icar|car|ble|uart|ffe0|fff0/.test(`${name} ${serviceText}`);
+}
+
+function isStrongObdDevice(device: { name?: string | null; localName?: string | null; serviceUUIDs?: string[] | null }) {
+  const name = deviceName(device).toLowerCase();
+  const serviceText = (device.serviceUUIDs ?? []).join(' ').toLowerCase();
+  return /obd|elm|vlink|v-link|icar|ffe0|fff0|18f0|e7810a71|6e400001/.test(`${name} ${serviceText}`);
 }
 
 async function requestAndroidBluetoothPermissions() {
@@ -89,6 +95,11 @@ export async function scanForObdBleDevices(scanMs = DEFAULT_SCAN_MS): Promise<Ob
           rssi: typeof device.rssi === 'number' ? device.rssi : null,
           serviceUUIDs: device.serviceUUIDs ?? [],
         });
+        if (isStrongObdDevice(device)) {
+          clearTimeout(timeoutId);
+          manager.stopDeviceScan();
+          resolve();
+        }
       });
     });
   } finally {

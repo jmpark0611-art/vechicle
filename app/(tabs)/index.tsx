@@ -50,6 +50,13 @@ function formatKm(value: number | null | undefined) {
   return `${Math.round(value).toLocaleString('ko-KR')} km`;
 }
 
+function displayObdDeviceName(deviceName: string | null | undefined, vehicleNumber?: string | null) {
+  if (!deviceName || /^OBD 단말기$|이름 없는 BLE|unknown/i.test(deviceName)) {
+    return vehicleNumber ? `${vehicleNumber} OBD 단말기` : 'OBD 단말기';
+  }
+  return deviceName;
+}
+
 function parseKm(value: string) {
   const parsed = Number(value.replace(/,/g, '').trim());
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
@@ -107,6 +114,8 @@ export default function TripScreen() {
   obdLiveRef.current = obdLiveData;
 
   const activeTrip = activeTrips[0] ?? null;
+  const selectedVehicle = vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? null;
+  const currentVehicleNumber = activeTrip?.vehicleNumber ?? selectedVehicle?.vehicleNumber ?? null;
   const selectedCurrentKm = selectedVehicleId
     ? getVehicleMaintenanceState(maintenanceSnapshot, selectedVehicleId).currentKm
     : null;
@@ -156,7 +165,7 @@ export default function TripScreen() {
     setIsObdConnecting(true);
     try {
       let deviceId = savedBleDeviceId;
-      let deviceName = savedBleDeviceName;
+      let deviceName = displayObdDeviceName(savedBleDeviceName, currentVehicleNumber);
 
       if (!deviceId) {
         setObdStatus('OBD 단말기 자동 검색 중');
@@ -166,11 +175,12 @@ export default function TripScreen() {
           return;
         }
         const device = scan.devices[0];
-        await saveSelectedObdBleDevice(device);
+        const namedDevice = { ...device, name: displayObdDeviceName(device.name, currentVehicleNumber) };
+        await saveSelectedObdBleDevice(namedDevice);
         deviceId = device.id;
-        deviceName = device.name;
+        deviceName = namedDevice.name;
         setSavedBleDeviceId(device.id);
-        setSavedBleDeviceName(device.name);
+        setSavedBleDeviceName(namedDevice.name);
       }
 
       setObdStatus(`${deviceName ?? 'OBD'} 연결 중`);
@@ -192,7 +202,7 @@ export default function TripScreen() {
     } finally {
       setIsObdConnecting(false);
     }
-  }, [isObdConnected, isObdConnecting, savedBleDeviceId, savedBleDeviceName, startObdSaveTimer, stopObdRetryTimer]);
+  }, [currentVehicleNumber, isObdConnected, isObdConnecting, savedBleDeviceId, savedBleDeviceName, startObdSaveTimer, stopObdRetryTimer]);
 
   useEffect(() => {
     obdBle.setCallbacks({
@@ -241,14 +251,15 @@ export default function TripScreen() {
     void loadSelectedObdBleDevice().then((device) => {
       if (device) {
         setSavedBleDeviceId(device.id);
-        setSavedBleDeviceName(device.name);
-        setObdStatus(`${device.name} 자동연결 준비`);
+        const deviceName = displayObdDeviceName(device.name, currentVehicleNumber);
+        setSavedBleDeviceName(deviceName);
+        setObdStatus(`${deviceName} 자동연결 준비`);
       }
     });
     void getStoredRole().then((nextRole) => {
       if (nextRole === 'commander') router.replace('/(tabs)/explore');
     });
-  }, []);
+  }, [currentVehicleNumber]);
 
   useEffect(() => {
     if (sameUser) {

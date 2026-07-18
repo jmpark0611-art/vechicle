@@ -35,6 +35,13 @@
 - Raw Supabase unique constraint messages remain hidden from the operator.
 - Verification passed with `npm.cmd run verify`.
 
+## 2026-07-18 faster OBD BLE recognition
+
+- Reduced BLE OBD scan timeout from 8 seconds to 3 seconds.
+- BLE scans now stop early when a strong OBD/VLink/ELM candidate is found.
+- `이름 없는 BLE 장치` is saved and displayed with the current vehicle number, such as `222 OBD 단말기`, in driver and diagnosis flows.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 role selection polish and fleet alert tab
 
 - Renamed the commander `알림` tab to `정비` because it now combines fleet alerts with vehicle-specific maintenance settings.

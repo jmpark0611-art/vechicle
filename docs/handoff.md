@@ -40,6 +40,12 @@
   - Keep legacy fallback paths until all field devices have updated APKs and the Supabase schema is confirmed in production. Removing fallbacks too early will reproduce the recent broken-function issues.
   - Recommended next AI instruction: treat unit expansion as a schema/data-layer migration first, then UI list expansion second.
   - Detailed checklist saved in `docs/unit-expansion.md`.
+- 2026-07-18 faster OBD BLE recognition:
+  - User reported OBD adapter recognition is too slow and unnamed BLE devices are confusing.
+  - `lib/obd-ble.native.ts` and `lib/obd-ble.ts` reduced default scan timeout from 8s to 3s.
+  - BLE scan now resolves early when a strong OBD/VLink/ELM candidate appears.
+  - Driver and diagnosis screens map unnamed/generic BLE names to the active/selected vehicle number, e.g. `222 OBD 단말기`.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 role selection / fleet alert tab:
   - Commander tab label changed from `알림` to `정비`.
   - Periodic replacement cards were removed from `app/(tabs)/vehicles.tsx` and moved to `app/(tabs)/alerts.tsx` under `차량 설정`, below the alert list. Diagnosis now focuses on ECU/OBD sensor information.
