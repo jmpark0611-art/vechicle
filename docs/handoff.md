@@ -32,6 +32,14 @@
   - `lib/readonly-data.ts` now throws a friendly duplicate message instead of returning the existing vehicle.
   - `app/(tabs)/vehicles.tsx` shows duplicate cases as `중복 차량번호` and keeps raw Supabase unique constraint text hidden.
   - `npm.cmd run verify` passed.
+- 2026-07-18 future 30-unit expansion guardrail:
+  - User plans to expand from 2 test units to about 30 units later.
+  - Do not hard-code a larger unit list directly into screen logic. Keep units behind `lib/unit.ts` / DB-driven unit loading, and pass only `unit_code` through data-layer functions.
+  - Before enabling more units, apply `docs/schema.sql` to Supabase first. Required columns include `vehicles.unit_code`, `trips.unit_code`, `speed_zones.unit_code`, `speed_zones.zone_kind`, and `speed_zones.polygon_points`.
+  - After schema migration, verify these flows by unit: mode selection persistence, vehicle list/register/delete, trip start/end, records/monthly export, diagnosis OBD snapshot, maintenance alerts, speed-zone save/read, and overspeed alerts.
+  - Keep legacy fallback paths until all field devices have updated APKs and the Supabase schema is confirmed in production. Removing fallbacks too early will reproduce the recent broken-function issues.
+  - Recommended next AI instruction: treat unit expansion as a schema/data-layer migration first, then UI list expansion second.
+  - Detailed checklist saved in `docs/unit-expansion.md`.
 - 2026-07-17 role selection / fleet alert tab:
   - Commander tab label changed from `알림` to `정비`.
   - Periodic replacement cards were removed from `app/(tabs)/vehicles.tsx` and moved to `app/(tabs)/alerts.tsx` under `차량 설정`, below the alert list. Diagnosis now focuses on ECU/OBD sensor information.
