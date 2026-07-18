@@ -28,6 +28,13 @@
 - Polygon zones are temporarily approximated as center-radius zones until the full `docs/schema.sql` migration is applied.
 - Verification passed with `npm.cmd run verify`.
 
+## 2026-07-18 duplicate vehicle registration block
+
+- Changed duplicate vehicle registration behavior from selecting the existing vehicle to blocking the registration.
+- Duplicate vehicle numbers now show a `중복 차량번호` popup with guidance to use the existing vehicle from the dropdown.
+- Raw Supabase unique constraint messages remain hidden from the operator.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 role selection polish and fleet alert tab
 
 - Renamed the commander `알림` tab to `정비` because it now combines fleet alerts with vehicle-specific maintenance settings.

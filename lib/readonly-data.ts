@@ -97,6 +97,10 @@ function isDuplicateVehicleError(error: { code?: string; message: string } | nul
   return error.code === '23505' || /vehicles_vehicle_number_key|duplicate key value/i.test(error.message);
 }
 
+function duplicateVehicleMessage(vehicleNumber: string) {
+  return `${vehicleNumber} 차량은 이미 등록되어 있습니다. 차량 선택 목록에서 기존 차량을 선택해 주세요.`;
+}
+
 function mapVehicle(row: VehicleRow): VehicleSummary {
   return {
     id: row.id,
@@ -178,34 +182,6 @@ export async function fetchVehiclesReadOnly(limit = 20): Promise<VehicleSummary[
   return ((result.data ?? []) as VehicleRow[]).map(mapVehicle);
 }
 
-async function fetchVehicleByNumber(vehicleNumber: string): Promise<VehicleSummary | null> {
-  let result = await withRequestTimeout(
-    supabase
-      .from('vehicles')
-      .select('id, vehicle_number, unit_code, created_at')
-      .eq('vehicle_number', vehicleNumber)
-      .maybeSingle(),
-    '차량 확인'
-  ) as QueryResult<VehicleRow>;
-
-  if (result.error && isMissingColumnError(result.error)) {
-    result = await withRequestTimeout(
-      supabase
-        .from('vehicles')
-        .select('id, vehicle_number, created_at')
-        .eq('vehicle_number', vehicleNumber)
-        .maybeSingle(),
-      '차량 확인'
-    ) as QueryResult<VehicleRow>;
-  }
-
-  if (result.error) {
-    throw new Error(result.error.message);
-  }
-
-  return result.data ? mapVehicle(result.data as VehicleRow) : null;
-}
-
 export async function createVehicle(vehicleNumber: string): Promise<VehicleSummary> {
   const trimmed = vehicleNumber.trim();
   const unitCode = await getStoredUnitCode();
@@ -224,8 +200,7 @@ export async function createVehicle(vehicleNumber: string): Promise<VehicleSumma
 
   if (result.error) {
     if (isDuplicateVehicleError(result.error)) {
-      const existing = await fetchVehicleByNumber(trimmed);
-      if (existing) return existing;
+      throw new Error(duplicateVehicleMessage(trimmed));
     }
     if (!isMissingColumnError(result.error)) {
       throw new Error(result.error.message);
@@ -240,8 +215,7 @@ export async function createVehicle(vehicleNumber: string): Promise<VehicleSumma
     ) as QueryResult<VehicleRow>;
     if (result.error) {
       if (isDuplicateVehicleError(result.error)) {
-        const existing = await fetchVehicleByNumber(unitCode ? `${unitCode}-${trimmed}` : trimmed);
-        if (existing) return existing;
+        throw new Error(duplicateVehicleMessage(trimmed));
       }
       throw new Error(result.error.message);
     }

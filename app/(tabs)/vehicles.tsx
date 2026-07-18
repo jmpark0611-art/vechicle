@@ -245,9 +245,10 @@ export default function VehiclesScreen() {
       setSelectedVehicleId(vehicle.id);
       setIsRegisterOpen(false);
       await loadVehicles();
-      Alert.alert('차량 등록/선택 완료', `${vehicle.vehicleNumber}${newVehicleType.trim() ? ` · ${newVehicleType.trim()}` : ''}`);
+      Alert.alert('차량 등록 완료', `${vehicle.vehicleNumber}${newVehicleType.trim() ? ` · ${newVehicleType.trim()}` : ''}`);
     } catch (error) {
-      Alert.alert('차량 등록 실패', error instanceof Error ? error.message : '차량을 등록하지 못했습니다.');
+      const message = error instanceof Error ? error.message : '차량을 등록하지 못했습니다.';
+      Alert.alert(message.includes('이미 등록') ? '중복 차량번호' : '차량 등록 실패', message);
     } finally {
       setIsSaving(false);
     }
