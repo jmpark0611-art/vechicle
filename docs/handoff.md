@@ -513,6 +513,16 @@ npm.cmd run health
   - Apply the same `VehicleDropdown` pattern anywhere else that asks for a vehicle selection.
   - Keep the tab count small; prefer improving the existing 기록 screen over reintroducing 월장비운행증 as a separate tab.
   - Device-test APK after GitHub Actions finishes, especially tab navigation and trip start/end.
+## 2026-07-18 handoff: diagnosis vehicle dropdown selection
+
+- User reported that selecting a vehicle in the diagnosis tab did not apply.
+- Cause: `app/(tabs)/vehicles.tsx` passed `displayLabel="차량 선택"` and `mutedDisplay`, so the dropdown display stayed fixed even after selection.
+- Fix:
+  - Removed the forced display label.
+  - Passed the actual `selectedVehicleId` to `VehicleDropdown`.
+  - The selected vehicle number should now be visible and aligned with the selected diagnosis data.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-18 handoff: compact records cards
 
 - User reported records tab cards became too large.

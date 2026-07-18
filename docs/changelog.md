@@ -600,6 +600,12 @@
 - Rewrote the 운행 and 기록 screen copy back to clean Korean in the touched files.
 - Simplified shared card styling in `components/rebuild-screen.tsx` to reduce the busy rounded-card look.
 - Verification passed with `npm.cmd run verify`.
+## 2026-07-18 diagnosis vehicle dropdown selection
+
+- Fixed diagnosis vehicle dropdown display: it no longer forces the label to `차량 선택` after a vehicle is selected.
+- The dropdown now receives the actual `selectedVehicleId`, so selected state and displayed vehicle number stay aligned.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-18 compact records cards
 
 - Restored compact records-list cards after the monthly-log metric tiles made each record too tall.

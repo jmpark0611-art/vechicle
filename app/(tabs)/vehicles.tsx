@@ -281,10 +281,9 @@ export default function VehiclesScreen() {
               <View style={styles.dropdownWrap}>
                 <VehicleDropdown
                   vehicles={vehicles}
-                  selectedVehicleId={selectedVehicle?.id ?? null}
+                  selectedVehicleId={selectedVehicleId}
                   onSelect={setSelectedVehicleId}
-                  displayLabel="차량 선택"
-                  mutedDisplay
+                  placeholder="차량 선택"
                   compact
                 />
               </View>
