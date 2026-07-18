@@ -21,6 +21,13 @@
 - Diagnosis registration success copy now says `차량 등록/선택 완료`.
 - Verification passed with `npm.cmd run verify`.
 
+## 2026-07-18 speed zone legacy schema fallback
+
+- Speed-zone save no longer blocks field testing when Supabase has not yet applied `speed_zones.unit_code`, `zone_kind`, or `polygon_points`.
+- If polygon/unit columns are missing, the app now saves the zone using the legacy center/radius columns.
+- Polygon zones are temporarily approximated as center-radius zones until the full `docs/schema.sql` migration is applied.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 role selection polish and fleet alert tab
 
 - Renamed the commander `알림` tab to `정비` because it now combines fleet alerts with vehicle-specific maintenance settings.

@@ -21,6 +21,12 @@
   - `app/(tabs)/vehicles.tsx` now shows `차량 등록/선택 완료` for this shared path.
   - This avoids raw DB errors during field testing when testers try to register an already-seeded vehicle.
   - `npm.cmd run verify` passed.
+- 2026-07-18 speed zone legacy schema fallback:
+  - User reported speed-zone save failure after unit split: `speed_zones` polygon/unit DB columns not yet applied.
+  - `lib/location-data.ts` now treats missing `unit_code`, `zone_kind`, and `polygon_points` as legacy-schema cases.
+  - On legacy schema, polygon input is saved as a center/radius zone so field testing is not blocked before Supabase migration.
+  - Full polygon/unit separation still requires applying `docs/schema.sql` to Supabase later.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 role selection / fleet alert tab:
   - Commander tab label changed from `알림` to `정비`.
   - Periodic replacement cards were removed from `app/(tabs)/vehicles.tsx` and moved to `app/(tabs)/alerts.tsx` under `차량 설정`, below the alert list. Diagnosis now focuses on ECU/OBD sensor information.

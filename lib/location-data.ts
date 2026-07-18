@@ -95,7 +95,7 @@ function isMissingTable(error: { code?: string; message: string } | null) {
 }
 
 function isMissingPolygonColumns(error: { message: string } | null) {
-  return /zone_kind|polygon_points|schema cache|could not find/i.test(error?.message ?? '');
+  return /unit_code|zone_kind|polygon_points|schema cache|could not find/i.test(error?.message ?? '');
 }
 
 function isNoRows(error: { code?: string; message: string } | null) {
@@ -344,10 +344,27 @@ export async function createSpeedZone(input: CreateSpeedZoneInput): Promise<{ ok
 
   if (!result.error) return { ok: true, message: '제한속도 구역을 저장했습니다.' };
   if (isMissingPolygonColumns(result.error)) {
-    return {
-      ok: false,
-      message: '면적 구역용 DB 컬럼이 아직 적용되지 않았습니다. docs/schema.sql의 speed_zones 마이그레이션을 Supabase에 적용해 주세요.',
-    };
+    const legacyResult = await withRequestTimeout(
+      supabase.from('speed_zones').insert({
+        name: input.name.trim(),
+        latitude,
+        longitude,
+        radius_m: dbRadiusM,
+        speed_limit_kmh: dbSpeedLimitKmh,
+      }),
+      '제한속도 구역 저장'
+    );
+    if (!legacyResult.error) {
+      return {
+        ok: true,
+        message: zoneKind === 'polygon'
+          ? 'DB 마이그레이션 전이라 면적 구역을 중심 반경 구역으로 저장했습니다.'
+          : '제한속도 구역을 저장했습니다.',
+      };
+    }
+    if (!isMissingTable(legacyResult.error)) {
+      return { ok: false, message: legacyResult.error.message };
+    }
   }
   if (isMissingTable(result.error)) {
     return { ok: false, message: 'speed_zones 테이블이 아직 DB에 적용되지 않았습니다.' };
