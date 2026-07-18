@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-18 vehicle unit FK fallback:
+  - User hit vehicle registration failure: `insert or update on table "vehicles" violates foreign key constraint "vehicles_unit_code_fkey"`.
+  - Cause: selected app unit code exists locally but has not been seeded into Supabase `units` yet.
+  - `createVehicle()` now retries vehicle insert with `unit_code: null` when `vehicles_unit_code_fkey` blocks the first insert.
+  - This is a compatibility fallback for field testing only. Later, apply `docs/schema.sql` and seed valid unit rows before removing fallback behavior.
 - 2026-07-18 1862-Test device-to-vehicle matching:
   - User clarified the registered vehicle number should match the known test adapter name, so the active vehicle should be `1862-Test`, not `222`.
   - `getVehicleNumberForObdDevice()` now exposes the known adapter-to-vehicle alias from `lib/obd-ble.native.ts` and `lib/obd-ble.ts`.

@@ -1,5 +1,11 @@
 # 변경 이력
 
+## 2026-07-18 vehicle unit FK fallback
+
+- Vehicle registration no longer blocks field testing when `vehicles.unit_code` references a unit code that has not been seeded in Supabase yet.
+- If insert with the selected `unit_code` fails on `vehicles_unit_code_fkey`, the app retries the same vehicle number with `unit_code: null`.
+- This keeps vehicle registration and `1862-Test` auto-registration working until the full Supabase unit seed/migration is applied.
+
 ## 2026-07-18 1862-Test device-to-vehicle matching
 
 - Known BLE adapter `7E:57:58:E1:03:3D` still displays as `1862-Test`.
