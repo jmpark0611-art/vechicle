@@ -42,6 +42,13 @@
 - `이름 없는 BLE 장치` is saved and displayed with the current vehicle number, such as `222 OBD 단말기`, in driver and diagnosis flows.
 - Verification passed with `npm.cmd run verify`.
 
+## 2026-07-18 1862-Test OBD device alias
+
+- Added a local BLE device alias for `7E:57:58:E1:03:3D` as `1862-Test`.
+- Scan results, saved device loading, and saved device writing now normalize that BLE ID to the `1862-Test` display name.
+- This keeps the known test adapter from appearing as `이름 없는 BLE 장치`.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 role selection polish and fleet alert tab
 
 - Renamed the commander `알림` tab to `정비` because it now combines fleet alerts with vehicle-specific maintenance settings.

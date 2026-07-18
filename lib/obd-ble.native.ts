@@ -33,6 +33,9 @@ export type ObdProbeResult = {
 
 const SELECTED_DEVICE_KEY = 'vehicle-obd-ble-selected-device-v1';
 const DEFAULT_SCAN_MS = 3_000;
+const DEVICE_ALIASES: Record<string, string> = {
+  '7E:57:58:E1:03:3D': '1862-Test',
+};
 
 // Known BLE OBD serial profiles (service / notify / write characteristic prefixes)
 const OBD_BLE_PROFILES = [
@@ -137,6 +140,11 @@ function deviceName(device: { name?: string | null; localName?: string | null })
   return device.localName || device.name || '이름 없는 BLE 장치';
 }
 
+function applyDeviceAlias(device: ObdBleDevice): ObdBleDevice {
+  const alias = DEVICE_ALIASES[device.id];
+  return alias ? { ...device, name: alias } : device;
+}
+
 function isLikelyObdDevice(device: { name?: string | null; localName?: string | null; serviceUUIDs?: string[] | null }) {
   const name = deviceName(device).toLowerCase();
   const serviceText = (device.serviceUUIDs ?? []).join(' ').toLowerCase();
@@ -203,7 +211,7 @@ export async function scanForObdBleDevices(scanMs = DEFAULT_SCAN_MS): Promise<Ob
 
         found.set(device.id, {
           id: device.id,
-          name: deviceName(device),
+          name: DEVICE_ALIASES[device.id] ?? deviceName(device),
           rssi: typeof device.rssi === 'number' ? device.rssi : null,
           serviceUUIDs: device.serviceUUIDs ?? [],
         });
@@ -240,14 +248,14 @@ export async function loadSelectedObdBleDevice(): Promise<ObdBleDevice | null> {
     if (!parsed.id || !parsed.name) {
       return null;
     }
-    return parsed;
+    return applyDeviceAlias(parsed);
   } catch {
     return null;
   }
 }
 
 export async function saveSelectedObdBleDevice(device: ObdBleDevice) {
-  await AsyncStorage.setItem(SELECTED_DEVICE_KEY, JSON.stringify(device));
+  await AsyncStorage.setItem(SELECTED_DEVICE_KEY, JSON.stringify(applyDeviceAlias(device)));
 }
 
 /**

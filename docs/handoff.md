@@ -46,6 +46,12 @@
   - BLE scan now resolves early when a strong OBD/VLink/ELM candidate appears.
   - Driver and diagnosis screens map unnamed/generic BLE names to the active/selected vehicle number, e.g. `222 OBD 단말기`.
   - `npm.cmd run verify` passed.
+- 2026-07-18 1862-Test OBD device alias:
+  - User requested the current test adapter be saved as `1862-Test`.
+  - Known BLE ID `7E:57:58:E1:03:3D` now normalizes to display name `1862-Test` in `lib/obd-ble.native.ts` and `lib/obd-ble.ts`.
+  - The alias is applied during scan result creation, saved device loading, and saved device writing.
+  - Long-term plan remains DB-backed `obd_devices` mapping by `unit_code + vehicle_id + device_id`; this is a local alias for the current field test adapter.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 role selection / fleet alert tab:
   - Commander tab label changed from `알림` to `정비`.
   - Periodic replacement cards were removed from `app/(tabs)/vehicles.tsx` and moved to `app/(tabs)/alerts.tsx` under `차량 설정`, below the alert list. Diagnosis now focuses on ECU/OBD sensor information.
