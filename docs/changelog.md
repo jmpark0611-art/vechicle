@@ -7,6 +7,13 @@
 - Final failure messages are normalized into Korean guidance so testers know to check Android-VLink power/Bluetooth state and retry.
 - Verification passed with `npm.cmd run verify`.
 
+## 2026-07-18 trip start legacy schema fallback
+
+- Fixed trip start failure on Supabase databases that have not yet applied `trips.unit_code`.
+- `startManualTrip()` now retries without `unit_code` using legacy trip select columns, instead of reselecting the missing column during fallback.
+- The app still keeps the unit-aware schema path for later Supabase migration; this change only prevents field testing from being blocked before migration.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 role selection polish and fleet alert tab
 
 - Renamed the commander `알림` tab to `정비` because it now combines fleet alerts with vehicle-specific maintenance settings.

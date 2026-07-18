@@ -351,7 +351,18 @@ async function insertBasicTrip(payload: Record<string, string | number | null>) 
     supabase
       .from('trips')
       .insert(payload)
-      .select(tripSelect(false))
+      .select(legacyTripSelect(false))
+      .single(),
+    '운행 시작'
+  ) as Promise<QueryResult<TripRow>>;
+}
+
+async function insertLegacyExtendedTrip(payload: Record<string, string | number | null>) {
+  return withRequestTimeout(
+    supabase
+      .from('trips')
+      .insert(payload)
+      .select(legacyTripSelect(true))
       .single(),
     '운행 시작'
   ) as Promise<QueryResult<TripRow>>;
@@ -380,8 +391,20 @@ export async function startManualTrip(input: ManualTripInput): Promise<TripSumma
 
   let result = await insertTrip(extendedPayload);
   if (result.error && isMissingColumnError(result.error)) {
-    const { unit_code: _unitCode, ...legacyBasePayload } = basePayload;
-    result = await insertBasicTrip(legacyBasePayload);
+    const { unit_code: _unitCode, ...legacyExtendedPayload } = extendedPayload;
+    result = await insertLegacyExtendedTrip(legacyExtendedPayload);
+    if (result.error && isMissingColumnError(result.error)) {
+      const {
+        purpose: _purpose,
+        operator_name: _operatorName,
+        operator_rank: _operatorRank,
+        user_name: _userName,
+        user_rank: _userRank,
+        start_odometer: _startOdometer,
+        ...legacyBasePayload
+      } = legacyExtendedPayload;
+      result = await insertBasicTrip(legacyBasePayload);
+    }
   }
 
   if (result.error) {

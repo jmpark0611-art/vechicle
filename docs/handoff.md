@@ -9,6 +9,12 @@
   - Diagnosis connection now handles stale saved BLE device IDs: try saved device, on failure disconnect, scan again, save the best OBD/VLink candidate, and retry once before showing final guidance.
   - Final failure status is `단말기 연결 실패 · 다시 시도 필요` instead of the raw BLE exception.
   - `npm.cmd run verify` passed.
+- 2026-07-18 trip start legacy schema fallback:
+  - User reported driver trip start failure: `column trips.unit_code does not exist`.
+  - Root cause was the legacy fallback insert path still selecting `unit_code` via `tripSelect(false)`.
+  - `lib/readonly-data.ts` now uses `legacyTripSelect(false)` for `insertBasicTrip()` and adds a legacy extended fallback that removes only `unit_code` first.
+  - Supabase migration in `docs/schema.sql` is still pending for full unit-aware DB separation, but field testing can continue before that migration.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 role selection / fleet alert tab:
   - Commander tab label changed from `알림` to `정비`.
   - Periodic replacement cards were removed from `app/(tabs)/vehicles.tsx` and moved to `app/(tabs)/alerts.tsx` under `차량 설정`, below the alert list. Diagnosis now focuses on ECU/OBD sensor information.
