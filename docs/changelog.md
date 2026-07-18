@@ -14,6 +14,13 @@
 - The app still keeps the unit-aware schema path for later Supabase migration; this change only prevents field testing from being blocked before migration.
 - Verification passed with `npm.cmd run verify`.
 
+## 2026-07-18 duplicate vehicle registration handling
+
+- Vehicle registration no longer surfaces raw Supabase duplicate-key errors for `vehicles_vehicle_number_key`.
+- When the entered vehicle number already exists, the app now returns and selects the existing vehicle instead of failing the registration flow.
+- Diagnosis registration success copy now says `차량 등록/선택 완료`.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-17 role selection polish and fleet alert tab
 
 - Renamed the commander `알림` tab to `정비` because it now combines fleet alerts with vehicle-specific maintenance settings.

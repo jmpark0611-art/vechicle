@@ -15,6 +15,12 @@
   - `lib/readonly-data.ts` now uses `legacyTripSelect(false)` for `insertBasicTrip()` and adds a legacy extended fallback that removes only `unit_code` first.
   - Supabase migration in `docs/schema.sql` is still pending for full unit-aware DB separation, but field testing can continue before that migration.
   - `npm.cmd run verify` passed.
+- 2026-07-18 duplicate vehicle registration handling:
+  - User reported diagnosis vehicle registration failure: `duplicate key value violates unique constraint "vehicles_vehicle_number_key"`.
+  - `lib/readonly-data.ts` now treats duplicate vehicle numbers as an existing-vehicle selection path by fetching and returning the existing row.
+  - `app/(tabs)/vehicles.tsx` now shows `차량 등록/선택 완료` for this shared path.
+  - This avoids raw DB errors during field testing when testers try to register an already-seeded vehicle.
+  - `npm.cmd run verify` passed.
 - 2026-07-17 role selection / fleet alert tab:
   - Commander tab label changed from `알림` to `정비`.
   - Periodic replacement cards were removed from `app/(tabs)/vehicles.tsx` and moved to `app/(tabs)/alerts.tsx` under `차량 설정`, below the alert list. Diagnosis now focuses on ECU/OBD sensor information.
