@@ -1,5 +1,11 @@
 # 변경 이력
 
+## 2026-07-19 overspeed voice message cleanup
+
+- Centralized the overspeed voice phrase in `lib/overspeed-warning.ts` so foreground and background warning work can reuse the same Korean message safely.
+- No native dependency or permission change was added in this step.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 maintenance alert popup de-dupe
 
 - The maintenance tab now shows an `Alert.alert` popup when newly visible maintenance or ECU alerts appear while the commander is viewing the screen.

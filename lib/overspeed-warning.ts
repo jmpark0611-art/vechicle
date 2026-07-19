@@ -4,6 +4,7 @@ import { Alert, Vibration } from 'react-native';
 import type { SpeedZoneAlert } from './location-data';
 
 export const OVERSPEED_VIBRATION_PATTERN = [0, 650, 160, 650, 160, 900];
+const OVERSPEED_VOICE_MESSAGE = '제한속도 초과입니다. 감속하세요.';
 
 export function overspeedWarningKey(alert: SpeedZoneAlert) {
   return `${alert.tripId}-${alert.zoneName}-${Math.round(alert.speedLimitKmh)}`;
@@ -12,7 +13,7 @@ export function overspeedWarningKey(alert: SpeedZoneAlert) {
 export function speakOverspeedWarning() {
   try {
     Speech.stop();
-    Speech.speak('제한속도 초과입니다. 감속하세요.', {
+    Speech.speak(OVERSPEED_VOICE_MESSAGE, {
       language: 'ko-KR',
       pitch: 1,
       rate: 0.95,

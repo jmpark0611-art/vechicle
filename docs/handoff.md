@@ -3,6 +3,10 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 overspeed voice message cleanup:
+  - `lib/overspeed-warning.ts` now keeps the spoken phrase in `OVERSPEED_VOICE_MESSAGE`.
+  - This is a small stability/maintainability step before further foreground/background speed-warning work; it does not add native dependencies or permission changes.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 maintenance alert popup de-dupe:
   - `app/(tabs)/alerts.tsx` now announces newly visible maintenance/ECU alerts with a native `Alert.alert` popup while the commander is viewing the maintenance tab.
   - Popup repetition is prevented with `vehicle-maintenance-alert-announced-v1` in AsyncStorage.
