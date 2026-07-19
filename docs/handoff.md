@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 active trip live dashboard:
+  - User wanted the app to show useful phone-screen information when opened while driving.
+  - Active trip card now displays current time, elapsed trip time, and accumulated GPS movement distance.
+  - GPS movement distance uses existing `fetchTripGpsDistances()` and refreshes every 15 seconds while `activeTrip` exists.
+  - Both active-trip render branches in `app/(tabs)/index.tsx` were updated to avoid future UI drift.
 - 2026-07-19 faster driver OBD auto-connect:
   - User reported the driver screen stays at `1862-Test 자동연결 준비` after getting in the vehicle.
   - Driver input screen now calls `ensureObdConnected()` before trip start when a saved BLE adapter and selected vehicle exist.

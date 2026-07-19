@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 active trip live dashboard
+
+- Active driver trip screen now shows phone-readable live information when the app is opened mid-drive.
+- Added current time, elapsed trip time, and accumulated GPS movement distance to the running trip card.
+- GPS movement distance refreshes every 15 seconds while a trip is active.
+- The duplicate active-trip render path was kept in sync so future route/layout changes do not drift.
+
 ## 2026-07-19 faster driver OBD auto-connect
 
 - Driver input screen now attempts OBD connection before pressing trip start when a saved BLE device exists.

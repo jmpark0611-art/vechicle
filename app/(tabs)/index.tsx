@@ -48,9 +48,29 @@ function formatTime(value: string | null) {
     .padStart(2, '0')}`;
 }
 
+function formatClock(value: Date) {
+  return `${value.getHours().toString().padStart(2, '0')}:${value.getMinutes().toString().padStart(2, '0')}`;
+}
+
+function formatElapsed(startTime: string | null, now: Date) {
+  if (!startTime) return '-';
+  const start = new Date(startTime);
+  if (Number.isNaN(start.getTime())) return '-';
+  const elapsedMinutes = Math.max(0, Math.floor((now.getTime() - start.getTime()) / 60_000));
+  const hours = Math.floor(elapsedMinutes / 60);
+  const minutes = elapsedMinutes % 60;
+  return hours > 0 ? `${hours}시간 ${minutes}분` : `${minutes}분`;
+}
+
 function formatKm(value: number | null | undefined) {
   if (value === null || value === undefined) return '- km';
   return `${Math.round(value).toLocaleString('ko-KR')} km`;
+}
+
+function formatDistanceKm(value: number | null) {
+  if (value === null) return '-';
+  if (value < 1) return `${Math.round(value * 1000).toLocaleString('ko-KR')} m`;
+  return `${value.toLocaleString('ko-KR')} km`;
 }
 
 function displayObdDeviceName(deviceName: string | null | undefined, vehicleNumber?: string | null) {
@@ -94,6 +114,8 @@ export default function TripScreen() {
   const [endPlace, setEndPlace] = useState('');
   const [startOdometer, setStartOdometer] = useState('');
   const [lastCompletion, setLastCompletion] = useState<CompletionSummary | null>(null);
+  const [now, setNow] = useState(() => new Date());
+  const [activeGpsDistanceKm, setActiveGpsDistanceKm] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -339,6 +361,31 @@ export default function TripScreen() {
     }
   }, [activeTrip, selectedCurrentKm, startOdometer]);
 
+  useEffect(() => {
+    const timerId = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(timerId);
+  }, []);
+
+  useEffect(() => {
+    if (!activeTrip) {
+      setActiveGpsDistanceKm(null);
+      return;
+    }
+
+    const refreshGpsDistance = async () => {
+      try {
+        const distances = await fetchTripGpsDistances([activeTrip.id]);
+        setActiveGpsDistanceKm(distances[activeTrip.id] ?? 0);
+      } catch {
+        setActiveGpsDistanceKm(null);
+      }
+    };
+
+    void refreshGpsDistance();
+    const timerId = setInterval(() => void refreshGpsDistance(), 15_000);
+    return () => clearInterval(timerId);
+  }, [activeTrip]);
+
   const loadData = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -545,6 +592,20 @@ export default function TripScreen() {
             <Text style={styles.routeArrow}>→</Text>
             <Text style={styles.routePoint}>{activeTrip.endPlace ?? '-'}</Text>
           </View>
+          <View style={styles.liveInfoRow}>
+            <View style={styles.liveInfoCard}>
+              <Text style={styles.liveInfoLabel}>현재 시각</Text>
+              <Text style={styles.liveInfoValue}>{formatClock(now)}</Text>
+            </View>
+            <View style={styles.liveInfoCard}>
+              <Text style={styles.liveInfoLabel}>경과</Text>
+              <Text style={styles.liveInfoValue}>{formatElapsed(activeTrip.startTime, now)}</Text>
+            </View>
+            <View style={styles.liveInfoCard}>
+              <Text style={styles.liveInfoLabel}>GPS 이동</Text>
+              <Text style={styles.liveInfoValue}>{formatDistanceKm(activeGpsDistanceKm)}</Text>
+            </View>
+          </View>
           <View style={styles.statRow}>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>시작</Text>
@@ -638,6 +699,20 @@ export default function TripScreen() {
             <Text style={styles.routePoint}>{activeTrip.startPlace ?? '-'}</Text>
             <Text style={styles.routeArrow}>→</Text>
             <Text style={styles.routePoint}>{activeTrip.endPlace ?? '-'}</Text>
+          </View>
+          <View style={styles.liveInfoRow}>
+            <View style={styles.liveInfoCard}>
+              <Text style={styles.liveInfoLabel}>현재 시각</Text>
+              <Text style={styles.liveInfoValue}>{formatClock(now)}</Text>
+            </View>
+            <View style={styles.liveInfoCard}>
+              <Text style={styles.liveInfoLabel}>경과</Text>
+              <Text style={styles.liveInfoValue}>{formatElapsed(activeTrip.startTime, now)}</Text>
+            </View>
+            <View style={styles.liveInfoCard}>
+              <Text style={styles.liveInfoLabel}>GPS 이동</Text>
+              <Text style={styles.liveInfoValue}>{formatDistanceKm(activeGpsDistanceKm)}</Text>
+            </View>
           </View>
           <View style={styles.statRow}>
             <View style={styles.statCard}>
@@ -883,6 +958,18 @@ const styles = StyleSheet.create({
   },
   routePoint: { color: '#1E2946', fontSize: 19, fontWeight: '900', flex: 1 },
   routeArrow: { color: '#7B86A8', fontSize: 22, fontWeight: '900', marginHorizontal: 12 },
+  liveInfoRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  liveInfoCard: {
+    flex: 1,
+    minHeight: 74,
+    borderRadius: 18,
+    backgroundColor: '#F0F7FF',
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+  },
+  liveInfoLabel: { color: '#6D7B9D', fontSize: 11, fontWeight: '900', marginBottom: 8 },
+  liveInfoValue: { color: '#1E2946', fontSize: 16, fontWeight: '900' },
   statRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   statCard: { flex: 1, minHeight: 116, borderRadius: 20, backgroundColor: '#F6F8FE', padding: 16, justifyContent: 'center' },
   statLabel: { color: '#7B86A8', fontSize: 13, fontWeight: '900', marginBottom: 10 },
