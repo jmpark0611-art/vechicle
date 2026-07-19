@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 overspeed repeat warning interval
+
+- Speed-limit warnings now repeat while the vehicle remains over the limit instead of firing only once per trip/zone/limit.
+- Foreground driver speed checks now run every 3 seconds.
+- Background location updates request a 3-second interval and 5m distance interval, and warning state is stored with `lastWarnedAt` so the same overspeed condition can alert again after the repeat delay.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 maintenance alert popup removal
 
 - Disabled commander maintenance alert popups because maintenance/inspection notices are not urgent enough to interrupt the user flow.

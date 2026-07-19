@@ -5,7 +5,13 @@ import { Platform } from 'react-native';
 
 import { enqueueGpsPoint } from './gps-queue';
 import { evaluateSpeedZoneAlerts, type VehiclePosition } from './location-data';
-import { overspeedWarningKey, showBackgroundOverspeedWarning } from './overspeed-warning';
+import {
+  createOverspeedWarningState,
+  overspeedWarningKey,
+  shouldShowOverspeedWarning,
+  showBackgroundOverspeedWarning,
+  type OverspeedWarningState,
+} from './overspeed-warning';
 import { fetchActiveTrips, type TripSummary } from './readonly-data';
 import { supabase } from './supabase';
 
@@ -47,6 +53,21 @@ function distanceMeters(a: { latitude: number; longitude: number }, b: { latitud
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function parseOverspeedWarningState(raw: string | null): OverspeedWarningState | null {
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<OverspeedWarningState>;
+    if (typeof parsed.key === 'string' && isFiniteNumber(parsed.lastWarnedAt)) {
+      return { key: parsed.key, lastWarnedAt: parsed.lastWarnedAt };
+    }
+  } catch {
+    return { key: raw, lastWarnedAt: 0 };
+  }
+
+  return null;
 }
 
 function routeLabel(trip: { startPlace?: string | null; endPlace?: string | null }) {
@@ -229,10 +250,10 @@ async function checkBackgroundOverspeedWarning(
     }
 
     const nextKey = overspeedWarningKey(overspeed);
-    const previousKey = await AsyncStorage.getItem(ACTIVE_TRIP_OVERSPEED_KEY);
-    if (previousKey === nextKey) return;
+    const previousState = parseOverspeedWarningState(await AsyncStorage.getItem(ACTIVE_TRIP_OVERSPEED_KEY));
+    if (!shouldShowOverspeedWarning(previousState, nextKey)) return;
 
-    await AsyncStorage.setItem(ACTIVE_TRIP_OVERSPEED_KEY, nextKey);
+    await AsyncStorage.setItem(ACTIVE_TRIP_OVERSPEED_KEY, JSON.stringify(createOverspeedWarningState(nextKey)));
     showBackgroundOverspeedWarning();
   } catch {
     // Background warning must never crash or stop location collection.
@@ -320,8 +341,8 @@ export async function startActiveTripBackgroundLocation(tripIds: string[]): Prom
 
     await Location.startLocationUpdatesAsync(ACTIVE_TRIP_LOCATION_TASK, {
       accuracy: Location.Accuracy.Balanced,
-      timeInterval: 10_000,
-      distanceInterval: 15,
+      timeInterval: 3_000,
+      distanceInterval: 5,
       pausesUpdatesAutomatically: false,
       showsBackgroundLocationIndicator: true,
       foregroundService: {

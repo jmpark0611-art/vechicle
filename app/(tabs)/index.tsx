@@ -18,7 +18,13 @@ import {
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
 import { buildObdReadingFromLiveData, saveLocalObdReading, saveTripObdLog } from '@/lib/obd-data';
-import { overspeedWarningKey, showOverspeedWarning } from '@/lib/overspeed-warning';
+import {
+  createOverspeedWarningState,
+  overspeedWarningKey,
+  shouldShowOverspeedWarning,
+  showOverspeedWarning,
+  type OverspeedWarningState,
+} from '@/lib/overspeed-warning';
 import {
   getVehicleNumberForObdDevice,
   loadSelectedObdBleDevice,
@@ -40,7 +46,7 @@ import {
   type VehicleSummary,
 } from '@/lib/readonly-data';
 
-const DRIVER_SPEED_CHECK_MS = 10_000;
+const DRIVER_SPEED_CHECK_MS = 3_000;
 
 function formatTime(value: string | null) {
   if (!value) return '-';
@@ -140,7 +146,7 @@ export default function TripScreen() {
   const gpsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const obdRetryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const obdSnapshotSaveAtRef = useRef<Record<string, number>>({});
-  const overspeedAlertedKeyRef = useRef<string | null>(null);
+  const overspeedWarningStateRef = useRef<OverspeedWarningState | null>(null);
 
   activeTripsRef.current = activeTrips;
   obdLiveRef.current = obdLiveData;
@@ -208,13 +214,13 @@ export default function TripScreen() {
       const snapshot = await fetchLocationSnapshot();
       const overspeed = snapshot.alerts.find((alert) => alert.status === 'overspeed' && activeTripIds.has(alert.tripId));
       if (!overspeed) {
-        overspeedAlertedKeyRef.current = null;
+        overspeedWarningStateRef.current = null;
         return;
       }
 
       const key = overspeedWarningKey(overspeed);
-      if (overspeedAlertedKeyRef.current === key) return;
-      overspeedAlertedKeyRef.current = key;
+      if (!shouldShowOverspeedWarning(overspeedWarningStateRef.current, key)) return;
+      overspeedWarningStateRef.current = createOverspeedWarningState(key);
 
       showOverspeedWarning(overspeed);
     } catch {
