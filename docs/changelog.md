@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-19 trip delete policy no-op detection
+
+- Checked the live Supabase `trips` table with the app anon key during field-test cleanup.
+- 29 trip records were visible, but an anon delete attempt removed 0 rows and the count stayed at 29.
+- Root cause: live Supabase still needs the `trips_anon_delete` RLS policy from `docs/schema.sql` before app-side trip cleanup can actually delete records.
+- `deleteTripsByIds()` now verifies the rows after deletion and throws a clear policy/migration error if Supabase silently blocks the delete.
+- Actual cleanup of existing test trip records still requires applying the Supabase delete policy or using service-role/admin access.
+
 ## 2026-07-19 records refresh overlap fix
 
 - Moved the records refresh action from the bottom primary button to a compact top-right button.

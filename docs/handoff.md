@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 trip delete policy no-op detection:
+  - Live Supabase cleanup check found 29 visible `trips` rows.
+  - Deleting with the app anon key returned no hard error, but deleted 0 rows; the count stayed at 29.
+  - Cause: the live DB still needs the `trips_anon_delete` RLS policy from `docs/schema.sql`, or cleanup must be done with service-role/admin access.
+  - `deleteTripsByIds()` now re-selects deleted IDs after each delete chunk and throws a clear policy/migration error if rows remain, so the app no longer reports a false successful cleanup.
+  - Required follow-up before deleting test records from the app: apply the Supabase `trips_anon_delete` policy.
 - 2026-07-19 records refresh overlap fix:
   - User reported the records refresh button visually overlapping the record cards/bottom tab bar.
   - `app/(tabs)/explore.tsx` no longer uses the shared bottom primary action for refresh.

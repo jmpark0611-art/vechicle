@@ -334,6 +334,19 @@ export async function deleteTripsByIds(tripIds: string[]): Promise<void> {
     if (result.error) {
       throw new Error(result.error.message);
     }
+
+    const verify = await withRequestTimeout(
+      supabase.from('trips').select('id').in('id', chunk),
+      '운행 기록 삭제 확인'
+    ) as QueryResult<{ id: string }[]>;
+
+    if (verify.error) {
+      throw new Error(verify.error.message);
+    }
+
+    if ((verify.data ?? []).length > 0) {
+      throw new Error('Supabase trips 삭제 정책이 아직 적용되지 않아 운행 기록이 삭제되지 않았습니다. docs/schema.sql의 trips_anon_delete 정책을 Supabase에 적용해 주세요.');
+    }
   }
 }
 
