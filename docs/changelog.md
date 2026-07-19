@@ -1,5 +1,20 @@
 # 변경 이력
 
+## 2026-07-19 persist driver form fields across sessions
+
+- `lib/last-trip-input.ts` (new): saves and loads `operatorRank`, `operatorName`, `userRank`, `userName`, `sameUser`, `startPlace` via AsyncStorage key `last_trip_input_v1`.
+- `app/(tabs)/index.tsx`: loads saved values on mount and prefills the form when fields are still empty. Saves after a trip starts successfully.
+- Fields not persisted (trip-specific): `purpose`, `endPlace`, `startOdometer`.
+- Verification passed: `npm run verify`, Android export.
+
+## 2026-07-19 long trip reminder banner
+
+- 8h+ elapsed: amber warning banner above the route panel in the active trip view.
+- 24h+ elapsed: red critical banner prompting the driver to end the trip.
+- Computed from the existing `now` state (updates every 30s) and `activeTrip.startTime`; no auto-complete or trip mutation.
+- Styles: `longTripBannerWarn` (amber), `longTripBannerCritical` (red).
+- Verification passed: `npm run verify`, Android export.
+
 ## 2026-07-19 long unfinished trip severity
 
 - The 정비 tab now separates unfinished trips into 24+ hour `미종료 확인` and 48+ hour `장기 미종료` severity.

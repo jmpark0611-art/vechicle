@@ -42,6 +42,7 @@ import {
   type ObdBleDevice,
   type ObdLiveData,
 } from '@/lib/obd-ble';
+import { loadLastTripInput, saveLastTripInput } from '@/lib/last-trip-input';
 import {
   cancelManualTrip,
   completeManualTrip,
@@ -501,6 +502,19 @@ export default function TripScreen() {
     void loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    void (async () => {
+      const saved = await loadLastTripInput();
+      if (!saved) return;
+      setOperatorRank((prev) => (prev ? prev : saved.operatorRank));
+      setOperatorName((prev) => (prev ? prev : saved.operatorName));
+      setUserRank((prev) => (prev ? prev : saved.userRank));
+      setUserName((prev) => (prev ? prev : saved.userName));
+      setSameUser((prev) => (prev ? prev : saved.sameUser));
+      setStartPlace((prev) => (prev && prev !== '본부대' ? prev : saved.startPlace || '본부대'));
+    })();
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       void loadData();
@@ -639,6 +653,7 @@ export default function TripScreen() {
       setStartOdometer(String(Math.round(startOdo)));
       setActiveTrips([trip]);
       tripStartFuelRef.current[trip.id] = typeof obdLiveData?.fuelPercent === 'number' ? obdLiveData.fuelPercent : null;
+      void saveLastTripInput({ operatorRank, operatorName, userRank, userName, sameUser, startPlace });
       setLastCompletion(null);
       setObdInterruption(null);
       void clearTripObdInterruption();
