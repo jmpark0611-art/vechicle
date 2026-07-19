@@ -45,6 +45,7 @@ type EcuAlert = {
 
 const ACK_STORAGE_KEY = 'vehicle-ecu-alert-acks-v1';
 const ANNOUNCED_ALERT_STORAGE_KEY = 'vehicle-maintenance-alert-announced-v1';
+const ENABLE_MAINTENANCE_ALERT_POPUPS = false;
 const PART_COLORS = ['#EAFBF4', '#FFF4DE', '#EAF7FA'];
 const FOCUSED_REFRESH_MS = 5_000;
 
@@ -94,17 +95,6 @@ async function saveAcknowledgedFingerprints(items: Set<string>) {
   await AsyncStorage.setItem(ACK_STORAGE_KEY, JSON.stringify([...items]));
 }
 
-async function loadAnnouncedAlertKeys(): Promise<Set<string>> {
-  const raw = await AsyncStorage.getItem(ANNOUNCED_ALERT_STORAGE_KEY);
-  if (!raw) return new Set();
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? new Set(parsed.filter((item): item is string => typeof item === 'string')) : new Set();
-  } catch {
-    return new Set();
-  }
-}
-
 async function saveAnnouncedAlertKeys(items: Set<string>) {
   await AsyncStorage.setItem(ANNOUNCED_ALERT_STORAGE_KEY, JSON.stringify([...items]));
 }
@@ -144,12 +134,11 @@ export default function AlertsScreen() {
     try {
       const nextVehicles = await fetchVehiclesReadOnly(200);
       const vehicleIds = nextVehicles.map((vehicle) => vehicle.id);
-      const [maintenanceResult, obdResult, odometers, ackSet, announcedSet] = await Promise.all([
+      const [maintenanceResult, obdResult, odometers, ackSet] = await Promise.all([
         loadSyncedMaintenanceSnapshot(vehicleIds),
         loadSyncedObdSnapshot(vehicleIds),
         fetchLatestVehicleOdometers(vehicleIds),
         loadAcknowledgedFingerprints(),
-        loadAnnouncedAlertKeys(),
       ]);
       const mergedMaintenance = await mergeVehicleCurrentKm(maintenanceResult.snapshot, odometers);
       setVehicles(nextVehicles);
@@ -157,8 +146,6 @@ export default function AlertsScreen() {
       setMaintenanceSnapshot(mergedMaintenance);
       setObdSnapshot(obdResult.snapshot);
       setAcknowledged(ackSet);
-      announcedAlertKeysRef.current = announcedSet;
-      hasLoadedAnnouncementsRef.current = true;
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '알림 데이터를 불러오지 못했습니다.');
     } finally {
@@ -228,7 +215,7 @@ export default function AlertsScreen() {
     : [];
 
   useEffect(() => {
-    if (isLoading || errorMessage || !hasLoadedAnnouncementsRef.current || alerts.length === 0) return;
+    if (!ENABLE_MAINTENANCE_ALERT_POPUPS || isLoading || errorMessage || !hasLoadedAnnouncementsRef.current || alerts.length === 0) return;
 
     const pending = alerts.filter((item) => !announcedAlertKeysRef.current.has(getAlertAnnouncementKey(item)));
     if (pending.length === 0) return;

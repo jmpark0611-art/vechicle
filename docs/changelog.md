@@ -1,5 +1,11 @@
 # 변경 이력
 
+## 2026-07-19 maintenance alert popup removal
+
+- Disabled commander maintenance alert popups because maintenance/inspection notices are not urgent enough to interrupt the user flow.
+- The maintenance tab continues to show alert cards and refreshes them while focused.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 overspeed voice message cleanup
 
 - Centralized the overspeed voice phrase in `lib/overspeed-warning.ts` so foreground and background warning work can reuse the same Korean message safely.
