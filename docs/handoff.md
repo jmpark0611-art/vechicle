@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 maintenance alert popup de-dupe:
+  - `app/(tabs)/alerts.tsx` now announces newly visible maintenance/ECU alerts with a native `Alert.alert` popup while the commander is viewing the maintenance tab.
+  - Popup repetition is prevented with `vehicle-maintenance-alert-announced-v1` in AsyncStorage.
+  - Maintenance alert keys use vehicle/item/severity so a warning can announce again if it becomes overdue, while ECU alert keys use the existing fingerprint/value behavior.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 shared ECU alert rules:
   - Added `lib/ecu-alert-rules.ts` so ECU thresholds are centralized.
   - `lib/fleet-alerts.ts` live popup alerts and `app/(tabs)/alerts.tsx` maintenance-tab alerts now share the same rule builder.

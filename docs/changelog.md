@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 maintenance alert popup de-dupe
+
+- The maintenance tab now shows an `Alert.alert` popup when newly visible maintenance or ECU alerts appear while the commander is viewing the screen.
+- Popups are de-duplicated in AsyncStorage with `vehicle-maintenance-alert-announced-v1` so the same alert does not repeat every 5-second refresh.
+- Maintenance alerts are announced by vehicle/item/severity, so a warning can announce again if it later becomes overdue; ECU alerts keep using their value fingerprint.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 shared ECU alert rules
 
 - Added `lib/ecu-alert-rules.ts` as the single source of truth for ECU alert thresholds.

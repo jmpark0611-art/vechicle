@@ -44,6 +44,7 @@ type EcuAlert = {
 };
 
 const ACK_STORAGE_KEY = 'vehicle-ecu-alert-acks-v1';
+const ANNOUNCED_ALERT_STORAGE_KEY = 'vehicle-maintenance-alert-announced-v1';
 const PART_COLORS = ['#EAFBF4', '#FFF4DE', '#EAF7FA'];
 const FOCUSED_REFRESH_MS = 5_000;
 
@@ -93,6 +94,33 @@ async function saveAcknowledgedFingerprints(items: Set<string>) {
   await AsyncStorage.setItem(ACK_STORAGE_KEY, JSON.stringify([...items]));
 }
 
+async function loadAnnouncedAlertKeys(): Promise<Set<string>> {
+  const raw = await AsyncStorage.getItem(ANNOUNCED_ALERT_STORAGE_KEY);
+  if (!raw) return new Set();
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? new Set(parsed.filter((item): item is string => typeof item === 'string')) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+async function saveAnnouncedAlertKeys(items: Set<string>) {
+  await AsyncStorage.setItem(ANNOUNCED_ALERT_STORAGE_KEY, JSON.stringify([...items]));
+}
+
+function getAlertAnnouncementKey(item: MaintenanceAlert | EcuAlert) {
+  if (item.kind === 'maintenance') return `${item.id}:${item.severity}`;
+  return item.fingerprint;
+}
+
+function getAlertPopupLine(item: MaintenanceAlert | EcuAlert) {
+  if (item.kind === 'maintenance') {
+    return `${item.vehicle.vehicleNumber} · ${maintenanceLabel(item.item)}: ${remainingLabel(item.remainingKm)}`;
+  }
+  return `${item.vehicle.vehicleNumber} · ${item.title}: ${item.value} (${item.detail})`;
+}
+
 export default function AlertsScreen() {
   useRoleGuard(['commander']);
 
@@ -105,6 +133,8 @@ export default function AlertsScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const refreshInFlightRef = useRef(false);
+  const announcedAlertKeysRef = useRef<Set<string>>(new Set());
+  const hasLoadedAnnouncementsRef = useRef(false);
 
   const loadData = useCallback(async (showLoading = true) => {
     if (refreshInFlightRef.current) return;
@@ -114,11 +144,12 @@ export default function AlertsScreen() {
     try {
       const nextVehicles = await fetchVehiclesReadOnly(200);
       const vehicleIds = nextVehicles.map((vehicle) => vehicle.id);
-      const [maintenanceResult, obdResult, odometers, ackSet] = await Promise.all([
+      const [maintenanceResult, obdResult, odometers, ackSet, announcedSet] = await Promise.all([
         loadSyncedMaintenanceSnapshot(vehicleIds),
         loadSyncedObdSnapshot(vehicleIds),
         fetchLatestVehicleOdometers(vehicleIds),
         loadAcknowledgedFingerprints(),
+        loadAnnouncedAlertKeys(),
       ]);
       const mergedMaintenance = await mergeVehicleCurrentKm(maintenanceResult.snapshot, odometers);
       setVehicles(nextVehicles);
@@ -126,6 +157,8 @@ export default function AlertsScreen() {
       setMaintenanceSnapshot(mergedMaintenance);
       setObdSnapshot(obdResult.snapshot);
       setAcknowledged(ackSet);
+      announcedAlertKeysRef.current = announcedSet;
+      hasLoadedAnnouncementsRef.current = true;
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '알림 데이터를 불러오지 못했습니다.');
     } finally {
@@ -193,6 +226,23 @@ export default function AlertsScreen() {
         };
       })
     : [];
+
+  useEffect(() => {
+    if (isLoading || errorMessage || !hasLoadedAnnouncementsRef.current || alerts.length === 0) return;
+
+    const pending = alerts.filter((item) => !announcedAlertKeysRef.current.has(getAlertAnnouncementKey(item)));
+    if (pending.length === 0) return;
+
+    for (const item of pending) {
+      announcedAlertKeysRef.current.add(getAlertAnnouncementKey(item));
+    }
+    void saveAnnouncedAlertKeys(announcedAlertKeysRef.current);
+
+    const title = pending.some((item) => item.severity === 'bad') ? '정비 필요 알림' : '점검 필요 알림';
+    const body = pending.slice(0, 4).map(getAlertPopupLine).join('\n');
+    const suffix = pending.length > 4 ? `\n외 ${pending.length - 4}건` : '';
+    Alert.alert(title, `${body}${suffix}`);
+  }, [alerts, errorMessage, isLoading]);
 
   async function handleCompleteMaintenance(alertItem: MaintenanceAlert) {
     const state = getVehicleMaintenanceState(maintenanceSnapshot, alertItem.vehicle.id);
