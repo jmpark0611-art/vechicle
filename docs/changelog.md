@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-19 overspeed warning shared foundation
+
+- Pulled the latest UI/UX work through `1b870fd`.
+- Added `lib/overspeed-warning.ts` as the shared foreground overspeed warning foundation.
+- Driver trip screen and commander speed tab now share the same overspeed vibration pattern and de-dupe key.
+- Kept this stage free of new native audio/background dependencies to avoid repeating the APK app-open crash regression.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 driver overspeed warning
 
 - Overspeed warning is no longer limited to the speed/map tab.

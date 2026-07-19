@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 overspeed warning shared foundation:
+  - Pulled latest UI/UX work through `1b870fd` before continuing.
+  - Added `lib/overspeed-warning.ts` for shared foreground overspeed warning constants and alert de-dupe key.
+  - Driver trip screen and commander speed tab now share the same vibration pattern and warning key.
+  - No new native audio/background dependency was added in this stage. This was intentional to avoid repeating the previous APK app-open crash while still preparing the code for recorded voice playback.
+  - Next recommended step: add foreground recorded voice playback behind this shared service, then test APK startup before considering background/lock-screen behavior.
 - 2026-07-19 driver overspeed warning:
   - User reported no phone alarm after setting speed zones and limits.
   - Cause: overspeed vibration/popup existed only in `app/(tabs)/map.tsx`; driver mode does not show that tab during active driving.

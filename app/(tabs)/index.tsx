@@ -15,6 +15,7 @@ import {
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
 import { buildObdReadingFromLiveData, saveLocalObdReading, saveTripObdLog } from '@/lib/obd-data';
+import { OVERSPEED_VIBRATION_PATTERN, overspeedWarningKey } from '@/lib/overspeed-warning';
 import {
   getVehicleNumberForObdDevice,
   loadSelectedObdBleDevice,
@@ -38,7 +39,6 @@ import {
 import { getStoredRole } from '@/lib/role';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-const OVERSPEED_VIBRATION_PATTERN = [0, 650, 160, 650, 160, 900];
 const DRIVER_SPEED_CHECK_MS = 10_000;
 
 function formatTime(value: string | null) {
@@ -207,7 +207,7 @@ export default function TripScreen() {
       if (!overspeed) return;
 
       const speed = Math.round(overspeed.speedKmh ?? 0);
-      const key = `${overspeed.tripId}-${overspeed.zoneName}-${speed}`;
+      const key = overspeedWarningKey(overspeed);
       if (overspeedAlertedKeyRef.current === key) return;
       overspeedAlertedKeyRef.current = key;
 

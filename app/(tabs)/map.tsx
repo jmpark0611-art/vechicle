@@ -6,9 +6,9 @@ import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/component
 import { VehicleMap } from '@/components/vehicle-map';
 import { createSpeedZone, fetchLocationSnapshot, type LocationSnapshot, type ZonePoint } from '@/lib/location-data';
 import { generateVehicleMapHtml } from '@/lib/map-html';
+import { OVERSPEED_VIBRATION_PATTERN, overspeedWarningKey } from '@/lib/overspeed-warning';
 
 const SPEED_REFRESH_MS = 10_000;
-const OVERSPEED_VIBRATION_PATTERN = [0, 650, 160, 650, 160, 900];
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
@@ -70,7 +70,7 @@ export default function MapScreen() {
   useEffect(() => {
     const overspeed = snapshot.alerts.find((alert) => alert.status === 'overspeed');
     if (!overspeed) return;
-    const key = `${overspeed.tripId}-${overspeed.zoneName}-${Math.round(overspeed.speedKmh ?? 0)}`;
+    const key = overspeedWarningKey(overspeed);
     if (alertedKeyRef.current === key) return;
     alertedKeyRef.current = key;
     Vibration.vibrate(OVERSPEED_VIBRATION_PATTERN);
