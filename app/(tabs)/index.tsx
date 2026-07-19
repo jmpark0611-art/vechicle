@@ -236,9 +236,13 @@ export default function TripScreen() {
     stopGpsTimer();
     gpsTimerRef.current = setInterval(() => {
       void (async () => {
-        const speedKmh = obdLiveRef.current?.speedKmh ?? null;
-        await Promise.all(activeTripsRef.current.map((trip) => saveCurrentGpsPoint(trip.id, speedKmh)));
-        await checkOverspeedWarning();
+        try {
+          const speedKmh = obdLiveRef.current?.speedKmh ?? null;
+          await Promise.all(activeTripsRef.current.map((trip) => saveCurrentGpsPoint(trip.id, speedKmh)));
+          await checkOverspeedWarning();
+        } catch {
+          // GPS/permission/network hiccups during the drive should not stop the running trip screen.
+        }
       })();
     }, DRIVER_SPEED_CHECK_MS);
   }, [checkOverspeedWarning, stopGpsTimer]);

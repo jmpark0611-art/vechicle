@@ -9,6 +9,7 @@
   - Removed unreachable legacy active-trip/completion render branches from `app/(tabs)/index.tsx`; the new early-return screens are now the single source of truth.
   - Removed dead styles tied to the deleted branches (`driverScreen`, old route panel, old completion card, old fullscreen trip wrappers).
   - Fixed `cancelManualTrip()` to write schema-valid `status: 'canceled'`; `docs/schema.sql` rejects the previous `cancelled` spelling.
+  - Wrapped the active-trip GPS/overspeed interval in `try/catch` so transient GPS/permission/network failures do not create unhandled timer errors.
   - `npm.cmd run verify` passed after cleanup.
 - 2026-07-19 trip delete policy no-op detection:
   - Live Supabase cleanup check found 29 visible `trips` rows.

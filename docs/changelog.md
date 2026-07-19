@@ -7,6 +7,7 @@
 - Removed the old unreachable active-trip and completion render branches that remained below the new early-return screens.
 - Removed the dead styles tied to those unreachable branches so future driver UI changes do not drift between two competing layouts.
 - Fixed trip cancel writes to use schema-valid `canceled` instead of `cancelled`.
+- Guarded the active-trip GPS/overspeed interval so temporary GPS, permission, or network failures do not break the running trip screen.
 - Verification passed with `npm.cmd run verify`.
 
 ## 2026-07-19 trip delete policy no-op detection
