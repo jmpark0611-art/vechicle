@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-19 background active-trip cache stage 4-6
+
+- Cached active trip summaries for the background location task when driver trips start.
+- Background overspeed evaluation now prefers cached trip vehicle/route data and only falls back to Supabase active-trip reads when the cache is missing.
+- The cache is cleared with the existing background trip keys when active background tracking stops.
+- This reduces missed screen-off warnings caused by temporary active-trip query failures.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 background startup safety stage 4-5
 
 - Wrapped the global Expo TaskManager task registration so app startup does not fail if the native task module is unavailable or temporarily misconfigured.

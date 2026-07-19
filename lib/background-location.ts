@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
 import { enqueueGpsPoint } from './gps-queue';
 import { evaluateSpeedZoneAlerts, type VehiclePosition } from './location-data';
 import { overspeedWarningKey, showBackgroundOverspeedWarning } from './overspeed-warning';
-import { fetchActiveTrips } from './readonly-data';
+import { fetchActiveTrips, type TripSummary } from './readonly-data';
 import { supabase } from './supabase';
 
 export const ACTIVE_TRIP_LOCATION_TASK = 'vehicle-active-trip-location';
@@ -14,6 +14,7 @@ export const ACTIVE_TRIP_LOCATION_TASK = 'vehicle-active-trip-location';
 const ACTIVE_TRIP_IDS_KEY = '@vehicle_active_background_trip_ids';
 const ACTIVE_TRIP_OVERSPEED_KEY = '@vehicle_active_background_overspeed_key';
 const ACTIVE_TRIP_LAST_LOCATION_KEY = '@vehicle_active_background_last_location';
+const ACTIVE_TRIP_SUMMARIES_KEY = '@vehicle_active_background_trip_summaries';
 
 type LocationTaskData = {
   locations?: Location.LocationObject[];
@@ -24,6 +25,8 @@ type StoredLocationSample = {
   longitude: number;
   timestamp: number;
 };
+
+type StoredTripSummary = Pick<TripSummary, 'id' | 'vehicleNumber' | 'startPlace' | 'endPlace'>;
 
 function speedMetersPerSecondToKmh(value: number | null) {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null;
@@ -106,15 +109,89 @@ async function getStoredTripIds() {
   }
 }
 
+function normalizeTripSummary(value: unknown): StoredTripSummary | null {
+  if (!value || typeof value !== 'object') return null;
+  const source = value as Partial<StoredTripSummary>;
+  if (typeof source.id !== 'string' || source.id.length === 0) return null;
+  return {
+    id: source.id,
+    vehicleNumber: typeof source.vehicleNumber === 'string' && source.vehicleNumber.length > 0
+      ? source.vehicleNumber
+      : '차량 미확인',
+    startPlace: typeof source.startPlace === 'string' ? source.startPlace : null,
+    endPlace: typeof source.endPlace === 'string' ? source.endPlace : null,
+  };
+}
+
+async function getStoredTripSummaries(): Promise<StoredTripSummary[]> {
+  try {
+    const raw = await AsyncStorage.getItem(ACTIVE_TRIP_SUMMARIES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map(normalizeTripSummary)
+      .filter((trip): trip is StoredTripSummary => trip !== null);
+  } catch {
+    return [];
+  }
+}
+
+async function setStoredTripSummaries(trips: StoredTripSummary[]) {
+  const uniqueTrips = Array.from(new Map(trips.map((trip) => [trip.id, trip])).values());
+  if (uniqueTrips.length === 0) {
+    await AsyncStorage.removeItem(ACTIVE_TRIP_SUMMARIES_KEY);
+    return;
+  }
+  await AsyncStorage.setItem(ACTIVE_TRIP_SUMMARIES_KEY, JSON.stringify(uniqueTrips));
+}
+
 async function setStoredTripIds(tripIds: string[]) {
   const uniqueIds = Array.from(new Set(tripIds.filter(Boolean)));
   if (uniqueIds.length === 0) {
     await AsyncStorage.removeItem(ACTIVE_TRIP_IDS_KEY);
     await AsyncStorage.removeItem(ACTIVE_TRIP_OVERSPEED_KEY);
     await AsyncStorage.removeItem(ACTIVE_TRIP_LAST_LOCATION_KEY);
+    await AsyncStorage.removeItem(ACTIVE_TRIP_SUMMARIES_KEY);
     return;
   }
   await AsyncStorage.setItem(ACTIVE_TRIP_IDS_KEY, JSON.stringify(uniqueIds));
+}
+
+async function refreshStoredTripSummaries(tripIds: string[]) {
+  try {
+    const activeTripIds = new Set(tripIds);
+    const trips = (await fetchActiveTrips(20)).filter((trip) => activeTripIds.has(trip.id));
+    await setStoredTripSummaries(trips.map((trip) => ({
+      id: trip.id,
+      vehicleNumber: trip.vehicleNumber,
+      startPlace: trip.startPlace,
+      endPlace: trip.endPlace,
+    })));
+  } catch {
+    // Cached summaries are an optimization; background tracking can continue with IDs only.
+  }
+}
+
+async function getBackgroundTripSummaries(tripIds: string[]) {
+  const activeTripIds = new Set(tripIds);
+  const cached = (await getStoredTripSummaries()).filter((trip) => activeTripIds.has(trip.id));
+  if (cached.length > 0) return cached;
+
+  try {
+    const activeTrips = (await fetchActiveTrips(20)).filter((trip) => activeTripIds.has(trip.id));
+    if (activeTrips.length > 0) {
+      await setStoredTripSummaries(activeTrips.map((trip) => ({
+        id: trip.id,
+        vehicleNumber: trip.vehicleNumber,
+        startPlace: trip.startPlace,
+        endPlace: trip.endPlace,
+      })));
+    }
+    return activeTrips;
+  } catch {
+    return [];
+  }
 }
 
 async function checkBackgroundOverspeedWarning(
@@ -125,7 +202,7 @@ async function checkBackgroundOverspeedWarning(
   try {
     const activeTripIds = new Set(tripIds);
     const recordedAt = new Date(latest.timestamp).toISOString();
-    const activeTrips = await fetchActiveTrips(20);
+    const activeTrips = await getBackgroundTripSummaries(tripIds);
     const positions: VehiclePosition[] = activeTrips
       .filter((trip) => activeTripIds.has(trip.id))
       .map((trip) => ({
@@ -220,6 +297,7 @@ export async function startActiveTripBackgroundLocation(tripIds: string[]): Prom
     }
 
     await setStoredTripIds(ids);
+    void refreshStoredTripSummaries(ids);
 
     if (Platform.OS === 'web') {
       return { ok: false, message: '웹에서는 백그라운드 위치를 사용할 수 없습니다.' };

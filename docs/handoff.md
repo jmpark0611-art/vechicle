@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 background active-trip cache stage 4-6:
+  - Active background trip IDs now have a companion cached summary list in AsyncStorage.
+  - Background overspeed checks prefer cached vehicle number and route metadata instead of requiring a fresh `fetchActiveTrips()` call every location tick.
+  - If the cache is absent, the task still falls back to `fetchActiveTrips()` and refreshes the cache when possible.
+  - The cache is removed when background tracking clears active trip IDs.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 background startup safety stage 4-5:
   - `lib/background-location.ts` now wraps global `TaskManager.defineTask()` registration in a startup-safe guard.
   - Background location start/stop failures are now non-blocking: they return a status message or silently stop best-effort instead of breaking trip start/completion.
