@@ -2,18 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type AppRole = 'driver' | 'commander' | 'admin';
 const ROLE_KEY = '@app_role';
-const COMMANDER_PIN_VERIFIED_KEY = '@commander_pin_verified';
-
-let commanderPinVerified = false;
-
-function getWebSessionStorage(): Storage | null {
-  try {
-    const maybeStorage = (globalThis as typeof globalThis & { sessionStorage?: Storage }).sessionStorage;
-    return maybeStorage ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export async function getStoredRole(): Promise<AppRole | null> {
   try {
@@ -31,23 +19,4 @@ export async function setStoredRole(role: AppRole): Promise<void> {
 
 export async function clearStoredRole(): Promise<void> {
   await AsyncStorage.removeItem(ROLE_KEY);
-  clearCommanderPinVerified();
-}
-
-export function markCommanderPinVerified(): void {
-  commanderPinVerified = true;
-  getWebSessionStorage()?.setItem(COMMANDER_PIN_VERIFIED_KEY, '1');
-}
-
-export function isCommanderPinVerified(): boolean {
-  if (commanderPinVerified) {
-    return true;
-  }
-
-  return getWebSessionStorage()?.getItem(COMMANDER_PIN_VERIFIED_KEY) === '1';
-}
-
-export function clearCommanderPinVerified(): void {
-  commanderPinVerified = false;
-  getWebSessionStorage()?.removeItem(COMMANDER_PIN_VERIFIED_KEY);
 }

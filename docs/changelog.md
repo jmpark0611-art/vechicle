@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-19 unused feature cleanup
+
+- Removed the hidden legacy `monthly-log` tab because 월장비운행증 now lives in the records tab export/detail flow.
+- Removed unused legacy helpers: `lib/speed-zones.ts`, `lib/driver-info.ts`, obsolete commander PIN setter/clearer functions, and unused role session-verification helpers.
+- Removed the old `fetchMonthlyTrips()` data path that was only used by the deleted monthly-log screen.
+- Removed unused `RebuildScreen` props and stale mode-settings style.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 role guard cleanup
 
 - Added a shared `useRoleGuard()` hook for tab-level role protection.

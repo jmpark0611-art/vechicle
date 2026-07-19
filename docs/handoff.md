@@ -3,6 +3,13 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 unused feature cleanup:
+  - Deleted `app/(tabs)/monthly-log.tsx`. The product decision is still that 기록 and 월장비운행증 are the same workflow; use records detail/export instead.
+  - Deleted unused legacy modules `lib/speed-zones.ts` and `lib/driver-info.ts`.
+  - Removed obsolete commander PIN setter/clearer functions and old role session-verification helpers.
+  - Removed `fetchMonthlyTrips()` / `MonthlyTripRow` from `lib/readonly-data.ts`.
+  - Removed unused `RebuildScreen` props and stale `mode-settings` style.
+  - `npm.cmd run verify` passed after deletion.
 - 2026-07-19 role guard cleanup:
   - Added `hooks/use-role-guard.ts`.
   - All role-specific tabs now guard direct/stale route access:

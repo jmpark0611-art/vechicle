@@ -108,10 +108,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
   },
-  rowBorder: {
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5FB',
-  },
   rowLabel: { color: '#0F172A', fontSize: 15, fontWeight: '600' },
   rowArrow: { color: '#94A3B8', fontSize: 20, fontWeight: '400' },
   pinHint: { color: '#94A3B8', fontSize: 12, fontWeight: '500', lineHeight: 18, marginTop: 8 },

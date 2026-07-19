@@ -10,11 +10,9 @@ type Metric = {
 type RebuildScreenProps = PropsWithChildren<{
   title: string;
   subtitle?: string;
-  roleLabel?: string;
   metrics?: Metric[];
   actionLabel?: string;
   onAction?: () => void;
-  onSettings?: () => void;
   bottomSpace?: 'tab' | 'compact' | 'none';
 }>;
 

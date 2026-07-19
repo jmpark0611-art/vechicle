@@ -81,7 +81,6 @@ export default function TabLayout() {
         name="check"
         options={{ title: '점검', tabBarIcon: ({ color }) => <TabGlyph label="✓" color={color} />, href: isCommander ? undefined : null }}
       />
-      <Tabs.Screen name="monthly-log" options={{ title: '기록', href: null }} />
     </Tabs>
   );
 }
