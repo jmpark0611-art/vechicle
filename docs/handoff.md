@@ -1,5 +1,13 @@
 # 인수인계 메모
 
+## 2026-07-19 rank picker for driver form
+
+- `app/(tabs)/index.tsx` 운행탭 인원 카드의 운행자·사용자 계급 입력을 자유 텍스트 → 모달 피커로 교체.
+- 계급 그룹: 병사(이병~병장), 부사관(하사~원사), 준사관·위관(준위~대위), 영관·장관(소령~대장), 기타(군무원·민간인).
+- 기존 저장 로직(`lib/last-trip-input.ts`)과 연동 이상 없음 — 피커로 선택한 값이 그대로 저장·복원됨.
+- `Modal` 추가, 상수 `RANK_GROUPS`, state `rankPickerTarget` 추가. 기존 기능 변경 없음.
+- `npm run verify` 통과, Android export 통과.
+
 ## 2026-07-19 driver long trip banner
 
 - `app/(tabs)/index.tsx` now shows an inline banner at the top of the active trip scroll panel when elapsed time crosses a threshold.

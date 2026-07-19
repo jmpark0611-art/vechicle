@@ -1,5 +1,15 @@
 # 변경 이력
 
+## 2026-07-19 rank picker for driver form
+
+- 운행탭 인원 카드의 계급 입력이 자유 텍스트에서 계급 피커 모달로 변경.
+- 운행자 계급·사용자 계급 버튼을 누르면 병사/부사관/준사관·위관/영관·장관/기타 그룹으로 나뉜 계급 목록이 표시됨.
+- 현재 선택된 계급은 파란 칩으로 표시되어 빠르게 확인 가능.
+- 사용자도 운행자와 동일 체크 시 사용자 계급 피커는 비활성.
+- 오타 입력 불가로 월장비운행증 계급 표기 오류 방지.
+- 새 스타일: `rankPickerBtn`, `rankModalOverlay`, `rankModalBox`, `rankChip*` 등.
+- `npm run verify` 통과, Android export 통과.
+
 ## 2026-07-19 persist driver form fields across sessions
 
 - `lib/last-trip-input.ts` (new): saves and loads `operatorRank`, `operatorName`, `userRank`, `userName`, `sameUser`, `startPlace` via AsyncStorage key `last_trip_input_v1`.

@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -56,6 +56,14 @@ import {
 } from '@/lib/readonly-data';
 
 const DRIVER_SPEED_CHECK_MS = 3_000;
+
+const RANK_GROUPS: { label: string; ranks: string[] }[] = [
+  { label: '병사', ranks: ['이병', '일병', '상병', '병장'] },
+  { label: '부사관', ranks: ['하사', '중사', '상사', '원사'] },
+  { label: '준사관/위관', ranks: ['준위', '소위', '중위', '대위'] },
+  { label: '영관/장관', ranks: ['소령', '중령', '대령', '준장', '소장', '중장', '대장'] },
+  { label: '기타', ranks: ['군무원', '민간인'] },
+];
 
 function formatTime(value: string | null) {
   if (!value) return '-';
@@ -149,6 +157,7 @@ export default function TripScreen() {
   const [obdStatus, setObdStatus] = useState('자동연결 준비');
   const [savedBleDeviceId, setSavedBleDeviceId] = useState<string | null>(null);
   const [savedBleDeviceName, setSavedBleDeviceName] = useState<string | null>(null);
+  const [rankPickerTarget, setRankPickerTarget] = useState<'operator' | 'user' | null>(null);
 
   const activeTripsRef = useRef<TripSummary[]>([]);
   const obdLiveRef = useRef<ObdLiveData | null>(null);
@@ -998,7 +1007,12 @@ export default function TripScreen() {
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>인원</Text>
           <View style={styles.twoCol}>
-            <TextInput style={styles.halfInput} value={operatorRank} onChangeText={setOperatorRank} placeholder="운행자 계급" placeholderTextColor="#94A3B8" />
+            <Pressable style={[styles.halfInput, styles.rankPickerBtn]} onPress={() => setRankPickerTarget('operator')}>
+              <Text style={operatorRank ? styles.rankPickerText : styles.rankPickerPlaceholder}>
+                {operatorRank || '운행자 계급'}
+              </Text>
+              <Text style={styles.rankPickerArrow}>▾</Text>
+            </Pressable>
             <TextInput style={styles.halfInput} value={operatorName} onChangeText={setOperatorName} placeholder="운행자 성명" placeholderTextColor="#94A3B8" />
           </View>
 
@@ -1010,14 +1024,14 @@ export default function TripScreen() {
           </Pressable>
 
           <View style={styles.twoCol}>
-            <TextInput
-              style={styles.halfInput}
-              value={userRank}
-              onChangeText={setUserRank}
-              placeholder="사용자 계급"
-              placeholderTextColor="#94A3B8"
-              editable={!sameUser}
-            />
+            <Pressable
+              style={[styles.halfInput, styles.rankPickerBtn, sameUser && styles.rankPickerDisabled]}
+              onPress={() => { if (!sameUser) setRankPickerTarget('user'); }}>
+              <Text style={[userRank ? styles.rankPickerText : styles.rankPickerPlaceholder, sameUser && styles.rankPickerMuted]}>
+                {userRank || '사용자 계급'}
+              </Text>
+              <Text style={[styles.rankPickerArrow, sameUser && styles.rankPickerMuted]}>▾</Text>
+            </Pressable>
             <TextInput
               style={styles.halfInput}
               value={userName}
@@ -1028,6 +1042,52 @@ export default function TripScreen() {
             />
           </View>
         </View>
+
+        <Modal
+          visible={rankPickerTarget !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setRankPickerTarget(null)}>
+          <Pressable style={styles.rankModalOverlay} onPress={() => setRankPickerTarget(null)}>
+            <View style={styles.rankModalBox} onStartShouldSetResponder={() => true}>
+              <Text style={styles.rankModalTitle}>
+                {rankPickerTarget === 'operator' ? '운행자 계급 선택' : '사용자 계급 선택'}
+              </Text>
+              {RANK_GROUPS.map((group) => (
+                <View key={group.label} style={styles.rankGroupRow}>
+                  <Text style={styles.rankGroupLabel}>{group.label}</Text>
+                  <View style={styles.rankChipRow}>
+                    {group.ranks.map((rank) => (
+                      <Pressable
+                        key={rank}
+                        style={[
+                          styles.rankChip,
+                          ((rankPickerTarget === 'operator' && operatorRank === rank) ||
+                            (rankPickerTarget === 'user' && userRank === rank)) && styles.rankChipSelected,
+                        ]}
+                        onPress={() => {
+                          if (rankPickerTarget === 'operator') setOperatorRank(rank);
+                          else setUserRank(rank);
+                          setRankPickerTarget(null);
+                        }}>
+                        <Text style={[
+                          styles.rankChipText,
+                          ((rankPickerTarget === 'operator' && operatorRank === rank) ||
+                            (rankPickerTarget === 'user' && userRank === rank)) && styles.rankChipTextSelected,
+                        ]}>
+                          {rank}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              ))}
+              <Pressable style={styles.rankModalClose} onPress={() => setRankPickerTarget(null)}>
+                <Text style={styles.rankModalCloseText}>닫기</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
 
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>운행 정보</Text>
@@ -1356,4 +1416,48 @@ const styles = StyleSheet.create({
   longTripBannerBody: { color: '#7F1D1D', fontSize: 13, fontWeight: '400', lineHeight: 18 },
   longTripBannerTitleWarn: { color: '#92400E', fontSize: 14, fontWeight: '700', marginBottom: 4 },
   longTripBannerBodyWarn: { color: '#78350F', fontSize: 13, fontWeight: '400', lineHeight: 18 },
+  rankPickerBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rankPickerText: { color: '#0F172A', fontSize: 14, fontWeight: '500' },
+  rankPickerPlaceholder: { color: '#94A3B8', fontSize: 14, fontWeight: '400' },
+  rankPickerArrow: { color: '#94A3B8', fontSize: 12 },
+  rankPickerDisabled: { backgroundColor: '#F1F5F9' },
+  rankPickerMuted: { color: '#CBD5E1' },
+  rankModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  rankModalBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 380,
+  },
+  rankModalTitle: { color: '#0F172A', fontSize: 16, fontWeight: '700', marginBottom: 14 },
+  rankGroupRow: { marginBottom: 10 },
+  rankGroupLabel: { color: '#64748B', fontSize: 11, fontWeight: '600', marginBottom: 6, letterSpacing: 0.4 },
+  rankChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  rankChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#DCEAF8',
+    backgroundColor: '#F8FAFC',
+  },
+  rankChipSelected: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+  rankChipText: { color: '#334155', fontSize: 13, fontWeight: '500' },
+  rankChipTextSelected: { color: '#FFFFFF', fontWeight: '700' },
+  rankModalClose: {
+    marginTop: 14,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DCEAF8',
+  },
+  rankModalCloseText: { color: '#64748B', fontSize: 14, fontWeight: '600' },
 });
