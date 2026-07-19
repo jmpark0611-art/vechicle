@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
+import { useRoleGuard } from '@/hooks/use-role-guard';
 import { fetchTripsReadOnly, fetchVehiclesReadOnly, getSupabaseReadSource } from '@/lib/readonly-data';
 import { clearStoredRole, getStoredRole } from '@/lib/role';
 import { supabase } from '@/lib/supabase';
@@ -60,6 +61,8 @@ function statusText(status: TableCheck['status']) {
 }
 
 export default function CheckScreen() {
+  useRoleGuard(['commander']);
+
   const sdkVersion = Constants.expoConfig?.sdkVersion ?? '54';
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);

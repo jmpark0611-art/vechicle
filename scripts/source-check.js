@@ -7,10 +7,12 @@ const requiredFiles = [
   path.join('app', '_layout.tsx'),
   path.join('app', 'role-select.tsx'),
   path.join('app', 'commander-pin.tsx'),
+  path.join('app', 'admin-pin.tsx'),
   path.join('app', '(tabs)', '_layout.tsx'),
   path.join('app', '(tabs)', 'index.tsx'),
   path.join('app', '(tabs)', 'explore.tsx'),
   path.join('app', '(tabs)', 'vehicles.tsx'),
+  path.join('app', '(tabs)', 'alerts.tsx'),
   path.join('app', '(tabs)', 'map.tsx'),
   path.join('app', '(tabs)', 'check.tsx'),
 ];

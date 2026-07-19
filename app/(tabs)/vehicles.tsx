@@ -3,6 +3,7 @@ import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'reac
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
+import { useRoleGuard } from '@/hooks/use-role-guard';
 import { showLiveEcuAlertPopup } from '@/lib/fleet-alerts';
 import {
   getVehicleMaintenanceState,
@@ -94,6 +95,8 @@ function liveToReading(vehicleId: string, data: ObdLiveData): ObdReading {
 }
 
 export default function VehiclesScreen() {
+  useRoleGuard(['commander']);
+
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<MaintenanceSnapshot>({});

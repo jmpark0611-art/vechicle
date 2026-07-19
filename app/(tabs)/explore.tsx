@@ -3,6 +3,7 @@ import { Alert, Modal, Pressable, Share, StyleSheet, Text, TextInput, View } fro
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
+import { useRoleGuard } from '@/hooks/use-role-guard';
 import { fetchTripGpsDistances } from '@/lib/gps-data';
 import { fetchFuelEvents, fetchTripFuelUsage, loadSyncedObdSnapshot, type FuelEvent, type ObdSnapshot, type TripFuelUsage } from '@/lib/obd-data';
 import { deleteTripsByIds, fetchTripsReadOnly, fetchVehiclesReadOnly, type TripSummary, type VehicleSummary } from '@/lib/readonly-data';
@@ -93,6 +94,8 @@ function groupTripsByDay(trips: TripSummary[]) {
 }
 
 export default function RecordsScreen() {
+  useRoleGuard(['commander']);
+
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);

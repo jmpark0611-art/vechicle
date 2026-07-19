@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 role guard cleanup
+
+- Added a shared `useRoleGuard()` hook for tab-level role protection.
+- Driver-only, commander-only, and admin-only tabs now redirect stale cached/direct routes back to the correct mode home screen.
+- Source checks now require the new `admin-pin.tsx` screen and the `alerts.tsx` maintenance tab so future accidental deletions are caught.
+- Verification passed cleanly with `npm.cmd run verify`.
+
 ## 2026-07-19 admin speed mode and overspeed stage 3
 
 - Added a separate administrator mode for speed-zone/map management.

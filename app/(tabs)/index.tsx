@@ -1,10 +1,10 @@
-import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Dimensions, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingCard, RebuildScreen, SectionCard } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
+import { useRoleGuard } from '@/hooks/use-role-guard';
 import { fetchTripGpsDistances, saveCurrentGpsPoint } from '@/lib/gps-data';
 import { fetchLocationSnapshot } from '@/lib/location-data';
 import {
@@ -36,7 +36,6 @@ import {
   type TripSummary,
   type VehicleSummary,
 } from '@/lib/readonly-data';
-import { getStoredRole } from '@/lib/role';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const DRIVER_SPEED_CHECK_MS = 10_000;
@@ -103,6 +102,8 @@ type CompletionSummary = {
 };
 
 export default function TripScreen() {
+  useRoleGuard(['driver']);
+
   const insets = useSafeAreaInsets();
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [activeTrips, setActiveTrips] = useState<TripSummary[]>([]);
@@ -372,10 +373,6 @@ export default function TripScreen() {
         setObdStatus(`${deviceName} 자동연결 준비`);
         void selectVehicleForObdDevice(device);
       }
-    });
-    void getStoredRole().then((nextRole) => {
-      if (nextRole === 'commander') router.replace('/(tabs)/explore');
-      if (nextRole === 'admin') router.replace('/(tabs)/map');
     });
   }, [currentVehicleNumber, selectVehicleForObdDevice]);
 

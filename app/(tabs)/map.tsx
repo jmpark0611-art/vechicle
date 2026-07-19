@@ -1,18 +1,19 @@
-import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleMap } from '@/components/vehicle-map';
+import { useRoleGuard } from '@/hooks/use-role-guard';
 import { createSpeedZone, fetchLocationSnapshot, type LocationSnapshot, type ZonePoint } from '@/lib/location-data';
 import { generateVehicleMapHtml } from '@/lib/map-html';
 import { overspeedWarningKey, showOverspeedWarning } from '@/lib/overspeed-warning';
-import { getStoredRole } from '@/lib/role';
 
 const SPEED_REFRESH_MS = 10_000;
 
 export default function MapScreen() {
+  useRoleGuard(['admin']);
+
   const insets = useSafeAreaInsets();
   const [snapshot, setSnapshot] = useState<LocationSnapshot>({ positions: [], zones: [], alerts: [], message: '대기' });
   const [isLoading, setIsLoading] = useState(true);
@@ -58,10 +59,6 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
-    void getStoredRole().then((nextRole) => {
-      if (nextRole === 'driver') router.replace('/(tabs)');
-      if (nextRole === 'commander') router.replace('/(tabs)/explore');
-    });
     void loadLocation();
   }, [loadLocation]);
 

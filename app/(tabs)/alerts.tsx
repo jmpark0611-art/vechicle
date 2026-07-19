@@ -4,6 +4,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
+import { useRoleGuard } from '@/hooks/use-role-guard';
 import {
   completeMaintenanceItem,
   getRemainingKm,
@@ -131,6 +132,8 @@ async function saveAcknowledgedFingerprints(items: Set<string>) {
 }
 
 export default function AlertsScreen() {
+  useRoleGuard(['commander']);
+
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [maintenanceSnapshot, setMaintenanceSnapshot] = useState<MaintenanceSnapshot>({});

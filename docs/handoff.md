@@ -3,6 +3,15 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 role guard cleanup:
+  - Added `hooks/use-role-guard.ts`.
+  - All role-specific tabs now guard direct/stale route access:
+    - driver: 운행 only,
+    - commander: 기록/진단/정비/점검,
+    - admin: 속도 only.
+  - This fixes a likely post-admin-mode bug where a hidden tab could still open from cached navigation state or a direct route.
+  - `scripts/source-check.js` now also requires `app/admin-pin.tsx` and `app/(tabs)/alerts.tsx`.
+  - `npm.cmd run verify` passed cleanly.
 - 2026-07-19 admin speed mode and overspeed stage 3:
   - Added `admin` to `AppRole`.
   - Added `/admin-pin` with temporary fixed PIN `1862`.
