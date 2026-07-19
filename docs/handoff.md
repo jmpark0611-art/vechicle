@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 driver UI runtime cleanup:
+  - Pulled `433a2e4 Overhaul driver screens with dark split layout and gradients`.
+  - Initial `npm.cmd run verify` passed, and `expo-linear-gradient` is already present in `package.json`.
+  - Removed unreachable legacy active-trip/completion render branches from `app/(tabs)/index.tsx`; the new early-return screens are now the single source of truth.
+  - Removed dead styles tied to the deleted branches (`driverScreen`, old route panel, old completion card, old fullscreen trip wrappers).
+  - `npm.cmd run verify` passed after cleanup.
 - 2026-07-19 trip delete policy no-op detection:
   - Live Supabase cleanup check found 29 visible `trips` rows.
   - Deleting with the app anon key returned no hard error, but deleted 0 rows; the count stayed at 29.

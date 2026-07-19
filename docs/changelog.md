@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-19 driver UI runtime cleanup
+
+- Pulled UI/UX commit `433a2e4` with the dark split driver trip layout.
+- `npm.cmd run verify` passed after the pull.
+- Removed the old unreachable active-trip and completion render branches that remained below the new early-return screens.
+- Removed the dead styles tied to those unreachable branches so future driver UI changes do not drift between two competing layouts.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 trip delete policy no-op detection
 
 - Checked the live Supabase `trips` table with the app anon key during field-test cleanup.

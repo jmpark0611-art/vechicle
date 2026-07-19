@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Dimensions, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -39,7 +39,6 @@ import {
   type VehicleSummary,
 } from '@/lib/readonly-data';
 
-const SCREEN_HEIGHT = Dimensions.get('window').height;
 const DRIVER_SPEED_CHECK_MS = 10_000;
 
 function formatTime(value: string | null) {
@@ -737,97 +736,6 @@ export default function TripScreen() {
         <LoadingCard label="운행 데이터를 불러오는 중" />
       ) : errorMessage ? (
         <SectionCard title="오류" body={errorMessage} />
-      ) : activeTrip ? (
-        <View style={[styles.tripCard, styles.tripCardActive]}>
-          <View style={styles.heroTop}>
-            <View>
-              <Text style={styles.kicker}>운행 중</Text>
-              <Text style={styles.activeTitle}>{activeTrip.vehicleNumber}</Text>
-            </View>
-            <View style={styles.liveBadge}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveBadgeText}>LIVE</Text>
-            </View>
-          </View>
-          <View style={styles.routePanel}>
-            <Text style={styles.routePoint}>{activeTrip.startPlace ?? '-'}</Text>
-            <Text style={styles.routeArrow}>→</Text>
-            <Text style={styles.routePoint}>{activeTrip.endPlace ?? '-'}</Text>
-          </View>
-          <View style={styles.liveInfoRow}>
-            <View style={styles.liveInfoCard}>
-              <Text style={styles.liveInfoLabel}>현재 시각</Text>
-              <Text style={styles.liveInfoValue}>{formatClock(now)}</Text>
-            </View>
-            <View style={styles.liveInfoCard}>
-              <Text style={styles.liveInfoLabel}>경과</Text>
-              <Text style={styles.liveInfoValue}>{formatElapsed(activeTrip.startTime, now)}</Text>
-            </View>
-            <View style={styles.liveInfoCard}>
-              <Text style={styles.liveInfoLabel}>GPS 이동</Text>
-              <Text style={styles.liveInfoValue}>{formatDistanceKm(activeGpsDistanceKm)}</Text>
-            </View>
-          </View>
-          <View style={styles.statRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>시작</Text>
-              <Text style={styles.statValue}>{formatTime(activeTrip.startTime)}</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>계기판 누적거리</Text>
-              <Text style={styles.statValue}>{formatKm(activeStartOdometer)}</Text>
-            </View>
-          </View>
-          <View style={styles.statRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>현재 연료</Text>
-              <Text style={styles.statValue}>{typeof obdLiveData?.fuelPercent === 'number' ? `${obdLiveData.fuelPercent}%` : '-'}</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>소모 유류</Text>
-              <Text style={styles.statValue}>{activeFuelUsed}</Text>
-            </View>
-          </View>
-          <View style={styles.obdStrip}>
-            <Text style={styles.obdStripLabel}>OBD</Text>
-            <Text style={styles.obdStripValue}>{obdLabel}</Text>
-          </View>
-          <View style={styles.autoOdoBox}>
-            <Text style={styles.autoOdoLabel}>도착 계기판 자동</Text>
-            <Text style={styles.autoOdoValue}>
-              {activeStartOdometer !== null ? `${Math.round(activeStartOdometer).toLocaleString('ko-KR')}km + GPS 이동거리` : 'OBD/GPS 기준 자동 저장'}
-            </Text>
-          </View>
-          <View style={styles.tripFlexibleSpace} />
-          <View style={styles.actionRow}>
-            <Pressable style={styles.cancelBtnWide} onPress={() => void handleCancelTrip(activeTrip)} disabled={isSaving}>
-              <Text style={styles.cancelBtnText}>취소</Text>
-            </Pressable>
-            <Pressable style={styles.endBtn} onPress={handlePrimaryAction} disabled={isSaving}>
-              <Text style={styles.endBtnText}>{isSaving ? '저장 중' : '운행 종료'}</Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : lastCompletion ? (
-        <View style={styles.completionWrap}>
-          <View style={styles.thanksCard}>
-            <Text style={styles.thanksTitle}>안전운행해주셔서 감사합니다</Text>
-            <Text style={styles.thanksSub}>월장비운행증 반영 요소</Text>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>차량</Text><Text style={styles.summaryVal}>{lastCompletion.vehicleNumber}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>경로</Text><Text style={styles.summaryVal}>{lastCompletion.route}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>출발/도착</Text><Text style={styles.summaryVal}>{lastCompletion.startTime} / {lastCompletion.endTime}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>계기판 총 주행거리</Text><Text style={styles.summaryVal}>{lastCompletion.totalOdometer}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>계기판 운행거리</Text><Text style={styles.summaryVal}>{lastCompletion.tripDistance}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>실제 이동거리</Text><Text style={styles.summaryVal}>{lastCompletion.gpsDistance}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>소모 유류</Text><Text style={styles.summaryVal}>{lastCompletion.fuelUsed}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행목적</Text><Text style={styles.summaryVal}>{lastCompletion.purpose}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행자</Text><Text style={styles.summaryVal}>{lastCompletion.operator}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>사용자</Text><Text style={styles.summaryVal}>{lastCompletion.user}</Text></View>
-          </View>
-          <Pressable style={styles.startBtn} onPress={() => setLastCompletion(null)}>
-            <Text style={styles.startBtnText}>새 운행 입력</Text>
-          </Pressable>
-        </View>
       ) : (
         <>
         <LinearGradient
@@ -917,19 +825,6 @@ export default function TripScreen() {
 }
 
 const styles = StyleSheet.create({
-  driverScreen: {
-    flex: 1,
-    backgroundColor: '#F0F4FB',
-    paddingHorizontal: 18,
-  },
-  driverTitle: {
-    color: '#0F172A',
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-    marginBottom: 14,
-    paddingHorizontal: 2,
-  },
   heroCard: {
     minHeight: 96,
     borderRadius: 22,
@@ -946,10 +841,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 6,
   },
-  heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 },
   kicker: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '600', letterSpacing: 0.5, marginBottom: 5 },
   heroTitle: { color: '#FFFFFF', fontSize: 26, fontWeight: '700' },
-  activeTitle: { color: '#0F172A', fontSize: 34, fontWeight: '700' },
   heroIconBox: {
     width: 48,
     height: 48,
@@ -983,16 +876,6 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 6,
   },
-  tripCardActive: {
-    minHeight: Math.max(720, SCREEN_HEIGHT - 72),
-    justifyContent: 'flex-start',
-  },
-  tripCardFullscreen: {
-    flex: 1,
-    marginBottom: 0,
-    padding: 22,
-  },
-  tripFlexibleSpace: { minHeight: 18 },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1004,18 +887,6 @@ const styles = StyleSheet.create({
   },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#16A34A' },
   liveBadgeText: { color: '#047857', fontSize: 11, fontWeight: '700' },
-  routePanel: {
-    minHeight: 96,
-    borderRadius: 14,
-    backgroundColor: '#F5F8FF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    marginBottom: 12,
-  },
-  routePoint: { color: '#0F172A', fontSize: 18, fontWeight: '700', flex: 1 },
-  routeArrow: { color: '#94A3B8', fontSize: 20, fontWeight: '400', marginHorizontal: 12 },
   liveInfoRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   liveInfoCard: {
     flex: 1,
@@ -1063,18 +934,6 @@ const styles = StyleSheet.create({
   },
   autoOdoLabel: { color: '#64748B', fontSize: 14, fontWeight: '600', marginBottom: 8 },
   autoOdoValue: { color: '#0F172A', fontSize: 17, fontWeight: '700' },
-  thanksCard: {
-    flex: 1,
-    borderRadius: 16,
-    backgroundColor: '#F0FDF8',
-    borderWidth: 1,
-    borderColor: '#CFF4E3',
-    padding: 18,
-    marginBottom: 14,
-    justifyContent: 'space-between',
-  },
-  thanksTitle: { color: '#047857', fontSize: 22, fontWeight: '700' },
-  thanksSub: { color: '#588674', fontSize: 14, fontWeight: '600', marginTop: 6, marginBottom: 12 },
   summaryLine: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1168,9 +1027,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   startBtnText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', letterSpacing: 0.2 },
-  completionWrap: { minHeight: Math.max(720, SCREEN_HEIGHT - 72), justifyContent: 'space-between' },
-  completionFullscreen: { flex: 1, justifyContent: 'space-between', gap: 14 },
-
   // Active trip: dark split layout
   activeScreen: { flex: 1, backgroundColor: '#F0F4FB' },
   activeDark: { paddingHorizontal: 22, paddingBottom: 22 },
