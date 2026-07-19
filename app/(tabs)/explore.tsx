@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -143,6 +144,12 @@ export default function RecordsScreen() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadData();
+    }, [loadData])
+  );
 
   const filtered = useMemo(
     () => (selectedVehicleId ? trips.filter((trip) => trip.vehicleId === selectedVehicleId) : trips),

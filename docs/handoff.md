@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 cross-tab data refresh:
+  - User asked whether initial phone/scanner connection can read the dashboard total odometer and emphasized that driver-mode data must sync into all commander-mode tabs, and commander tabs must sync with one another.
+  - Limitation to preserve in future work: standard ELM327/OBD PID data usually does not provide the vehicle dashboard's total cumulative odometer. Use the saved vehicle current-km baseline plus GPS trip distance unless a manufacturer-specific PID/profile is added later.
+  - Added `useFocusEffect` refreshes to `app/(tabs)/index.tsx`, `app/(tabs)/explore.tsx`, and `app/(tabs)/vehicles.tsx`.
+  - Existing maintenance tab already had focused refresh. This makes trip, record, diagnostics, OBD, and maintenance snapshots more consistent after tab/mode switching.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 trip odometer baseline enforcement:
   - User reported that `계기판 누적주행거리` never displayed during testing.
   - Important domain note: standard OBD live data usually does not expose the dashboard's total cumulative odometer, so the app must rely on the saved vehicle current km or the driver's start odometer entry as the baseline.

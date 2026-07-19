@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -215,6 +216,12 @@ export default function VehiclesScreen() {
   useEffect(() => {
     void loadVehicles();
   }, [loadVehicles]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadVehicles();
+    }, [loadVehicles])
+  );
 
   async function handleConnectDevice() {
     if (!selectedVehicle) {

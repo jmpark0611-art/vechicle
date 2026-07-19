@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 cross-tab data refresh
+
+- Records, driver trip, and diagnostics tabs now refresh their shared vehicle/trip/OBD/maintenance data when the tab receives focus.
+- This helps driver-mode trip results and OBD readings appear in commander-mode records/diagnostics/maintenance screens without restarting the app.
+- Documented the OBD limitation: standard OBD data usually does not expose the dashboard's total cumulative odometer, so the app must use saved/current-km baselines plus GPS trip distance unless a vehicle-specific PID is later added.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 trip odometer baseline enforcement
 
 - Driver trips now require a start odometer baseline when no saved vehicle current km exists, instead of allowing trips that later show `- km` for total odometer.
