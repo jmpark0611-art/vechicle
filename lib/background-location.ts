@@ -13,9 +13,16 @@ export const ACTIVE_TRIP_LOCATION_TASK = 'vehicle-active-trip-location';
 
 const ACTIVE_TRIP_IDS_KEY = '@vehicle_active_background_trip_ids';
 const ACTIVE_TRIP_OVERSPEED_KEY = '@vehicle_active_background_overspeed_key';
+const ACTIVE_TRIP_LAST_LOCATION_KEY = '@vehicle_active_background_last_location';
 
 type LocationTaskData = {
   locations?: Location.LocationObject[];
+};
+
+type StoredLocationSample = {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
 };
 
 function speedMetersPerSecondToKmh(value: number | null) {
@@ -23,8 +30,69 @@ function speedMetersPerSecondToKmh(value: number | null) {
   return Math.round(value * 36) / 10;
 }
 
+function distanceMeters(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {
+  const earthRadiusM = 6_371_000;
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLng = toRad(b.longitude - a.longitude);
+  const lat1 = toRad(a.latitude);
+  const lat2 = toRad(b.latitude);
+  const haversine =
+    Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * earthRadiusM * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 function routeLabel(trip: { startPlace?: string | null; endPlace?: string | null }) {
   return `${trip.startPlace ?? '출발지 없음'} -> ${trip.endPlace ?? '목적지 없음'}`;
+}
+
+async function getStoredLocationSample(): Promise<StoredLocationSample | null> {
+  try {
+    const raw = await AsyncStorage.getItem(ACTIVE_TRIP_LAST_LOCATION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredLocationSample>;
+    if (!isFiniteNumber(parsed.latitude) || !isFiniteNumber(parsed.longitude) || !isFiniteNumber(parsed.timestamp)) {
+      return null;
+    }
+    return {
+      latitude: parsed.latitude,
+      longitude: parsed.longitude,
+      timestamp: parsed.timestamp,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function setStoredLocationSample(latest: Location.LocationObject) {
+  const sample: StoredLocationSample = {
+    latitude: latest.coords.latitude,
+    longitude: latest.coords.longitude,
+    timestamp: latest.timestamp,
+  };
+  await AsyncStorage.setItem(ACTIVE_TRIP_LAST_LOCATION_KEY, JSON.stringify(sample));
+}
+
+async function resolveSpeedKmh(latest: Location.LocationObject) {
+  const nativeSpeed = speedMetersPerSecondToKmh(latest.coords.speed);
+  const previous = await getStoredLocationSample();
+  await setStoredLocationSample(latest);
+  if (nativeSpeed !== null) return nativeSpeed;
+  if (!previous) return null;
+
+  const elapsedSeconds = (latest.timestamp - previous.timestamp) / 1000;
+  if (!Number.isFinite(elapsedSeconds) || elapsedSeconds < 2 || elapsedSeconds > 300) return null;
+
+  const meters = distanceMeters(previous, latest.coords);
+  if (!Number.isFinite(meters) || meters < 5) return 0;
+
+  const estimatedKmh = (meters / elapsedSeconds) * 3.6;
+  if (!Number.isFinite(estimatedKmh) || estimatedKmh < 0 || estimatedKmh > 180) return null;
+  return Math.round(estimatedKmh * 10) / 10;
 }
 
 async function getStoredTripIds() {
@@ -43,6 +111,7 @@ async function setStoredTripIds(tripIds: string[]) {
   if (uniqueIds.length === 0) {
     await AsyncStorage.removeItem(ACTIVE_TRIP_IDS_KEY);
     await AsyncStorage.removeItem(ACTIVE_TRIP_OVERSPEED_KEY);
+    await AsyncStorage.removeItem(ACTIVE_TRIP_LAST_LOCATION_KEY);
     return;
   }
   await AsyncStorage.setItem(ACTIVE_TRIP_IDS_KEY, JSON.stringify(uniqueIds));
@@ -105,7 +174,7 @@ TaskManager.defineTask(ACTIVE_TRIP_LOCATION_TASK, async ({ data, error }) => {
     if (!latest) return;
 
     const recordedAt = new Date(latest.timestamp).toISOString();
-    const speedKmh = speedMetersPerSecondToKmh(latest.coords.speed);
+    const speedKmh = await resolveSpeedKmh(latest);
     const rows = tripIds.map((tripId) => ({
       trip_id: tripId,
       latitude: latest.coords.latitude,

@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 background speed fallback stage 4-4
+
+- Added a background speed fallback for devices that provide GPS coordinates but return `coords.speed` as `null`.
+- The active-trip background task now stores the previous location sample and estimates km/h from distance over elapsed time.
+- Implausible samples are ignored, very small movement is treated as 0km/h, and the stored sample is cleared when background tracking stops.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 background overspeed direct-location stage 4-3
 
 - Background overspeed checks now evaluate the live `LocationObject` delivered by the Expo TaskManager task.

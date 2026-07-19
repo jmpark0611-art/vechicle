@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 background speed fallback stage 4-4:
+  - `lib/background-location.ts` now stores the previous background location sample in AsyncStorage.
+  - If Expo/OS provides coordinates but `coords.speed` is `null`, the task estimates speed from distance divided by elapsed time.
+  - The fallback ignores stale/too-fast samples, treats very small movement as 0km/h, and clears its last-location sample when background tracking stops.
+  - This makes speed-zone warnings less dependent on device-provided native speed values during screen-off operation.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 background overspeed direct-location stage 4-3:
   - `lib/location-data.ts` now exports `evaluateSpeedZoneAlerts()` so callers can evaluate speed zones from an explicit list of live positions.
   - `lib/background-location.ts` no longer waits for a successful `gps_points` insert and then re-queries `fetchLocationSnapshot()` for overspeed checks.
