@@ -27,6 +27,13 @@ import {
   type OverspeedWarningState,
 } from '@/lib/overspeed-warning';
 import {
+  clearTripObdInterruption,
+  isStaleObdInterruption,
+  loadTripObdInterruption,
+  saveTripObdInterruption,
+  type TripObdInterruption,
+} from '@/lib/trip-interruption';
+import {
   getVehicleNumberForObdDevice,
   loadSelectedObdBleDevice,
   obdBle,
@@ -130,6 +137,7 @@ export default function TripScreen() {
   const [lastCompletion, setLastCompletion] = useState<CompletionSummary | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [activeGpsDistanceKm, setActiveGpsDistanceKm] = useState<number | null>(null);
+  const [obdInterruption, setObdInterruption] = useState<TripObdInterruption | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -143,6 +151,9 @@ export default function TripScreen() {
 
   const activeTripsRef = useRef<TripSummary[]>([]);
   const obdLiveRef = useRef<ObdLiveData | null>(null);
+  const activeGpsDistanceRef = useRef<number | null>(null);
+  const savedBleDeviceIdRef = useRef<string | null>(null);
+  const savedBleDeviceNameRef = useRef<string | null>(null);
   const tripStartFuelRef = useRef<Record<string, number | null>>({});
   const obdSaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gpsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -152,6 +163,9 @@ export default function TripScreen() {
 
   activeTripsRef.current = activeTrips;
   obdLiveRef.current = obdLiveData;
+  activeGpsDistanceRef.current = activeGpsDistanceKm;
+  savedBleDeviceIdRef.current = savedBleDeviceId;
+  savedBleDeviceNameRef.current = savedBleDeviceName;
 
   const activeTrip = activeTrips[0] ?? null;
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? null;
@@ -342,6 +356,10 @@ export default function TripScreen() {
         setIsObdConnected(true);
         setIsObdConnecting(false);
         setObdStatus(`연결됨 · ${data.speedKmh ?? '-'}km/h · 연료 ${data.fuelPercent ?? '-'}%`);
+        for (const trip of activeTripsRef.current) {
+          void clearTripObdInterruption(trip.id);
+        }
+        setObdInterruption(null);
         const now = Date.now();
         for (const trip of activeTripsRef.current) {
           if (!trip.vehicleId) continue;
@@ -365,6 +383,20 @@ export default function TripScreen() {
         setIsObdConnected(false);
         setIsObdConnecting(false);
         setObdStatus('연결 끊김 · 자동 재시도 중');
+        const trip = activeTripsRef.current[0] ?? null;
+        if (trip) {
+          const interruption: TripObdInterruption = {
+            tripId: trip.id,
+            vehicleId: trip.vehicleId,
+            vehicleNumber: trip.vehicleNumber,
+            deviceId: savedBleDeviceIdRef.current,
+            deviceName: savedBleDeviceNameRef.current,
+            disconnectedAt: new Date().toISOString(),
+            gpsDistanceKm: activeGpsDistanceRef.current,
+          };
+          setObdInterruption(interruption);
+          void saveTripObdInterruption(interruption);
+        }
         stopObdSaveTimer();
       },
     });
@@ -411,13 +443,23 @@ export default function TripScreen() {
   useEffect(() => {
     if (!activeTrip) {
       setActiveGpsDistanceKm(null);
+      setObdInterruption(null);
       return;
     }
 
     const refreshGpsDistance = async () => {
       try {
-        const distances = await fetchTripGpsDistances([activeTrip.id]);
+        const [distances, interruption] = await Promise.all([
+          fetchTripGpsDistances([activeTrip.id]),
+          loadTripObdInterruption(),
+        ]);
         setActiveGpsDistanceKm(distances[activeTrip.id] ?? 0);
+        if (interruption?.tripId === activeTrip.id) {
+          setObdInterruption(interruption);
+        } else {
+          setObdInterruption(null);
+          if (interruption) void clearTripObdInterruption();
+        }
       } catch {
         setActiveGpsDistanceKm(null);
       }
@@ -554,6 +596,8 @@ export default function TripScreen() {
       setActiveTrips([trip]);
       tripStartFuelRef.current[trip.id] = typeof obdLiveData?.fuelPercent === 'number' ? obdLiveData.fuelPercent : null;
       setLastCompletion(null);
+      setObdInterruption(null);
+      void clearTripObdInterruption();
       setEndOdometer('');
       setPurpose('');
       setEndPlace('');
@@ -578,6 +622,8 @@ export default function TripScreen() {
       await cancelManualTrip(trip.id);
       setActiveTrips([]);
       setEndOdometer('');
+      setObdInterruption(null);
+      void clearTripObdInterruption(trip.id);
       delete tripStartFuelRef.current[trip.id];
       stopGpsTimer();
       await stopActiveTripBackgroundLocation();
@@ -639,10 +685,12 @@ export default function TripScreen() {
         user: [trip.userRank, trip.userName].filter(Boolean).join(' ') || [sameUser ? operatorRank : userRank, sameUser ? operatorName : userName].filter(Boolean).join(' ') || '-',
       });
       setActiveTrips([]);
+      setObdInterruption(null);
       setPurpose('');
       setEndPlace('');
       setStartOdometer('');
       setEndOdometer('');
+      void clearTripObdInterruption(trip.id);
       delete tripStartFuelRef.current[trip.id];
       obdBle.stopPolling();
       void obdBle.disconnect();
@@ -686,6 +734,11 @@ export default function TripScreen() {
     activeStartOdometer !== null && activeStartOdometer !== undefined
       ? activeStartOdometer + (activeGpsDistanceKm ?? 0)
       : null;
+  const interruptionText = obdInterruption
+    ? isStaleObdInterruption(obdInterruption)
+      ? `미종료 의심 · OBD 끊김 ${formatTime(obdInterruption.disconnectedAt)}`
+      : `일시 이탈 후보 · OBD 끊김 ${formatTime(obdInterruption.disconnectedAt)}`
+    : null;
 
   if (!isLoading && !errorMessage && activeTrip) {
     return (
@@ -760,6 +813,12 @@ export default function TripScreen() {
             <Text style={styles.obdStripLabel}>OBD</Text>
             <Text style={styles.obdStripValue}>{obdLabel}</Text>
           </View>
+          {interruptionText ? (
+            <View style={[styles.obdStrip, styles.interruptionStrip]}>
+              <Text style={styles.obdStripLabel}>상태</Text>
+              <Text style={styles.interruptionValue}>{interruptionText}</Text>
+            </View>
+          ) : null}
           <View style={styles.autoOdoBox}>
             <Text style={styles.autoOdoLabel}>도착 계기판 km</Text>
             <TextInput
@@ -1049,6 +1108,8 @@ const styles = StyleSheet.create({
   summaryVal: { color: '#163B31', fontSize: 14, fontWeight: '700', flex: 1, textAlign: 'right' },
   obdStripLabel: { color: '#64748B', fontSize: 14, fontWeight: '600' },
   obdStripValue: { color: '#1D4ED8', fontSize: 14, fontWeight: '700', flexShrink: 1, textAlign: 'right' },
+  interruptionStrip: { backgroundColor: '#FFF7ED' },
+  interruptionValue: { color: '#C2410C', fontSize: 13, fontWeight: '700', flexShrink: 1, textAlign: 'right' },
   input: {
     minHeight: 38,
     borderRadius: 12,

@@ -3,6 +3,14 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 OBD interruption checkpoint:
+  - User clarified that OBD disconnect must not mean immediate trip completion, because a driver can park for work and later restart the same vehicle.
+  - Added `lib/trip-interruption.ts` for local `AsyncStorage` OBD disconnect checkpoints.
+  - `app/(tabs)/index.tsx` now saves trip/vehicle/device/disconnect-time/GPS-reference metadata when OBD disconnects during an active trip.
+  - If OBD live data arrives again for the same active trip, the checkpoint is cleared and the trip continues.
+  - Active trip UI shows `일시 이탈 후보` and changes to `미종료 의심` after 24 hours, but this is only a status cue. It does not auto-complete, delete, or mutate Supabase trip data.
+  - Future step: add an app-start suggestion flow: `OBD 끊김 시점 기준 종료`, `계속 운행 중`, `직접 도착 계기판 입력`.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 trip completion odometer confirmation:
   - User raised a field-test issue: if a driver starts a trip, leaves the vehicle, walks around for hours, and later taps completion, GPS walking distance can pollute the trip distance.
   - `app/(tabs)/index.tsx` now requires `도착 계기판 km` on the active trip screen before completion.

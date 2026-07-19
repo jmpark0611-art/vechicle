@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-19 OBD interruption checkpoint
+
+- Added a local active-trip OBD interruption checkpoint for field workflows where a driver parks, leaves the vehicle, and later resumes the same trip.
+- OBD disconnect now records the active trip, vehicle, saved BLE device, disconnect time, and GPS reference distance without ending the trip.
+- When OBD data is received again for the same active trip, the interruption checkpoint is cleared and the trip continues.
+- The active trip screen shows `일시 이탈 후보` or `미종료 의심` after a disconnect, but does not automatically complete or delete the trip.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 trip completion odometer confirmation
 
 - Driver trip completion no longer calculates the official end odometer from GPS distance.
