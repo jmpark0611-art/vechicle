@@ -39,6 +39,7 @@ import { getStoredRole } from '@/lib/role';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const OVERSPEED_VIBRATION_PATTERN = [0, 650, 160, 650, 160, 900];
+const DRIVER_SPEED_CHECK_MS = 10_000;
 
 function formatTime(value: string | null) {
   if (!value) return '-';
@@ -239,7 +240,7 @@ export default function TripScreen() {
         await Promise.all(activeTripsRef.current.map((trip) => saveCurrentGpsPoint(trip.id, speedKmh)));
         await checkOverspeedWarning();
       })();
-    }, 60_000);
+    }, DRIVER_SPEED_CHECK_MS);
   }, [checkOverspeedWarning, stopGpsTimer]);
 
   const stopObdRetryTimer = useCallback(() => {
@@ -501,7 +502,7 @@ export default function TripScreen() {
       void ensureObdConnected();
 
       const gpsResult = await saveCurrentGpsPoint(trip.id, obdLiveRef.current?.speedKmh ?? null);
-      void checkOverspeedWarning([trip.id]);
+      await checkOverspeedWarning([trip.id]);
       startGpsTimer();
       Alert.alert('운행 시작', `${trip.vehicleNumber} 운행을 시작했습니다.\n${gpsResult.message}`);
     } catch (error) {

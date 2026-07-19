@@ -8,6 +8,7 @@
   - Cause: overspeed vibration/popup existed only in `app/(tabs)/map.tsx`; driver mode does not show that tab during active driving.
   - `app/(tabs)/index.tsx` now checks `fetchLocationSnapshot()` after active-trip GPS saves and vibrates/shows a foreground alert when an active trip is overspeed inside a zone.
   - `lib/gps-data.ts` now lets `saveCurrentGpsPoint()` accept an OBD speed override, so `gps_points.speed_kmh` is populated from OBD when Android GPS speed is missing.
+  - Follow-up adjustment: driver-mode speed-zone checks now run every 10 seconds. Speed tab remains commander setup/monitoring only; drivers should receive warnings from the running trip screen without opening the speed tab.
   - This is foreground app behavior. True background/lock-screen notification would require adding a notification/background-task design later.
 - 2026-07-19 active trip live dashboard:
   - User wanted the app to show useful phone-screen information when opened while driving.

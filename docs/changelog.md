@@ -6,6 +6,8 @@
 - Driver trip screen now checks speed-zone alerts after GPS point saves while a trip is active.
 - GPS point saves can now receive an OBD speed override so zones still evaluate when Android GPS speed is missing.
 - Foreground warning uses phone vibration plus an alert popup with vehicle, zone, current speed, and speed limit.
+- Driver-mode speed-zone checks now run every 10 seconds instead of waiting for the old 60-second GPS save interval.
+- Trip-start now waits for the first overspeed check after the initial GPS point save, so entering a configured zone immediately after start is not silently missed.
 
 ## 2026-07-19 active trip live dashboard
 
