@@ -3,6 +3,13 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 background overspeed direct-location stage 4-3:
+  - `lib/location-data.ts` now exports `evaluateSpeedZoneAlerts()` so callers can evaluate speed zones from an explicit list of live positions.
+  - `lib/background-location.ts` no longer waits for a successful `gps_points` insert and then re-queries `fetchLocationSnapshot()` for overspeed checks.
+  - The background task now evaluates the actual `LocationObject` it just received from Expo TaskManager, which should reduce missed voice/vibration warnings when Supabase writes are slow, queued, or immediately stale.
+  - GPS insert failures still enqueue through the existing offline queue, and the warning check still runs afterward when active trips and speed-zone rows are readable.
+  - Next real-device test: start a trip, lock the screen, drive/walk through a saved speed zone with speed above the limit, and confirm voice/vibration occurs without reopening the app.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 background overspeed warning stage 4-2:
   - Background location task now checks `fetchLocationSnapshot()` after successful background GPS inserts.
   - It matches overspeed alerts against the active background trip IDs and calls background-safe voice/vibration only.

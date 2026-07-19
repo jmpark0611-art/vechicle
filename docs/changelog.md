@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-19 background overspeed direct-location stage 4-3
+
+- Background overspeed checks now evaluate the live `LocationObject` delivered by the Expo TaskManager task.
+- The warning no longer depends on re-reading the latest GPS row from Supabase after insert, reducing missed alerts from DB write/query timing.
+- Overspeed voice/vibration can still run when background GPS writes fall back to the offline queue, as long as active trips and speed zones are readable.
+- Added `evaluateSpeedZoneAlerts()` as the shared direct-position speed-zone evaluator.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 background overspeed warning stage 4-2
 
 - Added background overspeed evaluation to the active-trip location task.

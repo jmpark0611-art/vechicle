@@ -209,6 +209,17 @@ function buildSpeedZoneAlerts(positions: VehiclePosition[], zones: SpeedZone[]):
   });
 }
 
+export async function evaluateSpeedZoneAlerts(
+  positions: VehiclePosition[]
+): Promise<{ alerts: SpeedZoneAlert[]; zones: SpeedZone[]; message: string }> {
+  const zoneResult = await fetchSpeedZones();
+  return {
+    alerts: buildSpeedZoneAlerts(positions, zoneResult.zones),
+    zones: zoneResult.zones,
+    message: zoneResult.message,
+  };
+}
+
 async function fetchLatestPoint(trip: TripSummary): Promise<VehiclePosition | null> {
   const result = await withRequestTimeout(
     supabase
