@@ -3,6 +3,16 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 background location stage 4-1:
+  - Added Android-first active-trip background location support.
+  - New dependency: `expo-task-manager`.
+  - New module: `lib/background-location.ts`, defining global task `vehicle-active-trip-location`.
+  - `app/_layout.tsx` imports the module so `TaskManager.defineTask()` runs at global app startup as required by Expo.
+  - `app/(tabs)/index.tsx` starts background location on trip start or when reloading an existing active trip, and stops it on trip completion/cancel/no-active-trip load.
+  - `app.json` now enables Android `ACCESS_BACKGROUND_LOCATION`, `FOREGROUND_SERVICE`, and `FOREGROUND_SERVICE_LOCATION`, plus the `expo-location` config plugin flags.
+  - Background task writes GPS points to `gps_points`; failed writes enqueue to the existing GPS offline queue.
+  - This requires a new native APK build. It does not yet implement lock-screen voice playback; next stage should test APK startup/permission flow before adding audio/notification escalation.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 driver UI runtime cleanup:
   - Pulled `433a2e4 Overhaul driver screens with dark split layout and gradients`.
   - Initial `npm.cmd run verify` passed, and `expo-linear-gradient` is already present in `package.json`.

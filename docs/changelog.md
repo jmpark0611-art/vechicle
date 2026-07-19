@@ -1,5 +1,15 @@
 # 변경 이력
 
+## 2026-07-19 background location stage 4-1
+
+- Added the Android-first background location foundation for active driver trips.
+- Added `expo-task-manager` and a global `vehicle-active-trip-location` task loaded from `app/_layout.tsx`.
+- Active trips now start Expo background location updates with an Android foreground-service notification, and trip completion/cancel stops the task.
+- Background GPS points are inserted into `gps_points`; failed inserts are queued through the existing GPS offline queue.
+- `app.json` now enables Android background location and foreground-service location permissions through the `expo-location` config plugin.
+- This stage does not yet add lock-screen voice playback; it only creates the safer background location/foreground-service base first.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 driver UI runtime cleanup
 
 - Pulled UI/UX commit `433a2e4` with the dark split driver trip layout.

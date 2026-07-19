@@ -1,6 +1,8 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
+import '@/lib/background-location';
+
 export const unstable_settings = {
   initialRouteName: 'role-select',
 };

@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { LoadingCard, RebuildScreen, SectionCard } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { useRoleGuard } from '@/hooks/use-role-guard';
+import { startActiveTripBackgroundLocation, stopActiveTripBackgroundLocation } from '@/lib/background-location';
 import { fetchTripGpsDistances, saveCurrentGpsPoint } from '@/lib/gps-data';
 import { fetchLocationSnapshot } from '@/lib/location-data';
 import {
@@ -432,7 +433,12 @@ export default function TripScreen() {
       setActiveTrips(nextActiveTrips);
       setMaintenanceSnapshot(nextMaintenanceSnapshot);
       setSelectedVehicleId((current) => current ?? nextVehicles[0]?.id ?? null);
-      if (nextActiveTrips.length > 0) startGpsTimer();
+      if (nextActiveTrips.length > 0) {
+        startGpsTimer();
+        void startActiveTripBackgroundLocation(nextActiveTrips.map((trip) => trip.id));
+      } else {
+        void stopActiveTripBackgroundLocation();
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '운행 데이터를 불러오지 못했습니다.');
     } finally {
@@ -505,7 +511,8 @@ export default function TripScreen() {
       const gpsResult = await saveCurrentGpsPoint(trip.id, obdLiveRef.current?.speedKmh ?? null);
       await checkOverspeedWarning([trip.id]);
       startGpsTimer();
-      Alert.alert('운행 시작', `${trip.vehicleNumber} 운행을 시작했습니다.\n${gpsResult.message}`);
+      const backgroundResult = await startActiveTripBackgroundLocation([trip.id]);
+      Alert.alert('운행 시작', `${trip.vehicleNumber} 운행을 시작했습니다.\n${gpsResult.message}\n${backgroundResult.message}`);
     } catch (error) {
       Alert.alert('운행 시작 실패', error instanceof Error ? error.message : '운행을 시작하지 못했습니다.');
     } finally {
@@ -520,6 +527,7 @@ export default function TripScreen() {
       setActiveTrips([]);
       delete tripStartFuelRef.current[trip.id];
       stopGpsTimer();
+      await stopActiveTripBackgroundLocation();
     } catch (error) {
       Alert.alert('취소 실패', error instanceof Error ? error.message : '운행을 취소하지 못했습니다.');
     } finally {
@@ -574,6 +582,7 @@ export default function TripScreen() {
       void obdBle.disconnect();
       stopObdSaveTimer();
       stopGpsTimer();
+      await stopActiveTripBackgroundLocation();
       setIsObdConnected(false);
       setIsObdConnecting(false);
       setObdLiveData(null);

@@ -16,6 +16,9 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
         "BLUETOOTH_SCAN",
         "BLUETOOTH_CONNECT"
       ],
@@ -41,6 +44,16 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": false,
+          "locationAlwaysAndWhenInUsePermission": "운행 중 화면이 꺼져도 위치를 저장하고 제한속도 구역을 확인하기 위해 위치 권한이 필요합니다.",
+          "locationWhenInUsePermission": "운행 위치를 저장하고 제한속도 구역을 확인하기 위해 위치 권한이 필요합니다."
         }
       ],
       [
