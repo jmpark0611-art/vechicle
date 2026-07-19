@@ -236,7 +236,8 @@ export default function VehiclesScreen() {
         }
       }
 
-      await selectVehicleForObdDevice(device);
+      const matchedVehicle = await selectVehicleForObdDevice(device);
+      if (matchedVehicle) selectedVehicleIdRef.current = matchedVehicle.id;
       setObdStatus(`${device.name} 연결 중`);
       let result = await obdBle.connect(device.id);
       if (!result.ok && hadSavedDevice) {
@@ -245,7 +246,8 @@ export default function VehiclesScreen() {
         const retryDevice = await scanAndRememberObdDevice(selectedVehicle.vehicleNumber);
         if (retryDevice) {
           device = retryDevice;
-          await selectVehicleForObdDevice(device);
+          const retryVehicle = await selectVehicleForObdDevice(device);
+          if (retryVehicle) selectedVehicleIdRef.current = retryVehicle.id;
           setObdStatus(`${device.name} 재연결 중`);
           result = await obdBle.connect(device.id);
         }

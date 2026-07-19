@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -143,8 +144,8 @@ export default function AlertsScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
+  const loadData = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     setErrorMessage(null);
     try {
       const nextVehicles = await fetchVehiclesReadOnly(200);
@@ -171,6 +172,12 @@ export default function AlertsScreen() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadData(false);
+    }, [loadData])
+  );
 
   const alerts = useMemo(() => {
     const maintenanceAlerts: MaintenanceAlert[] = vehicles.flatMap((vehicle) => {

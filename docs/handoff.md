@@ -3,6 +3,13 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 maintenance tab OBD refresh fix:
+  - User reported that the diagnostics tab showed OBD connection/alerts, but the maintenance tab still showed `ECU 상태: 미수신` and no visible change.
+  - Root cause: the maintenance tab loaded OBD/maintenance snapshots on mount only, so tab switching after diagnostics OBD receipt could show stale state.
+  - `app/(tabs)/alerts.tsx` now refreshes silently with `useFocusEffect()` whenever the maintenance tab becomes active.
+  - `app/(tabs)/vehicles.tsx` now updates `selectedVehicleIdRef` immediately after alias-based OBD vehicle matching, so the first live OBD frame is saved against the matched vehicle.
+  - Next APK test: connect OBD in 진단, wait for at least one live status update, switch to 정비, and confirm ECU 상태 changes from `미수신` to `최근 수신`.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 OBD auto-detect scan stability:
   - User tested in a vehicle after ignition and the driver screen stayed at `자동연결 준비` / `OBD 단말기 자동 검색 중`.
   - BLE OBD default scan duration is now 5 seconds instead of 2 seconds.

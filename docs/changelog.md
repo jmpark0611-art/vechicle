@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 maintenance tab OBD refresh fix
+
+- Fixed the maintenance tab staying stale after OBD data is received in the diagnostics tab.
+- The maintenance tab now silently refreshes vehicle, maintenance, and OBD snapshots whenever the tab gains focus.
+- Diagnostics OBD connection now immediately updates the selected vehicle ref after alias-based vehicle matching, so the first live OBD frame is saved to the correct vehicle.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 OBD auto-detect scan stability
 
 - Increased BLE OBD scan duration from 2 seconds to 5 seconds so the app has more time to detect the scanner after vehicle ignition.
