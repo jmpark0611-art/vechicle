@@ -112,6 +112,7 @@ export default function RoleSelectScreen() {
           </View>
           <Text style={styles.cardDesc}>운전자용 · 운행 시작과 종료</Text>
         </View>
+        <Text style={styles.cardChevron}>›</Text>
       </Pressable>
 
       <Pressable style={styles.card} onPress={() => void chooseCommander()}>
@@ -125,6 +126,7 @@ export default function RoleSelectScreen() {
           </View>
           <Text style={styles.cardDesc}>관리자용 · 기록, 진단, 위치, 점검</Text>
         </View>
+        <Text style={styles.cardChevron}>›</Text>
       </Pressable>
     </View>
   );
@@ -144,21 +146,21 @@ const styles = StyleSheet.create({
   logo: {
     width: 64,
     height: 64,
-    borderRadius: 20,
+    borderRadius: 32,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F8',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
+    borderColor: '#DCEAF8',
+    shadowColor: '#2563EB',
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    elevation: 3,
   },
-  logoText: { fontSize: 30 },
-  eyebrow: { color: '#64748B', fontSize: 12, fontWeight: '600', marginBottom: 6, letterSpacing: 0.5 },
+  logoText: { fontSize: 28 },
+  eyebrow: { color: '#94A3B8', fontSize: 10, fontWeight: '600', marginBottom: 8, letterSpacing: 1.5, textTransform: 'uppercase' },
   title: { color: '#0F172A', fontSize: 24, fontWeight: '700', textAlign: 'center', marginTop: 2 },
   subtitle: { color: '#64748B', fontSize: 14, fontWeight: '400', textAlign: 'center', marginTop: 10 },
   unitCard: {
@@ -243,4 +245,5 @@ const styles = StyleSheet.create({
   },
   commanderBadge: { color: '#15803D', backgroundColor: '#F0FDF4' },
   cardDesc: { color: '#64748B', fontSize: 13, fontWeight: '400', lineHeight: 18 },
+  cardChevron: { color: '#CBD5E1', fontSize: 28, fontWeight: '300', marginLeft: 6 },
 });
