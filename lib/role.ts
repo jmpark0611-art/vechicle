@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type AppRole = 'driver' | 'commander';
+export type AppRole = 'driver' | 'commander' | 'admin';
 const ROLE_KEY = '@app_role';
 const COMMANDER_PIN_VERIFIED_KEY = '@commander_pin_verified';
 
@@ -18,7 +18,7 @@ function getWebSessionStorage(): Storage | null {
 export async function getStoredRole(): Promise<AppRole | null> {
   try {
     const value = await AsyncStorage.getItem(ROLE_KEY);
-    if (value === 'driver' || value === 'commander') return value;
+    if (value === 'driver' || value === 'commander' || value === 'admin') return value;
     return null;
   } catch {
     return null;

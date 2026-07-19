@@ -62,6 +62,11 @@ export default function RoleSelectScreen() {
     router.replace('/commander-pin');
   }
 
+  async function chooseAdmin() {
+    if (!ensureUnitSelected()) return;
+    router.replace('/admin-pin');
+  }
+
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 28 }]}>
       <View style={styles.hero}>
@@ -124,7 +129,21 @@ export default function RoleSelectScreen() {
             <Text style={styles.cardTitle}>수송부 모드</Text>
             <Text style={[styles.roleBadge, styles.commanderBadge]}>관리자용</Text>
           </View>
-          <Text style={styles.cardDesc}>관리자용 · 기록, 진단, 위치, 점검</Text>
+          <Text style={styles.cardDesc}>관리자용 · 기록, 진단, 정비, 점검</Text>
+        </View>
+        <Text style={styles.cardChevron}>›</Text>
+      </Pressable>
+
+      <Pressable style={styles.card} onPress={() => void chooseAdmin()}>
+        <View style={[styles.cardIcon, styles.adminIcon]}>
+          <Text style={styles.cardIconText}>🗺️</Text>
+        </View>
+        <View style={styles.cardCopy}>
+          <View style={styles.cardTitleRow}>
+            <Text style={styles.cardTitle}>관리자 모드</Text>
+            <Text style={[styles.roleBadge, styles.adminBadge]}>지도관리</Text>
+          </View>
+          <Text style={styles.cardDesc}>비밀취급 관리용 · 속도구역 설정</Text>
         </View>
         <Text style={styles.cardChevron}>›</Text>
       </Pressable>
@@ -229,6 +248,7 @@ const styles = StyleSheet.create({
   },
   driverIcon: { backgroundColor: '#EFF6FF' },
   commanderIcon: { backgroundColor: '#F0FDF4' },
+  adminIcon: { backgroundColor: '#FFF7ED' },
   cardIconText: { fontSize: 22 },
   cardCopy: { flex: 1, minWidth: 0 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 6 },
@@ -244,6 +264,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   commanderBadge: { color: '#15803D', backgroundColor: '#F0FDF4' },
+  adminBadge: { color: '#C2410C', backgroundColor: '#FFF7ED' },
   cardDesc: { color: '#64748B', fontSize: 13, fontWeight: '400', lineHeight: 18 },
   cardChevron: { color: '#CBD5E1', fontSize: 28, fontWeight: '300', marginLeft: 6 },
 });

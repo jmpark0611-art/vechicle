@@ -3,6 +3,15 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 admin speed mode and overspeed stage 3:
+  - Added `admin` to `AppRole`.
+  - Added `/admin-pin` with temporary fixed PIN `1862`.
+  - Role selection now has three modes: 운행, 수송부, 관리자.
+  - 수송부 mode no longer exposes the speed tab. It keeps 기록, 진단, 정비, 점검.
+  - 관리자 mode opens `/(tabs)/map` directly and exposes only the 속도 tab for speed-zone/map management.
+  - `app/(tabs)/map.tsx` redirects driver/commander roles away if opened from stale cached routes.
+  - Overspeed stage 3 stability: warning de-dupe key now uses trip + zone + limit, not changing current speed, so the phone does not speak/popup again every time speed fluctuates by 1km/h. The key resets when there is no overspeed alert.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 overspeed voice warning stage 2:
   - Added Expo official `expo-speech` dependency.
   - `lib/overspeed-warning.ts` now speaks `제한속도 초과입니다. 감속하세요.` in foreground before vibration/popup.

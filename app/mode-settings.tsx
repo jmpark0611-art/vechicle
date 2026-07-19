@@ -8,6 +8,7 @@ import { clearStoredRole, getStoredRole, type AppRole } from '@/lib/role';
 const ROLE_LABELS: Record<AppRole, string> = {
   driver: '운전자',
   commander: '수송부',
+  admin: '관리자',
 };
 
 export default function ModeSettingsScreen() {
@@ -57,6 +58,7 @@ export default function ModeSettingsScreen() {
             <Text style={styles.rowArrow}>›</Text>
           </Pressable>
           {role === 'commander' ? <Text style={styles.pinHint}>수송부 PIN은 1862로 고정되어 있습니다.</Text> : null}
+          {role === 'admin' ? <Text style={styles.pinHint}>관리자 PIN은 임시로 1862입니다.</Text> : null}
         </View>
       </View>
     </View>

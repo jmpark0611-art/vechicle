@@ -204,7 +204,10 @@ export default function TripScreen() {
     try {
       const snapshot = await fetchLocationSnapshot();
       const overspeed = snapshot.alerts.find((alert) => alert.status === 'overspeed' && activeTripIds.has(alert.tripId));
-      if (!overspeed) return;
+      if (!overspeed) {
+        overspeedAlertedKeyRef.current = null;
+        return;
+      }
 
       const key = overspeedWarningKey(overspeed);
       if (overspeedAlertedKeyRef.current === key) return;
@@ -372,6 +375,7 @@ export default function TripScreen() {
     });
     void getStoredRole().then((nextRole) => {
       if (nextRole === 'commander') router.replace('/(tabs)/explore');
+      if (nextRole === 'admin') router.replace('/(tabs)/map');
     });
   }, [currentVehicleNumber, selectVehicleForObdDevice]);
 

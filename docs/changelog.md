@@ -1,5 +1,15 @@
 # 변경 이력
 
+## 2026-07-19 admin speed mode and overspeed stage 3
+
+- Added a separate administrator mode for speed-zone/map management.
+- Administrator PIN is temporarily fixed as `1862`.
+- Commander mode no longer shows the speed tab; speed-zone setup now belongs to administrator mode.
+- Administrator mode opens the speed tab directly and only exposes that tab.
+- Overspeed warning de-dupe no longer changes on every small speed change, preventing repeated voice/popup spam while staying in the same zone.
+- Overspeed warning state resets once no overspeed alert is present, so re-entering an overspeed state can warn again.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 overspeed voice warning stage 2
 
 - Added `expo-speech` and wired foreground voice guidance into the shared overspeed warning service.

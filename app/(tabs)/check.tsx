@@ -125,7 +125,10 @@ export default function CheckScreen() {
       onAction={() => void runReadCheck()}>
 
       <SectionCard title="현재 설정">
-        <StatusLine label="역할" value={currentRole === 'commander' ? '수송부 모드' : currentRole === 'driver' ? '운행 모드' : '-'} />
+        <StatusLine
+          label="역할"
+          value={currentRole === 'commander' ? '수송부 모드' : currentRole === 'admin' ? '관리자 모드' : currentRole === 'driver' ? '운행 모드' : '-'}
+        />
         <StatusLine label="Supabase" value={getSupabaseReadSource()} />
         {result ? (
           <>
@@ -137,6 +140,7 @@ export default function CheckScreen() {
           <Text style={styles.changeRoleBtnText}>역할 변경</Text>
         </Pressable>
         {currentRole === 'commander' ? <Text style={styles.pinHint}>수송부 PIN은 1862로 고정되어 있습니다.</Text> : null}
+        {currentRole === 'admin' ? <Text style={styles.pinHint}>관리자 PIN은 임시로 1862입니다.</Text> : null}
       </SectionCard>
 
       {isLoading ? (

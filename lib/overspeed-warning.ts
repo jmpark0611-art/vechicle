@@ -6,7 +6,7 @@ import type { SpeedZoneAlert } from './location-data';
 export const OVERSPEED_VIBRATION_PATTERN = [0, 650, 160, 650, 160, 900];
 
 export function overspeedWarningKey(alert: SpeedZoneAlert) {
-  return `${alert.tripId}-${alert.zoneName}-${Math.round(alert.speedKmh ?? 0)}`;
+  return `${alert.tripId}-${alert.zoneName}-${Math.round(alert.speedLimitKmh)}`;
 }
 
 export function showOverspeedWarning(alert: SpeedZoneAlert) {

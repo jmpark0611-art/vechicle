@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +8,7 @@ import { VehicleMap } from '@/components/vehicle-map';
 import { createSpeedZone, fetchLocationSnapshot, type LocationSnapshot, type ZonePoint } from '@/lib/location-data';
 import { generateVehicleMapHtml } from '@/lib/map-html';
 import { overspeedWarningKey, showOverspeedWarning } from '@/lib/overspeed-warning';
+import { getStoredRole } from '@/lib/role';
 
 const SPEED_REFRESH_MS = 10_000;
 
@@ -56,6 +58,10 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
+    void getStoredRole().then((nextRole) => {
+      if (nextRole === 'driver') router.replace('/(tabs)');
+      if (nextRole === 'commander') router.replace('/(tabs)/explore');
+    });
     void loadLocation();
   }, [loadLocation]);
 
@@ -69,7 +75,10 @@ export default function MapScreen() {
 
   useEffect(() => {
     const overspeed = snapshot.alerts.find((alert) => alert.status === 'overspeed');
-    if (!overspeed) return;
+    if (!overspeed) {
+      alertedKeyRef.current = null;
+      return;
+    }
     const key = overspeedWarningKey(overspeed);
     if (alertedKeyRef.current === key) return;
     alertedKeyRef.current = key;

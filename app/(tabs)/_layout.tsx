@@ -17,6 +17,7 @@ export default function TabLayout() {
   const [role, setRole] = useState<AppRole | null>(null);
   const isCommander = role === 'commander';
   const isDriver = role === 'driver';
+  const isAdmin = role === 'admin';
 
   useEffect(() => {
     void getStoredRole().then(setRole);
@@ -28,7 +29,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      initialRouteName={isCommander ? 'explore' : 'index'}
+      initialRouteName={isAdmin ? 'map' : isCommander ? 'explore' : 'index'}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: ACTIVE,
@@ -74,7 +75,7 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="map"
-        options={{ title: '속도', tabBarIcon: ({ color }) => <TabGlyph label="⚡" color={color} />, href: isCommander ? undefined : null }}
+        options={{ title: '속도', tabBarIcon: ({ color }) => <TabGlyph label="⚡" color={color} />, href: isAdmin ? undefined : null }}
       />
       <Tabs.Screen
         name="check"
