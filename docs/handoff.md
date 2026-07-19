@@ -3,6 +3,13 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 overspeed voice warning stage 2:
+  - Added Expo official `expo-speech` dependency.
+  - `lib/overspeed-warning.ts` now speaks `제한속도 초과입니다. 감속하세요.` in foreground before vibration/popup.
+  - Speech is wrapped in `try/catch`; if TTS is unavailable, the existing vibration and popup warning still work.
+  - `app/(tabs)/index.tsx` and `app/(tabs)/map.tsx` now call the shared `showOverspeedWarning()` function instead of duplicating alert code.
+  - Records tab now has a destructive-confirmed `운행 기록 삭제` action for currently visible trip records. It depends on Supabase delete policy/schema being available; if DB blocks it, the app shows a friendly failure popup instead of crashing.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 overspeed warning shared foundation:
   - Pulled latest UI/UX work through `1b870fd` before continuing.
   - Added `lib/overspeed-warning.ts` for shared foreground overspeed warning constants and alert de-dupe key.

@@ -320,6 +320,23 @@ export async function fetchActiveTrips(limit = 20): Promise<TripSummary[]> {
   return trips.map((trip) => mapTrip(trip, vehicleById));
 }
 
+export async function deleteTripsByIds(tripIds: string[]): Promise<void> {
+  const ids = Array.from(new Set(tripIds.filter(Boolean)));
+  if (ids.length === 0) return;
+
+  for (let index = 0; index < ids.length; index += 100) {
+    const chunk = ids.slice(index, index + 100);
+    const result = await withRequestTimeout(
+      supabase.from('trips').delete().in('id', chunk),
+      '운행 기록 삭제'
+    );
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+  }
+}
+
 export async function fetchLatestVehicleOdometers(vehicleIds: string[]): Promise<Record<string, number>> {
   if (vehicleIds.length === 0) {
     return {};

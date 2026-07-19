@@ -5,7 +5,7 @@ import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/component
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { fetchTripGpsDistances } from '@/lib/gps-data';
 import { fetchFuelEvents, fetchTripFuelUsage, loadSyncedObdSnapshot, type FuelEvent, type ObdSnapshot, type TripFuelUsage } from '@/lib/obd-data';
-import { fetchTripsReadOnly, fetchVehiclesReadOnly, type TripSummary, type VehicleSummary } from '@/lib/readonly-data';
+import { deleteTripsByIds, fetchTripsReadOnly, fetchVehiclesReadOnly, type TripSummary, type VehicleSummary } from '@/lib/readonly-data';
 
 function formatTripTime(value: string | null) {
   if (!value) return '-';
@@ -108,6 +108,7 @@ export default function RecordsScreen() {
   });
   const [exportTo, setExportTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -230,6 +231,40 @@ export default function RecordsScreen() {
     setExportModalVisible(false);
   }
 
+  function confirmDeleteVisibleTrips() {
+    if (filtered.length === 0 || isDeleting) return;
+    Alert.alert(
+      '운행 기록 삭제',
+      selectedVehicleId
+        ? '선택한 차량의 화면에 표시된 운행 기록을 삭제합니다. 삭제 후에는 앱에서 복구할 수 없습니다.'
+        : '화면에 표시된 전체 운행 기록을 삭제합니다. 삭제 후에는 앱에서 복구할 수 없습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => {
+            void deleteVisibleTrips();
+          },
+        },
+      ]
+    );
+  }
+
+  async function deleteVisibleTrips() {
+    setIsDeleting(true);
+    try {
+      await deleteTripsByIds(filtered.map((trip) => trip.id));
+      setSelectedTrip(null);
+      await loadData();
+      Alert.alert('삭제 완료', '화면에 표시된 운행 기록을 삭제했습니다.');
+    } catch (error) {
+      Alert.alert('삭제 실패', error instanceof Error ? error.message : '운행 기록을 삭제하지 못했습니다.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <RebuildScreen
       title="기록"
@@ -239,6 +274,12 @@ export default function RecordsScreen() {
       <Pressable style={styles.exportBtn} onPress={() => setExportModalVisible(true)}>
         <Text style={styles.exportBtnText}>월장비운행증 엑셀 내보내기</Text>
       </Pressable>
+
+      {filtered.length > 0 ? (
+        <Pressable style={[styles.deleteRecordsBtn, isDeleting && styles.disabledBtn]} onPress={confirmDeleteVisibleTrips} disabled={isDeleting}>
+          <Text style={styles.deleteRecordsBtnText}>{isDeleting ? '삭제 중' : '운행 기록 삭제'}</Text>
+        </Pressable>
+      ) : null}
 
       {vehicles.length > 0 ? (
         <SectionCard title="차량 선택">
@@ -340,6 +381,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   exportBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  deleteRecordsBtn: {
+    minHeight: 44,
+    borderRadius: 14,
+    backgroundColor: '#FFF1F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#FFE4E6',
+  },
+  deleteRecordsBtnText: { color: '#E11D48', fontSize: 14, fontWeight: '700' },
+  disabledBtn: { opacity: 0.55 },
   routeText: { color: '#64748B', fontSize: 14, fontWeight: '500', marginTop: 10 },
   compactMeta: { color: '#94A3B8', fontSize: 12, fontWeight: '500', marginTop: 8 },
   modalDim: { flex: 1, backgroundColor: 'rgba(15,23,42,0.32)', alignItems: 'center', justifyContent: 'center', padding: 24 },

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Dimensions, Pressable, StyleSheet, Text, TextInput, Vibration, View } from 'react-native';
+import { Alert, Dimensions, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingCard, RebuildScreen, SectionCard } from '@/components/rebuild-screen';
@@ -15,7 +15,7 @@ import {
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
 import { buildObdReadingFromLiveData, saveLocalObdReading, saveTripObdLog } from '@/lib/obd-data';
-import { OVERSPEED_VIBRATION_PATTERN, overspeedWarningKey } from '@/lib/overspeed-warning';
+import { overspeedWarningKey, showOverspeedWarning } from '@/lib/overspeed-warning';
 import {
   getVehicleNumberForObdDevice,
   loadSelectedObdBleDevice,
@@ -206,16 +206,11 @@ export default function TripScreen() {
       const overspeed = snapshot.alerts.find((alert) => alert.status === 'overspeed' && activeTripIds.has(alert.tripId));
       if (!overspeed) return;
 
-      const speed = Math.round(overspeed.speedKmh ?? 0);
       const key = overspeedWarningKey(overspeed);
       if (overspeedAlertedKeyRef.current === key) return;
       overspeedAlertedKeyRef.current = key;
 
-      Vibration.vibrate(OVERSPEED_VIBRATION_PATTERN);
-      Alert.alert(
-        '제한속도 초과 경고',
-        `${overspeed.vehicleNumber}\n${overspeed.zoneName}\n현재 ${speed}km/h / 제한 ${Math.round(overspeed.speedLimitKmh)}km/h\n\n즉시 감속해 주세요.`
-      );
+      showOverspeedWarning(overspeed);
     } catch {
       // Speed-zone warning must not block trip recording.
     }

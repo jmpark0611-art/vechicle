@@ -1,5 +1,14 @@
 # 변경 이력
 
+## 2026-07-19 overspeed voice warning stage 2
+
+- Added `expo-speech` and wired foreground voice guidance into the shared overspeed warning service.
+- Overspeed now attempts to speak `제한속도 초과입니다. 감속하세요.` before vibration and popup.
+- Speech failures are caught so vibration/popup still run if the device cannot speak.
+- Refactored driver trip and commander speed tab to call the same shared warning function.
+- Records tab can now delete the currently visible trip records after a destructive confirmation popup.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 overspeed warning shared foundation
 
 - Pulled the latest UI/UX work through `1b870fd`.

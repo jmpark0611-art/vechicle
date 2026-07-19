@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, Vibration, View } from 'react-native';
+import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleMap } from '@/components/vehicle-map';
 import { createSpeedZone, fetchLocationSnapshot, type LocationSnapshot, type ZonePoint } from '@/lib/location-data';
 import { generateVehicleMapHtml } from '@/lib/map-html';
-import { OVERSPEED_VIBRATION_PATTERN, overspeedWarningKey } from '@/lib/overspeed-warning';
+import { overspeedWarningKey, showOverspeedWarning } from '@/lib/overspeed-warning';
 
 const SPEED_REFRESH_MS = 10_000;
 
@@ -73,11 +73,7 @@ export default function MapScreen() {
     const key = overspeedWarningKey(overspeed);
     if (alertedKeyRef.current === key) return;
     alertedKeyRef.current = key;
-    Vibration.vibrate(OVERSPEED_VIBRATION_PATTERN);
-    Alert.alert(
-      '제한속도 초과 경고',
-      `${overspeed.vehicleNumber}\n${overspeed.zoneName}\n현재 ${Math.round(overspeed.speedKmh ?? 0)}km/h / 제한 ${Math.round(overspeed.speedLimitKmh)}km/h\n\n즉시 감속해 주세요.`
-    );
+    showOverspeedWarning(overspeed);
   }, [snapshot.alerts]);
 
   function updatePolygonPoints(points: ZonePoint[]) {
