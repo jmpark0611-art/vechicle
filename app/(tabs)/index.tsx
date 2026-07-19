@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Dimensions, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Dimensions, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { LoadingCard, RebuildScreen, SectionCard } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
@@ -603,23 +605,38 @@ export default function TripScreen() {
 
   if (!isLoading && !errorMessage && activeTrip) {
     return (
-      <View style={[styles.driverScreen, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
-        <Text style={styles.driverTitle}>운행</Text>
-        <View style={[styles.tripCard, styles.tripCardFullscreen]}>
-          <View style={styles.heroTop}>
-            <View>
-              <Text style={styles.kicker}>운행 중</Text>
-              <Text style={styles.activeTitle}>{activeTrip.vehicleNumber}</Text>
+      <View style={styles.activeScreen}>
+        <LinearGradient
+          colors={['#0A1628', '#1E3A5F']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.6, y: 1 }}
+          style={[styles.activeDark, { paddingTop: insets.top + 20 }]}>
+          <View style={styles.activeTopRow}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.activeLabelDark}>운행 중</Text>
+              <Text style={styles.activeVehicleHuge} numberOfLines={1}>{activeTrip.vehicleNumber}</Text>
+              <Text style={styles.activeElapsed}>{formatElapsed(activeTrip.startTime, now)} 경과</Text>
             </View>
-            <View style={styles.liveBadge}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveBadgeText}>LIVE</Text>
+            <View style={styles.liveBadgeDark}>
+              <View style={styles.liveDotDark} />
+              <Text style={styles.liveBadgeTextDark}>LIVE</Text>
             </View>
           </View>
-          <View style={styles.routePanel}>
-            <Text style={styles.routePoint}>{activeTrip.startPlace ?? '-'}</Text>
-            <Text style={styles.routeArrow}>→</Text>
-            <Text style={styles.routePoint}>{activeTrip.endPlace ?? '-'}</Text>
+        </LinearGradient>
+        <ScrollView
+          style={styles.activePanel}
+          contentContainerStyle={[styles.activePanelInner, { paddingBottom: insets.bottom + 20 }]}
+          showsVerticalScrollIndicator={false}>
+          <View style={styles.routePanelNew}>
+            <View style={styles.routeSide}>
+              <Text style={styles.routeSideLabel}>출발</Text>
+              <Text style={styles.routeSideValue} numberOfLines={1}>{activeTrip.startPlace ?? '-'}</Text>
+            </View>
+            <Text style={styles.routeArrowNew}>→</Text>
+            <View style={[styles.routeSide, { alignItems: 'flex-end' }]}>
+              <Text style={styles.routeSideLabel}>도착</Text>
+              <Text style={styles.routeSideValue} numberOfLines={1}>{activeTrip.endPlace ?? '-'}</Text>
+            </View>
           </View>
           <View style={styles.liveInfoRow}>
             <View style={styles.liveInfoCard}>
@@ -665,7 +682,6 @@ export default function TripScreen() {
               {activeStartOdometer !== null ? `${Math.round(activeStartOdometer).toLocaleString('ko-KR')}km + GPS 이동거리` : 'OBD/GPS 기준 자동 저장'}
             </Text>
           </View>
-          <View style={styles.tripFlexibleSpace} />
           <View style={styles.actionRow}>
             <Pressable style={styles.cancelBtnWide} onPress={() => void handleCancelTrip(activeTrip)} disabled={isSaving}>
               <Text style={styles.cancelBtnText}>취소</Text>
@@ -674,34 +690,43 @@ export default function TripScreen() {
               <Text style={styles.endBtnText}>{isSaving ? '저장 중' : '운행 종료'}</Text>
             </Pressable>
           </View>
-        </View>
+        </ScrollView>
       </View>
     );
   }
 
   if (!isLoading && !errorMessage && lastCompletion) {
     return (
-      <View style={[styles.driverScreen, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
-        <Text style={styles.driverTitle}>운행</Text>
-        <View style={styles.completionFullscreen}>
-          <View style={styles.thanksCard}>
-            <Text style={styles.thanksTitle}>안전운행해주셔서 감사합니다</Text>
-            <Text style={styles.thanksSub}>월장비운행증 반영 요소</Text>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>차량</Text><Text style={styles.summaryVal}>{lastCompletion.vehicleNumber}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>경로</Text><Text style={styles.summaryVal}>{lastCompletion.route}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>출발/도착</Text><Text style={styles.summaryVal}>{lastCompletion.startTime} / {lastCompletion.endTime}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>계기판 총 주행거리</Text><Text style={styles.summaryVal}>{lastCompletion.totalOdometer}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>계기판 운행거리</Text><Text style={styles.summaryVal}>{lastCompletion.tripDistance}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>실제 이동거리</Text><Text style={styles.summaryVal}>{lastCompletion.gpsDistance}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>소모 유류</Text><Text style={styles.summaryVal}>{lastCompletion.fuelUsed}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행목적</Text><Text style={styles.summaryVal}>{lastCompletion.purpose}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행자</Text><Text style={styles.summaryVal}>{lastCompletion.operator}</Text></View>
-            <View style={styles.summaryLine}><Text style={styles.summaryKey}>사용자</Text><Text style={styles.summaryVal}>{lastCompletion.user}</Text></View>
-          </View>
-          <Pressable style={styles.startBtn} onPress={() => setLastCompletion(null)}>
+      <View style={styles.completionScreen}>
+        <LinearGradient
+          colors={['#052E16', '#065F46']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={[styles.completionDarkTop, { paddingTop: insets.top + 24 }]}>
+          <Text style={styles.completionCheck}>✓</Text>
+          <Text style={styles.completionVehicle}>{lastCompletion.vehicleNumber}</Text>
+          <Text style={styles.completionRoute}>{lastCompletion.route}</Text>
+          <Text style={styles.completionTimes}>{lastCompletion.startTime} → {lastCompletion.endTime}</Text>
+        </LinearGradient>
+        <ScrollView
+          style={styles.completionLight}
+          contentContainerStyle={[styles.completionLightInner, { paddingBottom: insets.bottom + 20 }]}
+          showsVerticalScrollIndicator={false}>
+          <Text style={styles.completionSubtitle}>월장비운행증 반영 요소</Text>
+          <View style={styles.summaryLine}><Text style={styles.summaryKey}>차량</Text><Text style={styles.summaryVal}>{lastCompletion.vehicleNumber}</Text></View>
+          <View style={styles.summaryLine}><Text style={styles.summaryKey}>경로</Text><Text style={styles.summaryVal}>{lastCompletion.route}</Text></View>
+          <View style={styles.summaryLine}><Text style={styles.summaryKey}>출발/도착</Text><Text style={styles.summaryVal}>{lastCompletion.startTime} / {lastCompletion.endTime}</Text></View>
+          <View style={styles.summaryLine}><Text style={styles.summaryKey}>계기판 총 주행거리</Text><Text style={styles.summaryVal}>{lastCompletion.totalOdometer}</Text></View>
+          <View style={styles.summaryLine}><Text style={styles.summaryKey}>계기판 운행거리</Text><Text style={styles.summaryVal}>{lastCompletion.tripDistance}</Text></View>
+          <View style={styles.summaryLine}><Text style={styles.summaryKey}>실제 이동거리</Text><Text style={styles.summaryVal}>{lastCompletion.gpsDistance}</Text></View>
+          <View style={styles.summaryLine}><Text style={styles.summaryKey}>소모 유류</Text><Text style={styles.summaryVal}>{lastCompletion.fuelUsed}</Text></View>
+          <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행목적</Text><Text style={styles.summaryVal}>{lastCompletion.purpose}</Text></View>
+          <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행자</Text><Text style={styles.summaryVal}>{lastCompletion.operator}</Text></View>
+          <View style={styles.summaryLine}><Text style={styles.summaryKey}>사용자</Text><Text style={styles.summaryVal}>{lastCompletion.user}</Text></View>
+          <Pressable style={[styles.startBtn, { marginTop: 20 }]} onPress={() => setLastCompletion(null)}>
             <Text style={styles.startBtnText}>새 운행 입력</Text>
           </Pressable>
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -805,7 +830,11 @@ export default function TripScreen() {
         </View>
       ) : (
         <>
-        <View style={styles.heroCard}>
+        <LinearGradient
+          colors={['#1E3A8A', '#2563EB']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}>
           <View>
             <Text style={styles.kicker}>오늘 운행</Text>
             <Text style={styles.heroTitle}>출발 준비</Text>
@@ -813,7 +842,7 @@ export default function TripScreen() {
           <View style={styles.heroIconBox}>
             <Text style={styles.heroIcon}>▶</Text>
           </View>
-        </View>
+        </LinearGradient>
 
         <View style={styles.formCard}>
           <View style={styles.compactHeader}>
@@ -904,7 +933,7 @@ const styles = StyleSheet.create({
   heroCard: {
     minHeight: 96,
     borderRadius: 22,
-    backgroundColor: '#1D2B5C',
+    overflow: 'hidden',
     paddingHorizontal: 18,
     paddingVertical: 16,
     marginBottom: 8,
@@ -918,18 +947,18 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 },
-  kicker: { color: '#94A3B8', fontSize: 12, fontWeight: '600', marginBottom: 5 },
+  kicker: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '600', letterSpacing: 0.5, marginBottom: 5 },
   heroTitle: { color: '#FFFFFF', fontSize: 26, fontWeight: '700' },
   activeTitle: { color: '#0F172A', fontSize: 34, fontWeight: '700' },
   heroIconBox: {
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroIcon: { color: '#2563EB', fontSize: 22, fontWeight: '700' },
+  heroIcon: { color: '#FFFFFF', fontSize: 22, fontWeight: '700' },
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -1141,4 +1170,60 @@ const styles = StyleSheet.create({
   startBtnText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', letterSpacing: 0.2 },
   completionWrap: { minHeight: Math.max(720, SCREEN_HEIGHT - 72), justifyContent: 'space-between' },
   completionFullscreen: { flex: 1, justifyContent: 'space-between', gap: 14 },
+
+  // Active trip: dark split layout
+  activeScreen: { flex: 1, backgroundColor: '#F0F4FB' },
+  activeDark: { paddingHorizontal: 22, paddingBottom: 22 },
+  activeTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  activeLabelDark: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '600', letterSpacing: 0.5, marginBottom: 6 },
+  activeVehicleHuge: { color: '#FFFFFF', fontSize: 40, fontWeight: '800', letterSpacing: -1 },
+  activeElapsed: { color: 'rgba(255,255,255,0.7)', fontSize: 15, fontWeight: '500', marginTop: 6 },
+  liveBadgeDark: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(22,163,74,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(22,163,74,0.4)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 4,
+  },
+  liveDotDark: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#4ADE80' },
+  liveBadgeTextDark: { color: '#4ADE80', fontSize: 11, fontWeight: '700' },
+  activePanel: { flex: 1, backgroundColor: '#F0F4FB', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -16 },
+  activePanelInner: { paddingHorizontal: 18, paddingTop: 20 },
+  routePanelNew: {
+    minHeight: 72,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#DCEAF8',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    shadowColor: '#2563EB',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  routeSide: { flex: 1 },
+  routeSideLabel: { color: '#94A3B8', fontSize: 10, fontWeight: '600', letterSpacing: 0.5, marginBottom: 4 },
+  routeSideValue: { color: '#0F172A', fontSize: 16, fontWeight: '700' },
+  routeArrowNew: { color: '#CBD5E1', fontSize: 18, fontWeight: '400', marginHorizontal: 10 },
+
+  // Completion: green split layout
+  completionScreen: { flex: 1, backgroundColor: '#F0F4FB' },
+  completionDarkTop: { paddingHorizontal: 24, paddingBottom: 36, alignItems: 'center' },
+  completionCheck: { color: '#4ADE80', fontSize: 52, fontWeight: '700', marginBottom: 8 },
+  completionVehicle: { color: '#FFFFFF', fontSize: 30, fontWeight: '800', letterSpacing: -0.5, marginBottom: 4 },
+  completionRoute: { color: 'rgba(255,255,255,0.7)', fontSize: 15, fontWeight: '500', textAlign: 'center', marginBottom: 6 },
+  completionTimes: { color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '400', textAlign: 'center' },
+  completionLight: { flex: 1, backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -20 },
+  completionLightInner: { paddingHorizontal: 20, paddingTop: 22 },
+  completionSubtitle: { color: '#64748B', fontSize: 13, fontWeight: '600', marginBottom: 6 },
 });
