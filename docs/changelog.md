@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 maintenance live refresh while focused
+
+- The maintenance tab now refreshes OBD/maintenance snapshots every 5 seconds while it is focused.
+- Added an in-flight guard so repeated focus/interval refreshes do not overlap.
+- This helps the maintenance tab reflect diagnostics-tab OBD updates without leaving and reopening the screen.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 maintenance tab OBD refresh fix
 
 - Fixed the maintenance tab staying stale after OBD data is received in the diagnostics tab.

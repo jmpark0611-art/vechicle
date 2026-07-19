@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
@@ -44,6 +44,7 @@ type EcuAlert = {
 
 const ACK_STORAGE_KEY = 'vehicle-ecu-alert-acks-v1';
 const PART_COLORS = ['#EAFBF4', '#FFF4DE', '#EAF7FA'];
+const FOCUSED_REFRESH_MS = 5_000;
 
 function formatKm(value: number) {
   return `${Math.round(value).toLocaleString('ko-KR')}km`;
@@ -143,8 +144,11 @@ export default function AlertsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const refreshInFlightRef = useRef(false);
 
   const loadData = useCallback(async (showLoading = true) => {
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
     if (showLoading) setIsLoading(true);
     setErrorMessage(null);
     try {
@@ -166,6 +170,7 @@ export default function AlertsScreen() {
       setErrorMessage(error instanceof Error ? error.message : '알림 데이터를 불러오지 못했습니다.');
     } finally {
       setIsLoading(false);
+      refreshInFlightRef.current = false;
     }
   }, []);
 
@@ -176,6 +181,10 @@ export default function AlertsScreen() {
   useFocusEffect(
     useCallback(() => {
       void loadData(false);
+      const refreshId = setInterval(() => {
+        void loadData(false);
+      }, FOCUSED_REFRESH_MS);
+      return () => clearInterval(refreshId);
     }, [loadData])
   );
 

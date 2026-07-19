@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 maintenance live refresh while focused:
+  - The maintenance tab now refreshes vehicle/maintenance/OBD snapshots every 5 seconds while focused.
+  - An in-flight guard prevents overlapping refreshes if a previous AsyncStorage/Supabase read is still running.
+  - This complements the focus refresh fix and lets the maintenance screen update shortly after diagnostics saves an OBD frame, without requiring a full app restart.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 maintenance tab OBD refresh fix:
   - User reported that the diagnostics tab showed OBD connection/alerts, but the maintenance tab still showed `ECU 상태: 미수신` and no visible change.
   - Root cause: the maintenance tab loaded OBD/maintenance snapshots on mount only, so tab switching after diagnostics OBD receipt could show stale state.
