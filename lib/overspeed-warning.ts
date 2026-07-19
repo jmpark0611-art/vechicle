@@ -9,10 +9,7 @@ export function overspeedWarningKey(alert: SpeedZoneAlert) {
   return `${alert.tripId}-${alert.zoneName}-${Math.round(alert.speedLimitKmh)}`;
 }
 
-export function showOverspeedWarning(alert: SpeedZoneAlert) {
-  const speed = Math.round(alert.speedKmh ?? 0);
-  const speedLimit = Math.round(alert.speedLimitKmh);
-
+export function speakOverspeedWarning() {
   try {
     Speech.stop();
     Speech.speak('제한속도 초과입니다. 감속하세요.', {
@@ -23,8 +20,22 @@ export function showOverspeedWarning(alert: SpeedZoneAlert) {
   } catch {
     // Voice guidance is helpful, but vibration and popup must still run if speech is unavailable.
   }
+}
 
+export function vibrateOverspeedWarning() {
   Vibration.vibrate(OVERSPEED_VIBRATION_PATTERN);
+}
+
+export function showBackgroundOverspeedWarning() {
+  speakOverspeedWarning();
+  vibrateOverspeedWarning();
+}
+
+export function showOverspeedWarning(alert: SpeedZoneAlert) {
+  const speed = Math.round(alert.speedKmh ?? 0);
+  const speedLimit = Math.round(alert.speedLimitKmh);
+
+  showBackgroundOverspeedWarning();
   Alert.alert(
     '제한속도 초과 경고',
     `${alert.vehicleNumber}\n${alert.zoneName}\n현재 ${speed}km/h / 제한 ${speedLimit}km/h\n\n즉시 감속해 주세요.`

@@ -1,5 +1,14 @@
 # 변경 이력
 
+## 2026-07-19 background overspeed warning stage 4-2
+
+- Added background overspeed evaluation to the active-trip location task.
+- The background task now checks speed-zone alerts after a successful background GPS insert.
+- Background warnings reuse the existing `expo-speech` voice and vibration path without showing an Alert popup.
+- Added a persisted background overspeed key so the same trip/zone/limit does not repeatedly speak every location tick.
+- Wrapped the background task body in a broad guard so DB, storage, warning, or speech failures do not stop location collection.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 background location stage 4-1
 
 - Added the Android-first background location foundation for active driver trips.

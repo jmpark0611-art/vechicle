@@ -4,11 +4,14 @@ import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
 
 import { enqueueGpsPoint } from './gps-queue';
+import { fetchLocationSnapshot } from './location-data';
+import { overspeedWarningKey, showBackgroundOverspeedWarning } from './overspeed-warning';
 import { supabase } from './supabase';
 
 export const ACTIVE_TRIP_LOCATION_TASK = 'vehicle-active-trip-location';
 
 const ACTIVE_TRIP_IDS_KEY = '@vehicle_active_background_trip_ids';
+const ACTIVE_TRIP_OVERSPEED_KEY = '@vehicle_active_background_overspeed_key';
 
 type LocationTaskData = {
   locations?: Location.LocationObject[];
@@ -34,42 +37,72 @@ async function setStoredTripIds(tripIds: string[]) {
   const uniqueIds = Array.from(new Set(tripIds.filter(Boolean)));
   if (uniqueIds.length === 0) {
     await AsyncStorage.removeItem(ACTIVE_TRIP_IDS_KEY);
+    await AsyncStorage.removeItem(ACTIVE_TRIP_OVERSPEED_KEY);
     return;
   }
   await AsyncStorage.setItem(ACTIVE_TRIP_IDS_KEY, JSON.stringify(uniqueIds));
 }
 
+async function checkBackgroundOverspeedWarning(tripIds: string[]) {
+  try {
+    const activeTripIds = new Set(tripIds);
+    const snapshot = await fetchLocationSnapshot();
+    const overspeed = snapshot.alerts.find((alert) => alert.status === 'overspeed' && activeTripIds.has(alert.tripId));
+
+    if (!overspeed) {
+      await AsyncStorage.removeItem(ACTIVE_TRIP_OVERSPEED_KEY);
+      return;
+    }
+
+    const nextKey = overspeedWarningKey(overspeed);
+    const previousKey = await AsyncStorage.getItem(ACTIVE_TRIP_OVERSPEED_KEY);
+    if (previousKey === nextKey) return;
+
+    await AsyncStorage.setItem(ACTIVE_TRIP_OVERSPEED_KEY, nextKey);
+    showBackgroundOverspeedWarning();
+  } catch {
+    // Background warning must never crash or stop location collection.
+  }
+}
+
 TaskManager.defineTask(ACTIVE_TRIP_LOCATION_TASK, async ({ data, error }) => {
-  if (error) return;
+  try {
+    if (error) return;
 
-  const tripIds = await getStoredTripIds();
-  if (tripIds.length === 0) return;
+    const tripIds = await getStoredTripIds();
+    if (tripIds.length === 0) return;
 
-  const locations = (data as LocationTaskData | undefined)?.locations ?? [];
-  const latest = locations[locations.length - 1];
-  if (!latest) return;
+    const locations = (data as LocationTaskData | undefined)?.locations ?? [];
+    const latest = locations[locations.length - 1];
+    if (!latest) return;
 
-  const recordedAt = new Date(latest.timestamp).toISOString();
-  const speedKmh = speedMetersPerSecondToKmh(latest.coords.speed);
-  const rows = tripIds.map((tripId) => ({
-    trip_id: tripId,
-    latitude: latest.coords.latitude,
-    longitude: latest.coords.longitude,
-    speed_kmh: speedKmh,
-    recorded_at: recordedAt,
-  }));
-
-  const result = await supabase.from('gps_points').insert(rows);
-  if (!result.error) return;
-
-  for (const tripId of tripIds) {
-    void enqueueGpsPoint({
-      tripId,
+    const recordedAt = new Date(latest.timestamp).toISOString();
+    const speedKmh = speedMetersPerSecondToKmh(latest.coords.speed);
+    const rows = tripIds.map((tripId) => ({
+      trip_id: tripId,
       latitude: latest.coords.latitude,
       longitude: latest.coords.longitude,
-      speedKmh: speedKmh ?? 0,
-      recordedAt,
-    });
+      speed_kmh: speedKmh,
+      recorded_at: recordedAt,
+    }));
+
+    const result = await supabase.from('gps_points').insert(rows);
+    if (!result.error) {
+      await checkBackgroundOverspeedWarning(tripIds);
+      return;
+    }
+
+    for (const tripId of tripIds) {
+      void enqueueGpsPoint({
+        tripId,
+        latitude: latest.coords.latitude,
+        longitude: latest.coords.longitude,
+        speedKmh: speedKmh ?? 0,
+        recordedAt,
+      });
+    }
+  } catch {
+    // Keep the background task alive even if storage, DB, or warning checks fail once.
   }
 });
 

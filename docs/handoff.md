@@ -3,6 +3,15 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 background overspeed warning stage 4-2:
+  - Background location task now checks `fetchLocationSnapshot()` after successful background GPS inserts.
+  - It matches overspeed alerts against the active background trip IDs and calls background-safe voice/vibration only.
+  - `lib/overspeed-warning.ts` now separates `showBackgroundOverspeedWarning()` from the foreground popup `showOverspeedWarning()`.
+  - A persisted `@vehicle_active_background_overspeed_key` prevents repeated speech/vibration for the same trip + zone + limit while still resetting when no overspeed alert exists.
+  - The task body is wrapped in `try/catch`; background warning failures must not stop location collection.
+  - No new native dependency was added in 4-2. Existing `expo-speech`/React Native `Vibration` are reused.
+  - Requires new APK build and real-device test with screen off. If Android suppresses speech while locked, next step should use a recorded audio/notification channel design instead of expanding this blindly.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 background location stage 4-1:
   - Added Android-first active-trip background location support.
   - New dependency: `expo-task-manager`.
