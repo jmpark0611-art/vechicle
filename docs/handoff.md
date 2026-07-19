@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 background startup safety stage 4-5:
+  - `lib/background-location.ts` now wraps global `TaskManager.defineTask()` registration in a startup-safe guard.
+  - Background location start/stop failures are now non-blocking: they return a status message or silently stop best-effort instead of breaking trip start/completion.
+  - `lib/overspeed-warning.ts` now wraps vibration in `try/catch`, matching the existing speech guard.
+  - This was added because previous native/background work once produced APKs that would not open; future native changes should keep this pattern.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 background speed fallback stage 4-4:
   - `lib/background-location.ts` now stores the previous background location sample in AsyncStorage.
   - If Expo/OS provides coordinates but `coords.speed` is `null`, the task estimates speed from distance divided by elapsed time.

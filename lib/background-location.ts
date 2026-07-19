@@ -162,7 +162,7 @@ async function checkBackgroundOverspeedWarning(
   }
 }
 
-TaskManager.defineTask(ACTIVE_TRIP_LOCATION_TASK, async ({ data, error }) => {
+async function handleActiveTripLocationTask({ data, error }: TaskManager.TaskManagerTaskBody<LocationTaskData>) {
   try {
     if (error) return;
 
@@ -201,57 +201,72 @@ TaskManager.defineTask(ACTIVE_TRIP_LOCATION_TASK, async ({ data, error }) => {
   } catch {
     // Keep the background task alive even if storage, DB, or warning checks fail once.
   }
-});
+}
+
+try {
+  if (!TaskManager.isTaskDefined(ACTIVE_TRIP_LOCATION_TASK)) {
+    TaskManager.defineTask(ACTIVE_TRIP_LOCATION_TASK, handleActiveTripLocationTask);
+  }
+} catch {
+  // App startup must not fail if the native TaskManager module is unavailable or temporarily misconfigured.
+}
 
 export async function startActiveTripBackgroundLocation(tripIds: string[]): Promise<{ ok: boolean; message: string }> {
-  const ids = Array.from(new Set(tripIds.filter(Boolean)));
-  if (ids.length === 0) {
-    await stopActiveTripBackgroundLocation();
-    return { ok: true, message: '백그라운드 위치 대상 운행이 없습니다.' };
+  try {
+    const ids = Array.from(new Set(tripIds.filter(Boolean)));
+    if (ids.length === 0) {
+      await stopActiveTripBackgroundLocation();
+      return { ok: true, message: '백그라운드 위치 대상 운행이 없습니다.' };
+    }
+
+    await setStoredTripIds(ids);
+
+    if (Platform.OS === 'web') {
+      return { ok: false, message: '웹에서는 백그라운드 위치를 사용할 수 없습니다.' };
+    }
+
+    const foreground = await Location.requestForegroundPermissionsAsync();
+    if (foreground.status !== Location.PermissionStatus.GRANTED) {
+      return { ok: false, message: '위치 권한이 없어 백그라운드 위치를 시작하지 못했습니다.' };
+    }
+
+    const background = await Location.requestBackgroundPermissionsAsync();
+    if (background.status !== Location.PermissionStatus.GRANTED) {
+      return { ok: false, message: '백그라운드 위치 권한이 없어 화면이 꺼진 상태의 위치 저장은 제한됩니다.' };
+    }
+
+    const hasStarted = await Location.hasStartedLocationUpdatesAsync(ACTIVE_TRIP_LOCATION_TASK);
+    if (hasStarted) {
+      return { ok: true, message: '백그라운드 위치 저장이 이미 실행 중입니다.' };
+    }
+
+    await Location.startLocationUpdatesAsync(ACTIVE_TRIP_LOCATION_TASK, {
+      accuracy: Location.Accuracy.Balanced,
+      timeInterval: 10_000,
+      distanceInterval: 15,
+      pausesUpdatesAutomatically: false,
+      showsBackgroundLocationIndicator: true,
+      foregroundService: {
+        notificationTitle: '차량 운행 중',
+        notificationBody: '운행 위치와 제한속도 구역을 확인하고 있습니다.',
+        notificationColor: '#2563EB',
+      },
+    });
+
+    return { ok: true, message: '백그라운드 위치 저장을 시작했습니다.' };
+  } catch {
+    return {
+      ok: false,
+      message: '백그라운드 위치는 시작하지 못했지만 운행은 계속할 수 있습니다.',
+    };
   }
-
-  await setStoredTripIds(ids);
-
-  if (Platform.OS === 'web') {
-    return { ok: false, message: '웹에서는 백그라운드 위치를 사용할 수 없습니다.' };
-  }
-
-  const foreground = await Location.requestForegroundPermissionsAsync();
-  if (foreground.status !== Location.PermissionStatus.GRANTED) {
-    return { ok: false, message: '위치 권한이 없어 백그라운드 위치를 시작하지 못했습니다.' };
-  }
-
-  const background = await Location.requestBackgroundPermissionsAsync();
-  if (background.status !== Location.PermissionStatus.GRANTED) {
-    return { ok: false, message: '백그라운드 위치 권한이 없어 화면이 꺼진 상태의 위치 저장은 제한됩니다.' };
-  }
-
-  const hasStarted = await Location.hasStartedLocationUpdatesAsync(ACTIVE_TRIP_LOCATION_TASK);
-  if (hasStarted) {
-    return { ok: true, message: '백그라운드 위치 저장이 이미 실행 중입니다.' };
-  }
-
-  await Location.startLocationUpdatesAsync(ACTIVE_TRIP_LOCATION_TASK, {
-    accuracy: Location.Accuracy.Balanced,
-    timeInterval: 10_000,
-    distanceInterval: 15,
-    pausesUpdatesAutomatically: false,
-    showsBackgroundLocationIndicator: true,
-    foregroundService: {
-      notificationTitle: '차량 운행 중',
-      notificationBody: '운행 위치와 제한속도 구역을 확인하고 있습니다.',
-      notificationColor: '#2563EB',
-    },
-  });
-
-  return { ok: true, message: '백그라운드 위치 저장을 시작했습니다.' };
 }
 
 export async function stopActiveTripBackgroundLocation(): Promise<void> {
-  await setStoredTripIds([]);
-  if (Platform.OS === 'web') return;
-
   try {
+    await setStoredTripIds([]);
+    if (Platform.OS === 'web') return;
+
     const hasStarted = await Location.hasStartedLocationUpdatesAsync(ACTIVE_TRIP_LOCATION_TASK);
     if (hasStarted) {
       await Location.stopLocationUpdatesAsync(ACTIVE_TRIP_LOCATION_TASK);

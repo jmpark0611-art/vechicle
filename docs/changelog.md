@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-19 background startup safety stage 4-5
+
+- Wrapped the global Expo TaskManager task registration so app startup does not fail if the native task module is unavailable or temporarily misconfigured.
+- Converted background location start failures into non-blocking status messages so driver trip creation can continue even if background tracking cannot start.
+- Made background location stop best-effort so trip completion/cancel is not blocked by OS-level task stop errors.
+- Wrapped vibration calls so speed warnings do not throw in restricted device states.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 background speed fallback stage 4-4
 
 - Added a background speed fallback for devices that provide GPS coordinates but return `coords.speed` as `null`.

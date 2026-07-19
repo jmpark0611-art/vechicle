@@ -23,7 +23,11 @@ export function speakOverspeedWarning() {
 }
 
 export function vibrateOverspeedWarning() {
-  Vibration.vibrate(OVERSPEED_VIBRATION_PATTERN);
+  try {
+    Vibration.vibrate(OVERSPEED_VIBRATION_PATTERN);
+  } catch {
+    // Some OS states can reject vibration; warning flow must still continue.
+  }
 }
 
 export function showBackgroundOverspeedWarning() {
