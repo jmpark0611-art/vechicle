@@ -136,14 +136,13 @@ export default function RoleSelectScreen() {
 
       <Pressable style={styles.card} onPress={() => void chooseAdmin()}>
         <View style={[styles.cardIcon, styles.adminIcon]}>
-          <Text style={styles.cardIconText}>🗺️</Text>
+          <Text style={styles.cardIconText}>⚙️</Text>
         </View>
         <View style={styles.cardCopy}>
           <View style={styles.cardTitleRow}>
             <Text style={styles.cardTitle}>관리자 모드</Text>
-            <Text style={[styles.roleBadge, styles.adminBadge]}>지도관리</Text>
           </View>
-          <Text style={styles.cardDesc}>비밀취급 관리용 · 속도구역 설정</Text>
+          <Text style={styles.cardDesc}>관리자 설정</Text>
         </View>
         <Text style={styles.cardChevron}>›</Text>
       </Pressable>
@@ -264,7 +263,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   commanderBadge: { color: '#15803D', backgroundColor: '#F0FDF4' },
-  adminBadge: { color: '#C2410C', backgroundColor: '#FFF7ED' },
   cardDesc: { color: '#64748B', fontSize: 13, fontWeight: '400', lineHeight: 18 },
   cardChevron: { color: '#CBD5E1', fontSize: 28, fontWeight: '300', marginLeft: 6 },
 });
