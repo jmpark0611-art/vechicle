@@ -513,7 +513,7 @@ export async function completeManualTrip(
 
 export async function cancelManualTrip(tripId: string): Promise<void> {
   const result = await withRequestTimeout(
-    supabase.from('trips').update({ status: 'cancelled', end_time: new Date().toISOString() }).eq('id', tripId),
+    supabase.from('trips').update({ status: 'canceled', end_time: new Date().toISOString() }).eq('id', tripId),
     '운행 취소'
   );
   if (result.error) {

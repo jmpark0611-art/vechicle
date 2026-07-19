@@ -6,6 +6,7 @@
 - `npm.cmd run verify` passed after the pull.
 - Removed the old unreachable active-trip and completion render branches that remained below the new early-return screens.
 - Removed the dead styles tied to those unreachable branches so future driver UI changes do not drift between two competing layouts.
+- Fixed trip cancel writes to use schema-valid `canceled` instead of `cancelled`.
 - Verification passed with `npm.cmd run verify`.
 
 ## 2026-07-19 trip delete policy no-op detection
