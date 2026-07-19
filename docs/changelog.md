@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-19 commander long active trip visibility
+
+- The 정비 tab now reads active trips alongside maintenance/ECU data and surfaces trips that have remained in progress for 24+ hours.
+- Long active trips are shown as non-interrupting cards under `미종료 운행 확인`, with vehicle, route, elapsed time, and operator.
+- This remains read-only: the commander screen does not auto-complete, delete, or mutate unfinished trips.
+- The total alert metric now includes maintenance/ECU alerts plus long unfinished trip confirmations.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 stale OBD interruption confirmation
 
 - Added a one-time active-trip confirmation prompt when an OBD interruption remains stale for 24+ hours.

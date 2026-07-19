@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 commander long active trip visibility:
+  - `app/(tabs)/alerts.tsx` now fetches active trips with the maintenance/ECU refresh cycle.
+  - Trips in progress for 24+ hours are shown on the 정비 tab as `미종료 운행 확인` cards.
+  - Cards include vehicle number, route, elapsed time, and operator. They are intentionally non-interrupting and read-only.
+  - Important continuation rule: commander visibility must not auto-complete, delete, or mutate unfinished trips. Driver confirmation remains the source of truth for completion.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 stale OBD interruption confirmation:
   - Added the next step after the local OBD interruption checkpoint.
   - If an active trip has an OBD disconnect checkpoint older than 24 hours, driver mode now shows a one-time `미종료 운행 확인` prompt.

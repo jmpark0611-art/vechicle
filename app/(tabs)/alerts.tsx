@@ -19,7 +19,7 @@ import {
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
 import { loadSyncedObdSnapshot, type ObdReading, type ObdSnapshot } from '@/lib/obd-data';
-import { fetchLatestVehicleOdometers, fetchVehiclesReadOnly, type VehicleSummary } from '@/lib/readonly-data';
+import { fetchActiveTrips, fetchLatestVehicleOdometers, fetchVehiclesReadOnly, type TripSummary, type VehicleSummary } from '@/lib/readonly-data';
 
 type Severity = 'bad' | 'warn';
 
@@ -48,9 +48,26 @@ const ANNOUNCED_ALERT_STORAGE_KEY = 'vehicle-maintenance-alert-announced-v1';
 const ENABLE_MAINTENANCE_ALERT_POPUPS = false;
 const PART_COLORS = ['#EAFBF4', '#FFF4DE', '#EAF7FA'];
 const FOCUSED_REFRESH_MS = 5_000;
+const LONG_ACTIVE_TRIP_HOURS = 24;
 
 function formatKm(value: number) {
   return `${Math.round(value).toLocaleString('ko-KR')}km`;
+}
+
+function getElapsedHours(startTime: string | null) {
+  if (!startTime) return 0;
+  const startedAt = new Date(startTime).getTime();
+  if (!Number.isFinite(startedAt)) return 0;
+  return Math.max(0, (Date.now() - startedAt) / 3_600_000);
+}
+
+function elapsedLabel(startTime: string | null) {
+  const hours = getElapsedHours(startTime);
+  if (hours < 1) return '1시간 미만';
+  const rounded = Math.floor(hours);
+  const days = Math.floor(rounded / 24);
+  const restHours = rounded % 24;
+  return days > 0 ? `${days}일 ${restHours}시간` : `${rounded}시간`;
 }
 
 function remainingLabel(value: number) {
@@ -115,6 +132,7 @@ export default function AlertsScreen() {
   useRoleGuard(['commander']);
 
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
+  const [activeTrips, setActiveTrips] = useState<TripSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [maintenanceSnapshot, setMaintenanceSnapshot] = useState<MaintenanceSnapshot>({});
   const [obdSnapshot, setObdSnapshot] = useState<ObdSnapshot>({});
@@ -134,14 +152,16 @@ export default function AlertsScreen() {
     try {
       const nextVehicles = await fetchVehiclesReadOnly(200);
       const vehicleIds = nextVehicles.map((vehicle) => vehicle.id);
-      const [maintenanceResult, obdResult, odometers, ackSet] = await Promise.all([
+      const [maintenanceResult, obdResult, odometers, ackSet, nextActiveTrips] = await Promise.all([
         loadSyncedMaintenanceSnapshot(vehicleIds),
         loadSyncedObdSnapshot(vehicleIds),
         fetchLatestVehicleOdometers(vehicleIds),
         loadAcknowledgedFingerprints(),
+        fetchActiveTrips(100),
       ]);
       const mergedMaintenance = await mergeVehicleCurrentKm(maintenanceResult.snapshot, odometers);
       setVehicles(nextVehicles);
+      setActiveTrips(nextActiveTrips);
       setSelectedVehicleId((current) => current ?? nextVehicles[0]?.id ?? null);
       setMaintenanceSnapshot(mergedMaintenance);
       setObdSnapshot(obdResult.snapshot);
@@ -201,6 +221,12 @@ export default function AlertsScreen() {
   );
   const selectedState = selectedVehicle ? getVehicleMaintenanceState(maintenanceSnapshot, selectedVehicle.id) : null;
   const selectedObd = selectedVehicle ? obdSnapshot[selectedVehicle.id] : null;
+  const longActiveTrips = useMemo(
+    () => activeTrips
+      .filter((trip) => getElapsedHours(trip.startTime) >= LONG_ACTIVE_TRIP_HOURS)
+      .sort((a, b) => getElapsedHours(b.startTime) - getElapsedHours(a.startTime)),
+    [activeTrips]
+  );
   const maintenanceCards = selectedVehicle && selectedState
     ? MAINTENANCE_ITEMS.map((item) => {
         const remainingKm = getRemainingKm(selectedState, item);
@@ -265,44 +291,70 @@ export default function AlertsScreen() {
       subtitle="교환 알림과 차량별 정비 설정"
       bottomSpace="compact"
       metrics={[
-        { label: '전체 알림', value: `${alerts.length}건` },
+        { label: '전체 알림', value: `${alerts.length + longActiveTrips.length}건` },
         { label: '정비 필요', value: `${alerts.filter((item) => item.severity === 'bad').length}건` },
+        { label: '미종료 확인', value: `${longActiveTrips.length}건` },
       ]}>
       {isLoading ? (
         <LoadingCard label="알림 데이터를 불러오는 중" />
       ) : errorMessage ? (
         <SectionCard title="오류" body={errorMessage} />
-      ) : alerts.length === 0 ? (
+      ) : alerts.length === 0 && longActiveTrips.length === 0 ? (
         <SectionCard title="현재 알림 없음" body="교체주기가 임박했거나 ECU 기준치를 벗어난 차량이 없습니다." />
       ) : (
-        <SectionCard title={`알림 ${alerts.length}건`}>
-          <View style={styles.list}>
-            {alerts.map((item) => (
-              <View key={item.id} style={[styles.alertCard, item.severity === 'bad' ? styles.badCard : styles.warnCard]}>
-                <View style={styles.alertTop}>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{item.kind === 'maintenance' ? '교환' : '점검'}</Text>
+        <>
+          {longActiveTrips.length > 0 ? (
+            <SectionCard title={`미종료 운행 확인 ${longActiveTrips.length}건`} body="운행 시작 후 24시간 이상 종료되지 않은 운행입니다. 자동 종료하지 않고 운행자 확인 대상으로만 표시합니다.">
+              <View style={styles.list}>
+                {longActiveTrips.map((trip) => (
+                  <View key={trip.id} style={[styles.alertCard, styles.longTripCard]}>
+                    <View style={styles.alertTop}>
+                      <View style={styles.longTripBadge}>
+                        <Text style={styles.longTripBadgeText}>미종료</Text>
+                      </View>
+                      <Text style={styles.vehicleText}>{trip.vehicleNumber}</Text>
+                    </View>
+                    <Text style={styles.alertTitle}>{trip.startPlace ?? '-'} → {trip.endPlace ?? '-'}</Text>
+                    <Text style={styles.alertDetail}>
+                      경과 {elapsedLabel(trip.startTime)} · 운행자 {[trip.operatorRank, trip.operatorName].filter(Boolean).join(' ') || '-'}
+                    </Text>
                   </View>
-                  <Text style={styles.vehicleText}>{item.vehicle.vehicleNumber}</Text>
-                </View>
-                <Text style={styles.alertTitle}>
-                  {item.kind === 'maintenance' ? maintenanceLabel(item.item) : item.title}
-                </Text>
-                <Text style={styles.alertDetail}>
-                  {item.kind === 'maintenance'
-                    ? `${remainingLabel(item.remainingKm)} · ${item.item.intervalKm.toLocaleString('ko-KR')}km 주기`
-                    : `${item.value} · ${item.detail}`}
-                </Text>
-                <Pressable
-                  style={styles.completeButton}
-                  onPress={() => item.kind === 'maintenance' ? void handleCompleteMaintenance(item) : void handleAcknowledgeEcu(item)}
-                  disabled={isSaving}>
-                  <Text style={styles.completeButtonText}>{item.kind === 'maintenance' ? '교체완료' : '점검완료'}</Text>
-                </Pressable>
+                ))}
               </View>
-            ))}
-          </View>
-        </SectionCard>
+            </SectionCard>
+          ) : null}
+
+          {alerts.length > 0 ? (
+            <SectionCard title={`알림 ${alerts.length}건`}>
+              <View style={styles.list}>
+                {alerts.map((item) => (
+                  <View key={item.id} style={[styles.alertCard, item.severity === 'bad' ? styles.badCard : styles.warnCard]}>
+                    <View style={styles.alertTop}>
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{item.kind === 'maintenance' ? '교환' : '점검'}</Text>
+                      </View>
+                      <Text style={styles.vehicleText}>{item.vehicle.vehicleNumber}</Text>
+                    </View>
+                    <Text style={styles.alertTitle}>
+                      {item.kind === 'maintenance' ? maintenanceLabel(item.item) : item.title}
+                    </Text>
+                    <Text style={styles.alertDetail}>
+                      {item.kind === 'maintenance'
+                        ? `${remainingLabel(item.remainingKm)} · ${item.item.intervalKm.toLocaleString('ko-KR')}km 주기`
+                        : `${item.value} · ${item.detail}`}
+                    </Text>
+                    <Pressable
+                      style={styles.completeButton}
+                      onPress={() => item.kind === 'maintenance' ? void handleCompleteMaintenance(item) : void handleAcknowledgeEcu(item)}
+                      disabled={isSaving}>
+                      <Text style={styles.completeButtonText}>{item.kind === 'maintenance' ? '교체완료' : '점검완료'}</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            </SectionCard>
+          ) : null}
+        </>
       )}
 
       {!isLoading && !errorMessage && vehicles.length > 0 ? (
@@ -359,9 +411,12 @@ const styles = StyleSheet.create({
   },
   badCard: { backgroundColor: '#FFF1F2', borderColor: '#FFD0D6' },
   warnCard: { backgroundColor: '#FFF8E7', borderColor: '#FFE7AC' },
+  longTripCard: { backgroundColor: '#EEF6FF', borderColor: '#BFD7FF' },
   alertTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   badge: { borderRadius: 999, backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 5 },
   badgeText: { color: '#4F6AE6', fontSize: 11, fontWeight: '900' },
+  longTripBadge: { borderRadius: 999, backgroundColor: '#DBEAFE', paddingHorizontal: 10, paddingVertical: 5 },
+  longTripBadgeText: { color: '#2563EB', fontSize: 11, fontWeight: '900' },
   vehicleText: { color: '#1E2946', fontSize: 14, fontWeight: '900' },
   alertTitle: { color: '#111827', fontSize: 20, fontWeight: '900', marginTop: 12 },
   alertDetail: { color: '#52607D', fontSize: 13, fontWeight: '800', lineHeight: 18, marginTop: 6 },
