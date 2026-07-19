@@ -203,6 +203,7 @@ export default function TripScreen() {
     try {
       let deviceId = savedBleDeviceId;
       let deviceName = displayObdDeviceName(savedBleDeviceName, currentVehicleNumber);
+      const usedSavedDevice = Boolean(deviceId);
 
       if (!deviceId) {
         setObdStatus('OBD 단말기 자동 검색 중');
@@ -224,6 +225,31 @@ export default function TripScreen() {
       setObdStatus(`${deviceName ?? 'OBD'} 연결 중`);
       const result = await obdBle.connect(deviceId);
       if (!result.ok) {
+        if (usedSavedDevice) {
+          await obdBle.disconnect();
+          setObdStatus(`${deviceName ?? 'OBD'} 재검색 중`);
+          const scan = await scanForObdBleDevices(2_000);
+          const retryDevice = scan.devices.find((device) => device.id === savedBleDeviceId) ?? scan.devices[0] ?? null;
+          if (retryDevice) {
+            const namedDevice = { ...retryDevice, name: displayObdDeviceName(retryDevice.name, currentVehicleNumber) };
+            await saveSelectedObdBleDevice(namedDevice);
+            await selectVehicleForObdDevice(namedDevice);
+            deviceId = namedDevice.id;
+            deviceName = namedDevice.name;
+            setSavedBleDeviceId(namedDevice.id);
+            setSavedBleDeviceName(namedDevice.name);
+            setObdStatus(`${deviceName ?? 'OBD'} 재연결 중`);
+            const retryResult = await obdBle.connect(deviceId);
+            if (retryResult.ok) {
+              setIsObdConnected(true);
+              setObdStatus(`${deviceName ?? 'OBD'} 연결됨`);
+              obdBle.startPolling(2000);
+              startObdSaveTimer();
+              stopObdRetryTimer();
+              return;
+            }
+          }
+        }
         setIsObdConnected(false);
         setObdStatus(`${deviceName ?? 'OBD'} 연결 실패 · 자동 재시도 중`);
         return;
@@ -351,6 +377,19 @@ export default function TripScreen() {
     }
     return stopObdRetryTimer;
   }, [activeTrip, ensureObdConnected, stopObdRetryTimer]);
+
+  useEffect(() => {
+    if (isLoading || errorMessage || activeTrip || lastCompletion || !selectedVehicleId || !savedBleDeviceId) {
+      return;
+    }
+
+    void ensureObdConnected();
+    const retryId = setInterval(() => {
+      if (!obdBle.isConnected) void ensureObdConnected();
+    }, 6_000);
+
+    return () => clearInterval(retryId);
+  }, [activeTrip, ensureObdConnected, errorMessage, isLoading, lastCompletion, savedBleDeviceId, selectedVehicleId]);
 
   async function handleStartTrip() {
     if (!selectedVehicleId) {

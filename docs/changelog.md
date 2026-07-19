@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 faster driver OBD auto-connect
+
+- Driver input screen now attempts OBD connection before pressing trip start when a saved BLE device exists.
+- While the driver input screen is open, the app retries connection every 6 seconds until connected.
+- If a saved BLE device ID is stale, connection now falls back to a short BLE rescan and reconnect attempt instead of staying at `자동연결 준비`.
+- Reduced default BLE scan window from 3 seconds to 2 seconds for faster in-vehicle recognition.
+
 ## 2026-07-18 vehicle unit FK fallback
 
 - Vehicle registration no longer blocks field testing when `vehicles.unit_code` references a unit code that has not been seeded in Supabase yet.

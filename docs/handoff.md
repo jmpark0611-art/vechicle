@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 faster driver OBD auto-connect:
+  - User reported the driver screen stays at `1862-Test 자동연결 준비` after getting in the vehicle.
+  - Driver input screen now calls `ensureObdConnected()` before trip start when a saved BLE adapter and selected vehicle exist.
+  - It retries every 6 seconds while the input screen is open and not connected.
+  - If saved BLE ID connection fails, `ensureObdConnected()` now disconnects, rescans for 2 seconds, saves the found adapter, and retries once.
+  - Default BLE scan time is now 2 seconds in native and web/stub modules.
 - 2026-07-18 vehicle unit FK fallback:
   - User hit vehicle registration failure: `insert or update on table "vehicles" violates foreign key constraint "vehicles_unit_code_fkey"`.
   - Cause: selected app unit code exists locally but has not been seeded into Supabase `units` yet.
