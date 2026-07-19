@@ -1,5 +1,14 @@
 # 인수인계 메모
 
+## 2026-07-19 driver long trip banner
+
+- `app/(tabs)/index.tsx` now shows an inline banner at the top of the active trip scroll panel when elapsed time crosses a threshold.
+- 8+ hours: amber warning banner — "8시간 이상 운행 중", soft reminder to end trip on arrival.
+- 24+ hours: red critical banner — "24시간 이상 운행 중", strong prompt that the trip should be ended to avoid monthly log errors.
+- Computed from `now` state (refreshes every 30 s) and `activeTrip.startTime`; no auto-complete, deletion, or modification of trip data.
+- Styles: `longTripBannerWarn` (amber), `longTripBannerCritical` (red) added at bottom of styles object.
+- `npm run verify` passed, Android export passed.
+
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.

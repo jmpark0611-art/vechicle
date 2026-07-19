@@ -784,6 +784,12 @@ export default function TripScreen() {
       : `일시 이탈 후보 · OBD 끊김 ${formatTime(obdInterruption.disconnectedAt)}`
     : null;
 
+  const elapsedHours = activeTrip
+    ? Math.max(0, (now.getTime() - new Date(activeTrip.startTime ?? 0).getTime()) / 3_600_000)
+    : 0;
+  const isCriticalTrip = elapsedHours >= 24;
+  const isLongTrip = elapsedHours >= 8;
+
   if (!isLoading && !errorMessage && activeTrip) {
     return (
       <View style={styles.activeScreen}>
@@ -808,6 +814,23 @@ export default function TripScreen() {
           style={styles.activePanel}
           contentContainerStyle={[styles.activePanelInner, { paddingBottom: insets.bottom + 20 }]}
           showsVerticalScrollIndicator={false}>
+          {isCriticalTrip ? (
+            <View style={styles.longTripBannerCritical}>
+              <Text style={styles.longTripBannerIcon}>⚠️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.longTripBannerTitle}>24시간 이상 운행 중</Text>
+                <Text style={styles.longTripBannerBody}>장시간 운행이 감지되었습니다. 운행을 마쳤다면 지금 바로 종료해 주세요. 미종료 기록은 월장비운행증에 오류를 유발할 수 있습니다.</Text>
+              </View>
+            </View>
+          ) : isLongTrip ? (
+            <View style={styles.longTripBannerWarn}>
+              <Text style={styles.longTripBannerIcon}>⏱️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.longTripBannerTitleWarn}>8시간 이상 운행 중</Text>
+                <Text style={styles.longTripBannerBodyWarn}>운행이 길어지고 있습니다. 목적지 도착 후 반드시 종료해 주세요.</Text>
+              </View>
+            </View>
+          ) : null}
           <View style={styles.routePanelNew}>
             <View style={styles.routeSide}>
               <Text style={styles.routeSideLabel}>출발</Text>
@@ -1287,4 +1310,35 @@ const styles = StyleSheet.create({
   completionLight: { flex: 1, backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -20 },
   completionLightInner: { paddingHorizontal: 20, paddingTop: 22 },
   completionSubtitle: { color: '#64748B', fontSize: 13, fontWeight: '600', marginBottom: 6 },
+
+  // Long trip banners
+  longTripBannerWarn: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderRadius: 14,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 10,
+  },
+  longTripBannerCritical: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderRadius: 14,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 10,
+  },
+  longTripBannerIcon: { fontSize: 20, lineHeight: 24 },
+  longTripBannerTitle: { color: '#991B1B', fontSize: 14, fontWeight: '700', marginBottom: 4 },
+  longTripBannerBody: { color: '#7F1D1D', fontSize: 13, fontWeight: '400', lineHeight: 18 },
+  longTripBannerTitleWarn: { color: '#92400E', fontSize: 14, fontWeight: '700', marginBottom: 4 },
+  longTripBannerBodyWarn: { color: '#78350F', fontSize: 13, fontWeight: '400', lineHeight: 18 },
 });
