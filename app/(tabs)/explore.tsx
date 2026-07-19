@@ -194,7 +194,7 @@ export default function RecordsScreen() {
 
     for (const [day, dayTrips] of groupTripsByDay(exportRows)) {
       rows.push(`작성일자,${day}`);
-      rows.push('차량번호,상태,출발시각,도착시각,출발지,목적지,운행목적,운행자,사용자,계기판 총 주행거리,계기판 운행거리,실제 이동거리,소모한 유류,OBD 연료,주유추정');
+      rows.push('차량번호,상태,출발시각,도착시각,출발지,목적지,운행목적,운행자,사용자,계기판 총 주행거리,계기판 운행거리,GPS 참고거리,소모한 유류,OBD 연료,주유추정');
 
       for (const trip of dayTrips) {
         const fuel = trip.vehicleId && obdSnapshot[trip.vehicleId]?.fuelPercent !== null && obdSnapshot[trip.vehicleId]?.fuelPercent !== undefined
@@ -230,7 +230,7 @@ export default function RecordsScreen() {
         return sum + Math.max(0, value ?? 0);
       }, 0);
       const dayGpsKm = dayTrips.reduce((sum, trip) => sum + (gpsDistances[trip.id] ?? 0), 0);
-      rows.push(`일일합계,운행 ${dayTrips.length}건,계기판 운행거리 ${Math.round(dayOdometerKm).toLocaleString('ko-KR')}km,실제 이동거리 ${Math.round(dayGpsKm * 10) / 10}km`);
+      rows.push(`일일합계,운행 ${dayTrips.length}건,계기판 운행거리 ${Math.round(dayOdometerKm).toLocaleString('ko-KR')}km,GPS 참고거리 ${Math.round(dayGpsKm * 10) / 10}km`);
       rows.push('');
     }
 
@@ -314,7 +314,7 @@ export default function RecordsScreen() {
                 {trip.startPlace ?? '-'} → {trip.endPlace ?? '-'}
               </Text>
               <Text style={styles.compactMeta} numberOfLines={1}>
-                계기판 {tripDistance(trip)} · 실제 {gpsDistanceLabel(gpsDistances, trip.id)} · 유류 {fuelUsageLabel(tripFuelUsage, trip.id)}
+                계기판 {tripDistance(trip)} · GPS {gpsDistanceLabel(gpsDistances, trip.id)} · 유류 {fuelUsageLabel(tripFuelUsage, trip.id)}
               </Text>
             </SectionCard>
           </Pressable>
@@ -333,7 +333,7 @@ export default function RecordsScreen() {
                 <StatusLine label="도착" value={formatTripTime(selectedTrip.endTime)} />
                 <StatusLine label="계기판 총 주행거리" value={totalOdometer(selectedTrip)} />
                 <StatusLine label="계기판 운행거리" value={tripDistance(selectedTrip)} />
-                <StatusLine label="실제 이동거리" value={gpsDistanceLabel(gpsDistances, selectedTrip.id)} />
+                <StatusLine label="GPS 참고거리" value={gpsDistanceLabel(gpsDistances, selectedTrip.id)} />
                 <StatusLine label="소모한 유류" value={fuelUsageLabel(tripFuelUsage, selectedTrip.id)} />
                 <StatusLine label="운행목적" value={selectedTrip.purpose ?? '-'} />
                 <StatusLine label="운행자" value={[selectedTrip.operatorRank, selectedTrip.operatorName].filter(Boolean).join(' ') || '-'} />

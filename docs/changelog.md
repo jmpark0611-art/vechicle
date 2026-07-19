@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 trip completion odometer confirmation
+
+- Driver trip completion no longer calculates the official end odometer from GPS distance.
+- The active trip screen now requires `도착 계기판 km` before completing a trip, preventing walking distance after vehicle return from becoming the official monthly-log distance.
+- Active/completion/records labels now treat GPS as `GPS 참고거리` instead of official driving distance.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 driver trip required input guard
 
 - Removed the redundant `계기판 - km` label from the driver vehicle card because the start odometer input is the authoritative value.

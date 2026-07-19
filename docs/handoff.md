@@ -3,6 +3,14 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 trip completion odometer confirmation:
+  - User raised a field-test issue: if a driver starts a trip, leaves the vehicle, walks around for hours, and later taps completion, GPS walking distance can pollute the trip distance.
+  - `app/(tabs)/index.tsx` now requires `도착 계기판 km` on the active trip screen before completion.
+  - Completion saves `end_odometer`/`daily_km` from the confirmed odometer value, not from GPS distance.
+  - GPS distance remains stored/displayed only as `GPS 참고거리`.
+  - `app/(tabs)/explore.tsx` changed record/detail/export labels from `실제 이동거리` to `GPS 참고거리`.
+  - Next field test: start a trip, walk away before completing, then complete with the actual vehicle odometer. Monthly-log distance should follow 계기판 운행거리, while GPS remains a reference value.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 driver trip required input guard:
   - User asked to remove the circled `계기판 - km` display in driver mode and prevent trip start if any input field is blank.
   - `app/(tabs)/index.tsx` now removes that redundant vehicle-card odometer label.

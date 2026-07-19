@@ -126,6 +126,7 @@ export default function TripScreen() {
   const [startPlace, setStartPlace] = useState('본부대');
   const [endPlace, setEndPlace] = useState('');
   const [startOdometer, setStartOdometer] = useState('');
+  const [endOdometer, setEndOdometer] = useState('');
   const [lastCompletion, setLastCompletion] = useState<CompletionSummary | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [activeGpsDistanceKm, setActiveGpsDistanceKm] = useState<number | null>(null);
@@ -553,6 +554,7 @@ export default function TripScreen() {
       setActiveTrips([trip]);
       tripStartFuelRef.current[trip.id] = typeof obdLiveData?.fuelPercent === 'number' ? obdLiveData.fuelPercent : null;
       setLastCompletion(null);
+      setEndOdometer('');
       setPurpose('');
       setEndPlace('');
 
@@ -575,6 +577,7 @@ export default function TripScreen() {
     try {
       await cancelManualTrip(trip.id);
       setActiveTrips([]);
+      setEndOdometer('');
       delete tripStartFuelRef.current[trip.id];
       stopGpsTimer();
       await stopActiveTripBackgroundLocation();
@@ -588,21 +591,33 @@ export default function TripScreen() {
   async function handleCompleteTrip(trip: TripSummary) {
     const finalEndPlace = endPlace.trim() || trip.endPlace || '목적지 미입력';
     const startOdo = trip.startOdometer ?? parseKm(startOdometer);
+    if (startOdo === undefined) {
+      Alert.alert('운행 종료 필요', '출발 계기판 km를 확인할 수 없습니다. 운행 기록을 새로고침한 뒤 다시 시도해 주세요.');
+      return;
+    }
+    if (!endOdometer.trim()) {
+      Alert.alert('운행 종료 필요', '도착 계기판 km를 입력하세요.');
+      return;
+    }
+    const endOdo = parseKm(endOdometer);
+    if (endOdo === undefined) {
+      Alert.alert('운행 종료 필요', '도착 계기판 km를 숫자로 입력하세요.');
+      return;
+    }
+    if (endOdo < startOdo) {
+      Alert.alert('운행 종료 필요', '도착 계기판 km는 출발 계기판 km보다 작을 수 없습니다.');
+      return;
+    }
     setIsSaving(true);
     try {
       if (isObdConnected && obdLiveData && trip.vehicleId) await saveTripObdLog(trip.vehicleId, trip.id, obdLiveData);
       const gpsResult = await saveCurrentGpsPoint(trip.id, obdLiveRef.current?.speedKmh ?? null);
       const gpsDistances = await fetchTripGpsDistances([trip.id]);
       const gpsDistanceKm = gpsDistances[trip.id] ?? 0;
-      const autoEndOdo =
-        startOdo !== undefined
-          ? Math.round(startOdo + Math.max(0, gpsDistanceKm))
-          : selectedCurrentKm !== null
-            ? Math.round(selectedCurrentKm)
-            : undefined;
-      await completeManualTrip(trip.id, finalEndPlace, autoEndOdo, startOdo);
-      if (trip.vehicleId && autoEndOdo !== undefined) {
-        const nextSnapshot = await setVehicleCurrentKm(trip.vehicleId, autoEndOdo);
+      const confirmedEndOdo = Math.round(endOdo);
+      await completeManualTrip(trip.id, finalEndPlace, confirmedEndOdo, startOdo);
+      if (trip.vehicleId) {
+        const nextSnapshot = await setVehicleCurrentKm(trip.vehicleId, confirmedEndOdo);
         setMaintenanceSnapshot(nextSnapshot);
       }
       const startFuel = tripStartFuelRef.current[trip.id];
@@ -615,8 +630,8 @@ export default function TripScreen() {
         route: `${trip.startPlace ?? '-'} → ${finalEndPlace}`,
         startTime: formatTime(trip.startTime),
         endTime: formatTime(new Date().toISOString()),
-        totalOdometer: formatKm(autoEndOdo),
-        tripDistance: autoEndOdo !== undefined && startOdo !== undefined && autoEndOdo >= startOdo ? `${Math.round(autoEndOdo - startOdo).toLocaleString('ko-KR')} km` : '-',
+        totalOdometer: formatKm(confirmedEndOdo),
+        tripDistance: confirmedEndOdo >= startOdo ? `${Math.round(confirmedEndOdo - startOdo).toLocaleString('ko-KR')} km` : '-',
         gpsDistance: gpsDistanceKm > 0 ? `${gpsDistanceKm.toLocaleString('ko-KR')} km` : '-',
         fuelUsed,
         purpose: trip.purpose || purpose || '-',
@@ -627,6 +642,7 @@ export default function TripScreen() {
       setPurpose('');
       setEndPlace('');
       setStartOdometer('');
+      setEndOdometer('');
       delete tripStartFuelRef.current[trip.id];
       obdBle.stopPolling();
       void obdBle.disconnect();
@@ -726,7 +742,7 @@ export default function TripScreen() {
               <Text style={styles.statValue}>{formatTime(activeTrip.startTime)}</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>계기판 누적거리</Text>
+              <Text style={styles.statLabel}>GPS 참고 누적</Text>
               <Text style={styles.statValue}>{formatKm(activeEstimatedOdometer)}</Text>
             </View>
           </View>
@@ -745,10 +761,16 @@ export default function TripScreen() {
             <Text style={styles.obdStripValue}>{obdLabel}</Text>
           </View>
           <View style={styles.autoOdoBox}>
-            <Text style={styles.autoOdoLabel}>도착 계기판 자동</Text>
-            <Text style={styles.autoOdoValue}>
-              {activeStartOdometer !== null && activeStartOdometer !== undefined ? `${Math.round(activeStartOdometer).toLocaleString('ko-KR')}km + GPS 이동거리` : 'OBD/GPS 기준 자동 저장'}
-            </Text>
+            <Text style={styles.autoOdoLabel}>도착 계기판 km</Text>
+            <TextInput
+              style={styles.endOdoInput}
+              value={endOdometer}
+              onChangeText={setEndOdometer}
+              placeholder="차량 반납 전 계기판 km"
+              placeholderTextColor="#94A3B8"
+              keyboardType="numeric"
+            />
+            <Text style={styles.autoOdoHint}>GPS 이동거리는 참고값으로만 저장됩니다.</Text>
           </View>
           <View style={styles.actionRow}>
             <Pressable style={styles.cancelBtnWide} onPress={() => void handleCancelTrip(activeTrip)} disabled={isSaving}>
@@ -786,7 +808,7 @@ export default function TripScreen() {
           <View style={styles.summaryLine}><Text style={styles.summaryKey}>출발/도착</Text><Text style={styles.summaryVal}>{lastCompletion.startTime} / {lastCompletion.endTime}</Text></View>
           <View style={styles.summaryLine}><Text style={styles.summaryKey}>계기판 총 주행거리</Text><Text style={styles.summaryVal}>{lastCompletion.totalOdometer}</Text></View>
           <View style={styles.summaryLine}><Text style={styles.summaryKey}>계기판 운행거리</Text><Text style={styles.summaryVal}>{lastCompletion.tripDistance}</Text></View>
-          <View style={styles.summaryLine}><Text style={styles.summaryKey}>실제 이동거리</Text><Text style={styles.summaryVal}>{lastCompletion.gpsDistance}</Text></View>
+          <View style={styles.summaryLine}><Text style={styles.summaryKey}>GPS 참고거리</Text><Text style={styles.summaryVal}>{lastCompletion.gpsDistance}</Text></View>
           <View style={styles.summaryLine}><Text style={styles.summaryKey}>소모 유류</Text><Text style={styles.summaryVal}>{lastCompletion.fuelUsed}</Text></View>
           <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행목적</Text><Text style={styles.summaryVal}>{lastCompletion.purpose}</Text></View>
           <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행자</Text><Text style={styles.summaryVal}>{lastCompletion.operator}</Text></View>
@@ -1000,7 +1022,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   autoOdoLabel: { color: '#64748B', fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  autoOdoValue: { color: '#0F172A', fontSize: 17, fontWeight: '700' },
+  endOdoInput: {
+    minHeight: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DDE3F4',
+    backgroundColor: '#FFFFFF',
+    color: '#0F172A',
+    fontSize: 17,
+    fontWeight: '700',
+    paddingHorizontal: 12,
+  },
+  autoOdoHint: { color: '#64748B', fontSize: 12, fontWeight: '600', marginTop: 8 },
   summaryLine: {
     flexDirection: 'row',
     alignItems: 'center',
