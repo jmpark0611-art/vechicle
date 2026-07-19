@@ -6,6 +6,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { useRoleGuard } from '@/hooks/use-role-guard';
+import { buildEcuAlertRules } from '@/lib/ecu-alert-rules';
 import {
   completeMaintenanceItem,
   getRemainingKm,
@@ -59,63 +60,22 @@ function maintenanceLabel(item: MaintenanceItem) {
   return item.label;
 }
 
-function numberLabel(value: number, suffix: string) {
-  return `${Math.round(value * 10) / 10}${suffix}`;
-}
-
-function addEcuAlert(
-  alerts: EcuAlert[],
-  vehicle: VehicleSummary,
-  reading: ObdReading,
-  key: string,
-  severity: Severity,
-  title: string,
-  value: string,
-  detail: string
-) {
-  const fingerprint = `${vehicle.id}:${key}:${value}`;
-  alerts.push({
-    kind: 'ecu',
-    id: fingerprint,
-    fingerprint,
-    severity,
-    vehicle,
-    title,
-    value,
-    detail,
-  });
-}
-
 function buildEcuAlerts(vehicle: VehicleSummary, reading: ObdReading | undefined): EcuAlert[] {
   if (!reading) return [];
 
-  const alerts: EcuAlert[] = [];
-  if (reading.dtcCount !== null && reading.dtcCount > 0) {
-    addEcuAlert(alerts, vehicle, reading, 'dtc', 'bad', '고장 코드', `${reading.dtcCount}건`, 'DTC 점검 필요');
-  }
-  if (reading.coolantTempC !== null && reading.coolantTempC >= 105) {
-    addEcuAlert(alerts, vehicle, reading, 'coolant', 'bad', '냉각수 온도', numberLabel(reading.coolantTempC, '°C'), '105°C 이상');
-  }
-  if (reading.batteryVoltage !== null && (reading.batteryVoltage < 12 || reading.batteryVoltage > 15)) {
-    addEcuAlert(alerts, vehicle, reading, 'battery', 'warn', '배터리 전압', numberLabel(reading.batteryVoltage, 'V'), '정상 범위 12~15V');
-  }
-  if (reading.fuelPercent !== null && reading.fuelPercent <= 15) {
-    addEcuAlert(alerts, vehicle, reading, 'fuel', 'warn', '연료 잔량', `${reading.fuelPercent}%`, '15% 이하');
-  }
-  if (reading.engineLoadPercent !== null && reading.engineLoadPercent >= 90) {
-    addEcuAlert(alerts, vehicle, reading, 'engine-load', 'warn', '엔진 부하', `${reading.engineLoadPercent}%`, '90% 이상 지속 여부 확인');
-  }
-  if (reading.shortFuelTrimPercent !== null && Math.abs(reading.shortFuelTrimPercent) >= 20) {
-    addEcuAlert(alerts, vehicle, reading, 'short-trim', 'warn', '단기 연료트림', `${reading.shortFuelTrimPercent}%`, '혼합비 보정값 과다');
-  }
-  if (reading.longFuelTrimPercent !== null && Math.abs(reading.longFuelTrimPercent) >= 20) {
-    addEcuAlert(alerts, vehicle, reading, 'long-trim', 'warn', '장기 연료트림', `${reading.longFuelTrimPercent}%`, '혼합비 보정값 과다');
-  }
-  if (reading.readinessSummary && reading.readinessSummary !== '준비 완료') {
-    addEcuAlert(alerts, vehicle, reading, 'readiness', 'warn', '배출가스 준비상태', reading.readinessSummary, '검사 항목 준비 미완료');
-  }
-
-  return alerts;
+  return buildEcuAlertRules(reading).map((alert) => {
+    const fingerprint = `${vehicle.id}:${alert.key}:${alert.value}`;
+    return {
+      kind: 'ecu',
+      id: fingerprint,
+      fingerprint,
+      severity: alert.severity,
+      vehicle,
+      title: alert.title,
+      value: alert.value,
+      detail: alert.detail,
+    };
+  });
 }
 
 async function loadAcknowledgedFingerprints(): Promise<Set<string>> {

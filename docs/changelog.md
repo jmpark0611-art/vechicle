@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 shared ECU alert rules
+
+- Added `lib/ecu-alert-rules.ts` as the single source of truth for ECU alert thresholds.
+- Diagnostics live popups and the maintenance tab alert list now use the same rule builder.
+- This reduces drift where one screen could warn but another screen could miss the same OBD abnormal value.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 maintenance live refresh while focused
 
 - The maintenance tab now refreshes OBD/maintenance snapshots every 5 seconds while it is focused.

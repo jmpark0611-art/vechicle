@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 shared ECU alert rules:
+  - Added `lib/ecu-alert-rules.ts` so ECU thresholds are centralized.
+  - `lib/fleet-alerts.ts` live popup alerts and `app/(tabs)/alerts.tsx` maintenance-tab alerts now share the same rule builder.
+  - Future threshold changes should be made in `lib/ecu-alert-rules.ts` first to prevent diagnostics/maintenance drift.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 maintenance live refresh while focused:
   - The maintenance tab now refreshes vehicle/maintenance/OBD snapshots every 5 seconds while focused.
   - An in-flight guard prevents overlapping refreshes if a previous AsyncStorage/Supabase read is still running.
