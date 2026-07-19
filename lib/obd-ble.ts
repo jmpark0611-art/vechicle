@@ -15,7 +15,7 @@ export type ObdBleScanResult = {
 };
 
 const SELECTED_DEVICE_KEY = 'vehicle-obd-ble-selected-device-v1';
-const DEFAULT_SCAN_MS = 2_000;
+const DEFAULT_SCAN_MS = 5_000;
 const DEVICE_ALIASES: Record<string, string> = {
   '7E:57:58:E1:03:3D': '1862-Test',
 };

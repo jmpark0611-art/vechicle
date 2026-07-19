@@ -3,6 +3,13 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 OBD auto-detect scan stability:
+  - User tested in a vehicle after ignition and the driver screen stayed at `자동연결 준비` / `OBD 단말기 자동 검색 중`.
+  - BLE OBD default scan duration is now 5 seconds instead of 2 seconds.
+  - Saved-device reconnect fallback scans for 6 seconds before retrying later.
+  - Driver mode now starts OBD discovery when a vehicle is selected even if no saved BLE device is currently loaded, so first-time automatic detection is less passive.
+  - Next APK test: select `1862-Test`, keep Bluetooth on, start ignition, wait 10-20 seconds on the driver screen, and verify status changes from search/ready to connected or a concrete failure message.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 background active-trip cache stage 4-6:
   - Active background trip IDs now have a companion cached summary list in AsyncStorage.
   - Background overspeed checks prefer cached vehicle number and route metadata instead of requiring a fresh `fetchActiveTrips()` call every location tick.

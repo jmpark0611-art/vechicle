@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 OBD auto-detect scan stability
+
+- Increased BLE OBD scan duration from 2 seconds to 5 seconds so the app has more time to detect the scanner after vehicle ignition.
+- Saved-device reconnect fallback now scans for 6 seconds before giving up and retrying later.
+- Driver mode now starts automatic OBD discovery when a vehicle is selected even if no saved BLE device ID is present yet.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 background active-trip cache stage 4-6
 
 - Cached active trip summaries for the background location task when driver trips start.

@@ -287,7 +287,7 @@ export default function TripScreen() {
         if (usedSavedDevice) {
           await obdBle.disconnect();
           setObdStatus(`${deviceName ?? 'OBD'} 재검색 중`);
-          const scan = await scanForObdBleDevices(2_000);
+          const scan = await scanForObdBleDevices(6_000);
           const retryDevice = scan.devices.find((device) => device.id === savedBleDeviceId) ?? scan.devices[0] ?? null;
           if (retryDevice) {
             const namedDevice = { ...retryDevice, name: displayObdDeviceName(retryDevice.name, currentVehicleNumber) };
@@ -465,7 +465,7 @@ export default function TripScreen() {
   }, [activeTrip, ensureObdConnected, stopObdRetryTimer]);
 
   useEffect(() => {
-    if (isLoading || errorMessage || activeTrip || lastCompletion || !selectedVehicleId || !savedBleDeviceId) {
+    if (isLoading || errorMessage || activeTrip || lastCompletion || !selectedVehicleId) {
       return;
     }
 
