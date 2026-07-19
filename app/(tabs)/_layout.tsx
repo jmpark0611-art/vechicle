@@ -5,11 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getStoredRole, type AppRole } from '@/lib/role';
 
-const ACTIVE = '#5B7CFA';
-const MUTED = '#9AA8C7';
+const ACTIVE = '#2563EB';
+const MUTED = '#94A3B8';
 
 function TabGlyph({ label, color }: { label: string; color: string }) {
-  return <Text style={{ color, fontSize: 18, fontWeight: '900' }}>{label}</Text>;
+  return <Text style={{ color, fontSize: 18, fontWeight: '600' }}>{label}</Text>;
 }
 
 export default function TabLayout() {
@@ -23,7 +23,7 @@ export default function TabLayout() {
   }, []);
 
   if (role === null) {
-    return <View style={{ flex: 1, backgroundColor: '#F4F5FB' }} />;
+    return <View style={{ flex: 1, backgroundColor: '#F0F4FB' }} />;
   }
 
   return (
@@ -42,8 +42,8 @@ export default function TabLayout() {
           height: isDriver ? 58 : 64,
           borderRadius: 24,
           borderWidth: 1,
-          borderColor: '#E7EAF8',
-          backgroundColor: '#FFFDFB',
+          borderColor: '#E2E8F8',
+          backgroundColor: '#FFFFFF',
           elevation: 10,
           shadowColor: '#9AA8C7',
           shadowOpacity: 0.18,
@@ -52,7 +52,7 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '800',
+          fontWeight: '600',
           marginTop: 2,
         },
       }}>

@@ -163,6 +163,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 12,
   },
-  changeRoleBtnText: { color: '#64748B', fontSize: 14, fontWeight: '900' },
-  pinHint: { color: '#7B86A8', fontSize: 12, fontWeight: '700', marginTop: 10 },
+  changeRoleBtnText: { color: '#64748B', fontSize: 14, fontWeight: '600' },
+  pinHint: { color: '#94A3B8', fontSize: 12, fontWeight: '500', marginTop: 10 },
 });
