@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 records refresh overlap fix:
+  - User reported the records refresh button visually overlapping the record cards/bottom tab bar.
+  - `app/(tabs)/explore.tsx` no longer uses the shared bottom primary action for refresh.
+  - Refresh is now a compact top-right button above the export/delete controls.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 unused feature cleanup:
   - Deleted `app/(tabs)/monthly-log.tsx`. The product decision is still that 기록 and 월장비운행증 are the same workflow; use records detail/export instead.
   - Deleted unused legacy modules `lib/speed-zones.ts` and `lib/driver-info.ts`.

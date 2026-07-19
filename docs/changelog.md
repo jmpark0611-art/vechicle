@@ -1,5 +1,11 @@
 # 변경 이력
 
+## 2026-07-19 records refresh overlap fix
+
+- Moved the records refresh action from the bottom primary button to a compact top-right button.
+- This prevents the refresh button from visually overlapping the last record card and bottom tab bar on narrow Android screens.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 unused feature cleanup
 
 - Removed the hidden legacy `monthly-log` tab because 월장비운행증 now lives in the records tab export/detail flow.

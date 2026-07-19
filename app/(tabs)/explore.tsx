@@ -272,8 +272,11 @@ export default function RecordsScreen() {
     <RebuildScreen
       title="기록"
       metrics={[{ label: '완료', value: `${completedCount}건` }]}
-      actionLabel="새로고침"
-      onAction={() => void loadData()}>
+      bottomSpace="tab">
+      <Pressable style={styles.refreshBtn} onPress={() => void loadData()} disabled={isLoading}>
+        <Text style={styles.refreshBtnText}>{isLoading ? '불러오는 중' : '새로고침'}</Text>
+      </Pressable>
+
       <Pressable style={styles.exportBtn} onPress={() => setExportModalVisible(true)}>
         <Text style={styles.exportBtnText}>월장비운행증 엑셀 내보내기</Text>
       </Pressable>
@@ -374,6 +377,18 @@ export default function RecordsScreen() {
 }
 
 const styles = StyleSheet.create({
+  refreshBtn: {
+    alignSelf: 'flex-end',
+    minHeight: 36,
+    borderRadius: 12,
+    backgroundColor: '#EAF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  refreshBtnText: { color: '#2563EB', fontSize: 13, fontWeight: '700' },
   exportBtn: {
     minHeight: 48,
     borderRadius: 14,
