@@ -160,6 +160,7 @@ export default function TripScreen() {
   const obdRetryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const obdSnapshotSaveAtRef = useRef<Record<string, number>>({});
   const overspeedWarningStateRef = useRef<OverspeedWarningState | null>(null);
+  const staleInterruptionPromptKeyRef = useRef<string | null>(null);
 
   activeTripsRef.current = activeTrips;
   obdLiveRef.current = obdLiveData;
@@ -532,6 +533,49 @@ export default function TripScreen() {
 
     return () => clearInterval(retryId);
   }, [activeTrip, ensureObdConnected, errorMessage, isLoading, lastCompletion, savedBleDeviceId, selectedVehicleId]);
+
+  useEffect(() => {
+    if (!activeTrip || !obdInterruption) {
+      staleInterruptionPromptKeyRef.current = null;
+      return;
+    }
+    if (!isStaleObdInterruption(obdInterruption)) return;
+
+    const promptKey = `${obdInterruption.tripId}:${obdInterruption.disconnectedAt}`;
+    if (staleInterruptionPromptKeyRef.current === promptKey) return;
+    staleInterruptionPromptKeyRef.current = promptKey;
+
+    Alert.alert(
+      '미종료 운행 확인',
+      `OBD 연결이 ${formatTime(obdInterruption.disconnectedAt)}에 끊긴 뒤 24시간 이상 재연결되지 않았습니다.\n운행 상태를 확인해 주세요.`,
+      [
+        {
+          text: '계속 운행 중',
+          onPress: () => {
+            setObdInterruption(null);
+            void clearTripObdInterruption(activeTrip.id);
+            void ensureObdConnected();
+          },
+        },
+        {
+          text: '도착 km 입력',
+          style: 'cancel',
+        },
+        {
+          text: '끊김 기준 입력',
+          onPress: () => {
+            const startOdo = activeTrip.startOdometer ?? parseKm(startOdometer);
+            const gpsKm = obdInterruption.gpsDistanceKm;
+            if (startOdo !== undefined && typeof gpsKm === 'number' && gpsKm >= 0) {
+              setEndOdometer(String(Math.round(startOdo + gpsKm)));
+              return;
+            }
+            Alert.alert('계기판 확인 필요', '끊김 시점 기준 km를 계산할 수 없습니다. 도착 계기판 km를 직접 입력해 주세요.');
+          },
+        },
+      ]
+    );
+  }, [activeTrip, ensureObdConnected, obdInterruption, startOdometer]);
 
   async function handleStartTrip() {
     if (!selectedVehicleId) {

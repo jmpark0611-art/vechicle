@@ -3,6 +3,15 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 stale OBD interruption confirmation:
+  - Added the next step after the local OBD interruption checkpoint.
+  - If an active trip has an OBD disconnect checkpoint older than 24 hours, driver mode now shows a one-time `미종료 운행 확인` prompt.
+  - Choices are intentionally conservative:
+    - `계속 운행 중`: clears the local interruption checkpoint and retries OBD connection.
+    - `도착 km 입력`: leaves the active trip open so the driver can type the real arrival odometer.
+    - `끊김 기준 입력`: pre-fills arrival km from start odometer + GPS reference distance at disconnect, but still requires the driver to press `운행 종료`.
+  - Important: OBD disconnect alone still must not auto-complete or delete a trip, because drivers can park for work and later resume the same trip.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 OBD interruption checkpoint:
   - User clarified that OBD disconnect must not mean immediate trip completion, because a driver can park for work and later restart the same vehicle.
   - Added `lib/trip-interruption.ts` for local `AsyncStorage` OBD disconnect checkpoints.

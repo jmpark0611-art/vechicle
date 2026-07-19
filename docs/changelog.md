@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-19 stale OBD interruption confirmation
+
+- Added a one-time active-trip confirmation prompt when an OBD interruption remains stale for 24+ hours.
+- The prompt lets the driver choose whether the trip is still continuing, manually enter arrival km, or prefill arrival km from start odometer + GPS reference distance at the OBD disconnect point.
+- The app still does not automatically complete, delete, or mutate a trip from OBD disconnect alone; the driver must confirm completion with `운행 종료`.
+- This is the safer field workflow for cases where a driver parks for work, leaves the vehicle, and later resumes the same trip.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 OBD interruption checkpoint
 
 - Added a local active-trip OBD interruption checkpoint for field workflows where a driver parks, leaves the vehicle, and later resumes the same trip.
