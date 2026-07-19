@@ -70,6 +70,16 @@ function elapsedLabel(startTime: string | null) {
   return days > 0 ? `${days}일 ${restHours}시간` : `${rounded}시간`;
 }
 
+function formatTripTime(value: string | null) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 16);
+  return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date
+    .getMinutes()
+    .toString()
+    .padStart(2, '0')}`;
+}
+
 function remainingLabel(value: number) {
   if (value <= 0) return `${Math.abs(value).toLocaleString('ko-KR')}km 초과`;
   return `${value.toLocaleString('ko-KR')}km 남음`;
@@ -285,6 +295,24 @@ export default function AlertsScreen() {
     Alert.alert('점검 완료', `${alertItem.vehicle.vehicleNumber} · ${alertItem.title}\n값이 바뀌면 다시 알림에 표시됩니다.`);
   }
 
+  function handleShowLongTripDetail(trip: TripSummary) {
+    Alert.alert(
+      '미종료 운행 상세',
+      [
+        `차량: ${trip.vehicleNumber}`,
+        `상태: ${trip.status}`,
+        `경과: ${elapsedLabel(trip.startTime)}`,
+        `시작: ${formatTripTime(trip.startTime)}`,
+        `경로: ${trip.startPlace ?? '-'} → ${trip.endPlace ?? '-'}`,
+        `운행자: ${[trip.operatorRank, trip.operatorName].filter(Boolean).join(' ') || '-'}`,
+        `사용자: ${[trip.userRank, trip.userName].filter(Boolean).join(' ') || '-'}`,
+        `목적: ${trip.purpose || '-'}`,
+        `출발 계기판: ${trip.startOdometer === null ? '-' : formatKm(trip.startOdometer)}`,
+      ].join('\n'),
+      [{ text: '확인' }]
+    );
+  }
+
   return (
     <RebuildScreen
       title="정비"
@@ -307,7 +335,10 @@ export default function AlertsScreen() {
             <SectionCard title={`미종료 운행 확인 ${longActiveTrips.length}건`} body="운행 시작 후 24시간 이상 종료되지 않은 운행입니다. 자동 종료하지 않고 운행자 확인 대상으로만 표시합니다.">
               <View style={styles.list}>
                 {longActiveTrips.map((trip) => (
-                  <View key={trip.id} style={[styles.alertCard, styles.longTripCard]}>
+                  <Pressable
+                    key={trip.id}
+                    style={({ pressed }) => [styles.alertCard, styles.longTripCard, pressed && styles.pressedCard]}
+                    onPress={() => handleShowLongTripDetail(trip)}>
                     <View style={styles.alertTop}>
                       <View style={styles.longTripBadge}>
                         <Text style={styles.longTripBadgeText}>미종료</Text>
@@ -318,7 +349,7 @@ export default function AlertsScreen() {
                     <Text style={styles.alertDetail}>
                       경과 {elapsedLabel(trip.startTime)} · 운행자 {[trip.operatorRank, trip.operatorName].filter(Boolean).join(' ') || '-'}
                     </Text>
-                  </View>
+                  </Pressable>
                 ))}
               </View>
             </SectionCard>
@@ -412,6 +443,7 @@ const styles = StyleSheet.create({
   badCard: { backgroundColor: '#FFF1F2', borderColor: '#FFD0D6' },
   warnCard: { backgroundColor: '#FFF8E7', borderColor: '#FFE7AC' },
   longTripCard: { backgroundColor: '#EEF6FF', borderColor: '#BFD7FF' },
+  pressedCard: { opacity: 0.82, transform: [{ scale: 0.99 }] },
   alertTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   badge: { borderRadius: 999, backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 5 },
   badgeText: { color: '#4F6AE6', fontSize: 11, fontWeight: '900' },

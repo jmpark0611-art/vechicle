@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 long active trip detail prompt
+
+- Long unfinished trip cards in the 정비 tab are now pressable.
+- Pressing a card opens a read-only detail prompt with vehicle, status, elapsed time, start time, route, operator, user, purpose, and start odometer.
+- This keeps commander review lightweight and avoids adding new navigation/native dependencies.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 commander long active trip visibility
 
 - The 정비 tab now reads active trips alongside maintenance/ECU data and surfaces trips that have remained in progress for 24+ hours.

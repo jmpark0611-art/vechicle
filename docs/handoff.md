@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 long active trip detail prompt:
+  - Long unfinished trip cards in `app/(tabs)/alerts.tsx` are now pressable.
+  - Pressing a card opens a read-only native `Alert` detail with vehicle/status/elapsed/start/route/operator/user/purpose/start odometer.
+  - No trip data is changed from this prompt. It is commander review only.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 commander long active trip visibility:
   - `app/(tabs)/alerts.tsx` now fetches active trips with the maintenance/ECU refresh cycle.
   - Trips in progress for 24+ hours are shown on the 정비 tab as `미종료 운행 확인` cards.
