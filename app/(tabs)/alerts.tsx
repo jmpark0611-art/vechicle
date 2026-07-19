@@ -49,6 +49,7 @@ const ENABLE_MAINTENANCE_ALERT_POPUPS = false;
 const PART_COLORS = ['#EAFBF4', '#FFF4DE', '#EAF7FA'];
 const FOCUSED_REFRESH_MS = 5_000;
 const LONG_ACTIVE_TRIP_HOURS = 24;
+const CRITICAL_ACTIVE_TRIP_HOURS = 48;
 
 function formatKm(value: number) {
   return `${Math.round(value).toLocaleString('ko-KR')}km`;
@@ -68,6 +69,10 @@ function elapsedLabel(startTime: string | null) {
   const days = Math.floor(rounded / 24);
   const restHours = rounded % 24;
   return days > 0 ? `${days}일 ${restHours}시간` : `${rounded}시간`;
+}
+
+function isCriticalLongTrip(trip: TripSummary) {
+  return getElapsedHours(trip.startTime) >= CRITICAL_ACTIVE_TRIP_HOURS;
 }
 
 function formatTripTime(value: string | null) {
@@ -237,6 +242,10 @@ export default function AlertsScreen() {
       .sort((a, b) => getElapsedHours(b.startTime) - getElapsedHours(a.startTime)),
     [activeTrips]
   );
+  const criticalLongActiveTrips = useMemo(
+    () => longActiveTrips.filter(isCriticalLongTrip),
+    [longActiveTrips]
+  );
   const maintenanceCards = selectedVehicle && selectedState
     ? MAINTENANCE_ITEMS.map((item) => {
         const remainingKm = getRemainingKm(selectedState, item);
@@ -300,6 +309,7 @@ export default function AlertsScreen() {
       '미종료 운행 상세',
       [
         `차량: ${trip.vehicleNumber}`,
+        `구분: ${isCriticalLongTrip(trip) ? '장기 미종료' : '미종료 확인'}`,
         `상태: ${trip.status}`,
         `경과: ${elapsedLabel(trip.startTime)}`,
         `시작: ${formatTripTime(trip.startTime)}`,
@@ -322,6 +332,7 @@ export default function AlertsScreen() {
         { label: '전체 알림', value: `${alerts.length + longActiveTrips.length}건` },
         { label: '정비 필요', value: `${alerts.filter((item) => item.severity === 'bad').length}건` },
         { label: '미종료 확인', value: `${longActiveTrips.length}건` },
+        { label: '장기 미종료', value: `${criticalLongActiveTrips.length}건` },
       ]}>
       {isLoading ? (
         <LoadingCard label="알림 데이터를 불러오는 중" />
@@ -337,11 +348,17 @@ export default function AlertsScreen() {
                 {longActiveTrips.map((trip) => (
                   <Pressable
                     key={trip.id}
-                    style={({ pressed }) => [styles.alertCard, styles.longTripCard, pressed && styles.pressedCard]}
+                    style={({ pressed }) => [
+                      styles.alertCard,
+                      isCriticalLongTrip(trip) ? styles.criticalLongTripCard : styles.longTripCard,
+                      pressed && styles.pressedCard,
+                    ]}
                     onPress={() => handleShowLongTripDetail(trip)}>
                     <View style={styles.alertTop}>
-                      <View style={styles.longTripBadge}>
-                        <Text style={styles.longTripBadgeText}>미종료</Text>
+                      <View style={isCriticalLongTrip(trip) ? styles.criticalLongTripBadge : styles.longTripBadge}>
+                        <Text style={isCriticalLongTrip(trip) ? styles.criticalLongTripBadgeText : styles.longTripBadgeText}>
+                          {isCriticalLongTrip(trip) ? '장기 미종료' : '미종료'}
+                        </Text>
                       </View>
                       <Text style={styles.vehicleText}>{trip.vehicleNumber}</Text>
                     </View>
@@ -443,12 +460,15 @@ const styles = StyleSheet.create({
   badCard: { backgroundColor: '#FFF1F2', borderColor: '#FFD0D6' },
   warnCard: { backgroundColor: '#FFF8E7', borderColor: '#FFE7AC' },
   longTripCard: { backgroundColor: '#EEF6FF', borderColor: '#BFD7FF' },
+  criticalLongTripCard: { backgroundColor: '#FFF1F2', borderColor: '#FDA4AF' },
   pressedCard: { opacity: 0.82, transform: [{ scale: 0.99 }] },
   alertTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   badge: { borderRadius: 999, backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 5 },
   badgeText: { color: '#4F6AE6', fontSize: 11, fontWeight: '900' },
   longTripBadge: { borderRadius: 999, backgroundColor: '#DBEAFE', paddingHorizontal: 10, paddingVertical: 5 },
   longTripBadgeText: { color: '#2563EB', fontSize: 11, fontWeight: '900' },
+  criticalLongTripBadge: { borderRadius: 999, backgroundColor: '#FFE4E6', paddingHorizontal: 10, paddingVertical: 5 },
+  criticalLongTripBadgeText: { color: '#E11D48', fontSize: 11, fontWeight: '900' },
   vehicleText: { color: '#1E2946', fontSize: 14, fontWeight: '900' },
   alertTitle: { color: '#111827', fontSize: 20, fontWeight: '900', marginTop: 12 },
   alertDetail: { color: '#52607D', fontSize: 13, fontWeight: '800', lineHeight: 18, marginTop: 6 },

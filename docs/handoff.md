@@ -3,6 +3,12 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 long unfinished trip severity:
+  - `app/(tabs)/alerts.tsx` now treats 24+ hour active trips as `미종료 확인` and 48+ hour active trips as `장기 미종료`.
+  - The 정비 tab metric area includes `장기 미종료`.
+  - 48+ hour cards are red-tinted and their detail prompt includes the severity label.
+  - Still read-only: no commander-side auto-completion, deletion, or trip mutation.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 long active trip detail prompt:
   - Long unfinished trip cards in `app/(tabs)/alerts.tsx` are now pressable.
   - Pressing a card opens a read-only native `Alert` detail with vehicle/status/elapsed/start/route/operator/user/purpose/start odometer.

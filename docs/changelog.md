@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-19 long unfinished trip severity
+
+- The 정비 tab now separates unfinished trips into 24+ hour `미종료 확인` and 48+ hour `장기 미종료` severity.
+- 48+ hour unfinished trips use a stronger red-tinted card and badge so commanders can prioritize them.
+- The unfinished trip detail prompt now includes the severity label.
+- This remains read-only and does not auto-complete or mutate trip data.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 long active trip detail prompt
 
 - Long unfinished trip cards in the 정비 tab are now pressable.
