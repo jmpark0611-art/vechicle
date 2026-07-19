@@ -3,6 +3,11 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 trip odometer baseline enforcement:
+  - User reported that `계기판 누적주행거리` never displayed during testing.
+  - Important domain note: standard OBD live data usually does not expose the dashboard's total cumulative odometer, so the app must rely on the saved vehicle current km or the driver's start odometer entry as the baseline.
+  - `app/(tabs)/index.tsx` now blocks trip start when no baseline exists, saves the confirmed start odometer into the maintenance/current-km snapshot, shows active cumulative odometer as baseline + GPS distance, and records completion total even if GPS distance is 0.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 overspeed repeat warning interval:
   - User requested repeated voice/vibration warnings if speed does not drop after the warning sentence.
   - `lib/overspeed-warning.ts` now exports repeat-delay helpers and stores warning state as `{ key, lastWarnedAt }`.

@@ -493,6 +493,12 @@ export default function TripScreen() {
       return;
     }
 
+    const startOdo = parseKm(startOdometer) ?? selectedCurrentKm ?? undefined;
+    if (startOdo === undefined) {
+      Alert.alert('계기판 누적거리 필요', 'OBD 표준 데이터로는 계기판 총 누적거리를 읽지 못할 수 있습니다. 최초 1회 출발 계기판 km를 입력해 주세요.');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const trip = await startManualTrip({
@@ -504,8 +510,11 @@ export default function TripScreen() {
         operatorRank,
         userName: sameUser ? operatorName : userName,
         userRank: sameUser ? operatorRank : userRank,
-        startOdometer: parseKm(startOdometer) ?? selectedCurrentKm ?? undefined,
+        startOdometer: startOdo,
       });
+      const nextSnapshot = await setVehicleCurrentKm(selectedVehicleId, startOdo);
+      setMaintenanceSnapshot(nextSnapshot);
+      setStartOdometer(String(Math.round(startOdo)));
       setActiveTrips([trip]);
       tripStartFuelRef.current[trip.id] = typeof obdLiveData?.fuelPercent === 'number' ? obdLiveData.fuelPercent : null;
       setLastCompletion(null);
@@ -551,8 +560,8 @@ export default function TripScreen() {
       const gpsDistances = await fetchTripGpsDistances([trip.id]);
       const gpsDistanceKm = gpsDistances[trip.id] ?? 0;
       const autoEndOdo =
-        startOdo !== undefined && gpsDistanceKm > 0
-          ? Math.round(startOdo + gpsDistanceKm)
+        startOdo !== undefined
+          ? Math.round(startOdo + Math.max(0, gpsDistanceKm))
           : selectedCurrentKm !== null
             ? Math.round(selectedCurrentKm)
             : undefined;
@@ -619,7 +628,13 @@ export default function TripScreen() {
     activeStartFuel >= obdLiveData.fuelPercent
       ? `${Math.round((activeStartFuel - obdLiveData.fuelPercent) * 10) / 10}%`
       : '-';
-  const activeStartOdometer = activeTrip?.startOdometer ?? selectedCurrentKm;
+  const activeStartOdometer = activeTrip
+    ? activeTrip.startOdometer ?? parseKm(startOdometer) ?? selectedCurrentKm
+    : selectedCurrentKm;
+  const activeEstimatedOdometer =
+    activeStartOdometer !== null && activeStartOdometer !== undefined
+      ? activeStartOdometer + (activeGpsDistanceKm ?? 0)
+      : null;
 
   if (!isLoading && !errorMessage && activeTrip) {
     return (
@@ -677,7 +692,7 @@ export default function TripScreen() {
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>계기판 누적거리</Text>
-              <Text style={styles.statValue}>{formatKm(activeStartOdometer)}</Text>
+              <Text style={styles.statValue}>{formatKm(activeEstimatedOdometer)}</Text>
             </View>
           </View>
           <View style={styles.statRow}>
@@ -697,7 +712,7 @@ export default function TripScreen() {
           <View style={styles.autoOdoBox}>
             <Text style={styles.autoOdoLabel}>도착 계기판 자동</Text>
             <Text style={styles.autoOdoValue}>
-              {activeStartOdometer !== null ? `${Math.round(activeStartOdometer).toLocaleString('ko-KR')}km + GPS 이동거리` : 'OBD/GPS 기준 자동 저장'}
+              {activeStartOdometer !== null && activeStartOdometer !== undefined ? `${Math.round(activeStartOdometer).toLocaleString('ko-KR')}km + GPS 이동거리` : 'OBD/GPS 기준 자동 저장'}
             </Text>
           </View>
           <View style={styles.actionRow}>

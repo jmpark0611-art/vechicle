@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-07-19 trip odometer baseline enforcement
+
+- Driver trips now require a start odometer baseline when no saved vehicle current km exists, instead of allowing trips that later show `- km` for total odometer.
+- Trip start saves the confirmed baseline into the vehicle maintenance/current-km snapshot.
+- Active trip display now shows estimated current cumulative odometer as start odometer plus GPS distance.
+- Trip completion now records total odometer even when GPS distance is 0 by falling back to the confirmed start odometer.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 overspeed repeat warning interval
 
 - Speed-limit warnings now repeat while the vehicle remains over the limit instead of firing only once per trip/zone/limit.
