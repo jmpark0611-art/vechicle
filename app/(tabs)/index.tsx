@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Dimensions, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Dimensions, Pressable, StyleSheet, Text, TextInput, Vibration, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingCard, RebuildScreen, SectionCard } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { fetchTripGpsDistances, saveCurrentGpsPoint } from '@/lib/gps-data';
+import { fetchLocationSnapshot } from '@/lib/location-data';
 import {
   getVehicleMaintenanceState,
   loadSyncedMaintenanceSnapshot,
@@ -37,6 +38,7 @@ import {
 import { getStoredRole } from '@/lib/role';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
+const OVERSPEED_VIBRATION_PATTERN = [0, 650, 160, 650, 160, 900];
 
 function formatTime(value: string | null) {
   if (!value) return '-';
@@ -134,6 +136,7 @@ export default function TripScreen() {
   const gpsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const obdRetryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const obdSnapshotSaveAtRef = useRef<Record<string, number>>({});
+  const overspeedAlertedKeyRef = useRef<string | null>(null);
 
   activeTripsRef.current = activeTrips;
   obdLiveRef.current = obdLiveData;
@@ -193,6 +196,30 @@ export default function TripScreen() {
     }
   }, []);
 
+  const checkOverspeedWarning = useCallback(async (tripIds?: string[]) => {
+    const activeTripIds = new Set(tripIds ?? activeTripsRef.current.map((trip) => trip.id));
+    if (activeTripIds.size === 0) return;
+
+    try {
+      const snapshot = await fetchLocationSnapshot();
+      const overspeed = snapshot.alerts.find((alert) => alert.status === 'overspeed' && activeTripIds.has(alert.tripId));
+      if (!overspeed) return;
+
+      const speed = Math.round(overspeed.speedKmh ?? 0);
+      const key = `${overspeed.tripId}-${overspeed.zoneName}-${speed}`;
+      if (overspeedAlertedKeyRef.current === key) return;
+      overspeedAlertedKeyRef.current = key;
+
+      Vibration.vibrate(OVERSPEED_VIBRATION_PATTERN);
+      Alert.alert(
+        '제한속도 초과 경고',
+        `${overspeed.vehicleNumber}\n${overspeed.zoneName}\n현재 ${speed}km/h / 제한 ${Math.round(overspeed.speedLimitKmh)}km/h\n\n즉시 감속해 주세요.`
+      );
+    } catch {
+      // Speed-zone warning must not block trip recording.
+    }
+  }, []);
+
   const startObdSaveTimer = useCallback(() => {
     stopObdSaveTimer();
     obdSaveTimerRef.current = setInterval(() => {
@@ -207,9 +234,13 @@ export default function TripScreen() {
   const startGpsTimer = useCallback(() => {
     stopGpsTimer();
     gpsTimerRef.current = setInterval(() => {
-      for (const trip of activeTripsRef.current) void saveCurrentGpsPoint(trip.id);
+      void (async () => {
+        const speedKmh = obdLiveRef.current?.speedKmh ?? null;
+        await Promise.all(activeTripsRef.current.map((trip) => saveCurrentGpsPoint(trip.id, speedKmh)));
+        await checkOverspeedWarning();
+      })();
     }, 60_000);
-  }, [stopGpsTimer]);
+  }, [checkOverspeedWarning, stopGpsTimer]);
 
   const stopObdRetryTimer = useCallback(() => {
     if (obdRetryTimerRef.current !== null) {
@@ -469,7 +500,8 @@ export default function TripScreen() {
 
       void ensureObdConnected();
 
-      const gpsResult = await saveCurrentGpsPoint(trip.id);
+      const gpsResult = await saveCurrentGpsPoint(trip.id, obdLiveRef.current?.speedKmh ?? null);
+      void checkOverspeedWarning([trip.id]);
       startGpsTimer();
       Alert.alert('운행 시작', `${trip.vehicleNumber} 운행을 시작했습니다.\n${gpsResult.message}`);
     } catch (error) {
@@ -499,7 +531,7 @@ export default function TripScreen() {
     setIsSaving(true);
     try {
       if (isObdConnected && obdLiveData && trip.vehicleId) await saveTripObdLog(trip.vehicleId, trip.id, obdLiveData);
-      const gpsResult = await saveCurrentGpsPoint(trip.id);
+      const gpsResult = await saveCurrentGpsPoint(trip.id, obdLiveRef.current?.speedKmh ?? null);
       const gpsDistances = await fetchTripGpsDistances([trip.id]);
       const gpsDistanceKm = gpsDistances[trip.id] ?? 0;
       const autoEndOdo =

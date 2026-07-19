@@ -39,6 +39,11 @@ function speedMetersPerSecondToKmh(value: number | null) {
   return value * 3.6;
 }
 
+function normalizeSpeedKmh(value?: number | null) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null;
+  return Math.round(value * 10) / 10;
+}
+
 function distanceKm(a: GpsPointRow, b: GpsPointRow) {
   if (
     typeof a.latitude !== 'number' ||
@@ -78,7 +83,7 @@ async function flushGpsQueue(): Promise<void> {
   }
 }
 
-export async function saveCurrentGpsPoint(tripId: string): Promise<GpsSaveResult> {
+export async function saveCurrentGpsPoint(tripId: string, speedOverrideKmh?: number | null): Promise<GpsSaveResult> {
   const permission = await Location.requestForegroundPermissionsAsync();
   if (permission.status !== Location.PermissionStatus.GRANTED) {
     return { ok: false, message: '위치 권한이 허용되지 않아 GPS 저장을 건너뛰었습니다.' };
@@ -89,6 +94,8 @@ export async function saveCurrentGpsPoint(tripId: string): Promise<GpsSaveResult
     '현재 위치'
   );
 
+  const speedKmh = normalizeSpeedKmh(speedOverrideKmh) ?? speedMetersPerSecondToKmh(position.coords.speed);
+
   // Try to flush any queued points first
   void flushGpsQueue();
 
@@ -97,7 +104,7 @@ export async function saveCurrentGpsPoint(tripId: string): Promise<GpsSaveResult
       trip_id: tripId,
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
-      speed_kmh: speedMetersPerSecondToKmh(position.coords.speed),
+      speed_kmh: speedKmh,
       recorded_at: new Date(position.timestamp).toISOString(),
     }),
     'GPS 저장'
@@ -116,7 +123,7 @@ export async function saveCurrentGpsPoint(tripId: string): Promise<GpsSaveResult
     tripId,
     latitude: position.coords.latitude,
     longitude: position.coords.longitude,
-    speedKmh: speedMetersPerSecondToKmh(position.coords.speed) ?? 0,
+    speedKmh: speedKmh ?? 0,
     recordedAt: new Date(position.timestamp).toISOString(),
   });
   return { ok: false, message: `GPS를 오프라인 큐에 저장했습니다. (${result.error.message})` };

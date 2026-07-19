@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 driver overspeed warning
+
+- Overspeed warning is no longer limited to the speed/map tab.
+- Driver trip screen now checks speed-zone alerts after GPS point saves while a trip is active.
+- GPS point saves can now receive an OBD speed override so zones still evaluate when Android GPS speed is missing.
+- Foreground warning uses phone vibration plus an alert popup with vehicle, zone, current speed, and speed limit.
+
 ## 2026-07-19 active trip live dashboard
 
 - Active driver trip screen now shows phone-readable live information when the app is opened mid-drive.
