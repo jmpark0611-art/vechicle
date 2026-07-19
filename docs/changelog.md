@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-07-19 driver trip required input guard
+
+- Removed the redundant `계기판 - km` label from the driver vehicle card because the start odometer input is the authoritative value.
+- Driver trip start now blocks before saving when any required field is blank, with a specific Korean alert for the first missing field.
+- Start odometer input is validated directly so invalid text cannot silently fall back to a saved vehicle km value.
+- Verification passed with `npm.cmd run verify`.
+
 ## 2026-07-19 cross-tab data refresh
 
 - Records, driver trip, and diagnostics tabs now refresh their shared vehicle/trip/OBD/maintenance data when the tab receives focus.

@@ -492,17 +492,45 @@ export default function TripScreen() {
 
   async function handleStartTrip() {
     if (!selectedVehicleId) {
-      Alert.alert('차량 선택 필요', '운행을 시작할 차량을 선택해 주세요.');
+      Alert.alert('입력 필요', '차량을 선택하세요.');
       return;
     }
-    if (!startPlace.trim() || !endPlace.trim()) {
-      Alert.alert('입력 필요', '출발지와 목적지를 입력해 주세요.');
+    if (!operatorRank.trim()) {
+      Alert.alert('입력 필요', '운행자 계급을 입력하세요.');
+      return;
+    }
+    if (!operatorName.trim()) {
+      Alert.alert('입력 필요', '운행자 성명을 입력하세요.');
+      return;
+    }
+    if (!sameUser && !userRank.trim()) {
+      Alert.alert('입력 필요', '사용자 계급을 입력하세요.');
+      return;
+    }
+    if (!sameUser && !userName.trim()) {
+      Alert.alert('입력 필요', '사용자 성명을 입력하세요.');
+      return;
+    }
+    if (!purpose.trim()) {
+      Alert.alert('입력 필요', '운행 목적을 입력하세요.');
+      return;
+    }
+    if (!startPlace.trim()) {
+      Alert.alert('입력 필요', '출발지를 입력하세요.');
+      return;
+    }
+    if (!endPlace.trim()) {
+      Alert.alert('입력 필요', '목적지를 입력하세요.');
+      return;
+    }
+    if (!startOdometer.trim()) {
+      Alert.alert('입력 필요', '출발 계기판 km를 입력하세요.');
       return;
     }
 
-    const startOdo = parseKm(startOdometer) ?? selectedCurrentKm ?? undefined;
+    const startOdo = parseKm(startOdometer);
     if (startOdo === undefined) {
-      Alert.alert('계기판 누적거리 필요', 'OBD 표준 데이터로는 계기판 총 누적거리를 읽지 못할 수 있습니다. 최초 1회 출발 계기판 km를 입력해 주세요.');
+      Alert.alert('입력 필요', '출발 계기판 km를 숫자로 입력하세요.');
       return;
     }
 
@@ -796,7 +824,6 @@ export default function TripScreen() {
         <View style={styles.formCard}>
           <View style={styles.compactHeader}>
             <Text style={styles.formTitle}>차량</Text>
-            <Text style={styles.compactMeta}>계기판 {formatKm(selectedCurrentKm)}</Text>
           </View>
           <VehicleDropdown vehicles={vehicles} selectedVehicleId={selectedVehicleId} onSelect={setSelectedVehicleId} compact />
           <View style={styles.compactStatus}>
@@ -908,7 +935,6 @@ const styles = StyleSheet.create({
   },
   compactHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   formTitle: { color: '#0F172A', fontSize: 15, fontWeight: '700' },
-  compactMeta: { color: '#64748B', fontSize: 11, fontWeight: '500' },
   tripCard: {
     borderRadius: 20,
     backgroundColor: '#FFFFFF',

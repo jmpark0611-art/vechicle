@@ -3,6 +3,13 @@
 ## 2026-07-15 latest handoff
 
 - Current branch: `claude/env-permissions-session-restart-154onb`.
+- 2026-07-19 driver trip required input guard:
+  - User asked to remove the circled `계기판 - km` display in driver mode and prevent trip start if any input field is blank.
+  - `app/(tabs)/index.tsx` now removes that redundant vehicle-card odometer label.
+  - Trip start validates vehicle, operator rank/name, user rank/name when not same as operator, purpose, start/end places, and start odometer one by one before calling Supabase.
+  - The alert message names the missing field, e.g. `운행자 계급을 입력하세요.`
+  - Start odometer is parsed from the input itself; invalid text no longer falls back to the stored current-km baseline.
+  - `npm.cmd run verify` passed.
 - 2026-07-19 cross-tab data refresh:
   - User asked whether initial phone/scanner connection can read the dashboard total odometer and emphasized that driver-mode data must sync into all commander-mode tabs, and commander tabs must sync with one another.
   - Limitation to preserve in future work: standard ELM327/OBD PID data usually does not provide the vehicle dashboard's total cumulative odometer. Use the saved vehicle current-km baseline plus GPS trip distance unless a manufacturer-specific PID/profile is added later.
