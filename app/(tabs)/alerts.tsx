@@ -331,7 +331,7 @@ export default function AlertsScreen() {
       metrics={[
         { label: '전체 알림', value: `${alerts.length + longActiveTrips.length}건` },
         { label: '정비 필요', value: `${alerts.filter((item) => item.severity === 'bad').length}건` },
-        { label: '미종료 확인', value: `${longActiveTrips.length}건` },
+        { label: '미종료 확인', value: `${longActiveTrips.length - criticalLongActiveTrips.length}건` },
         { label: '장기 미종료', value: `${criticalLongActiveTrips.length}건` },
       ]}>
       {isLoading ? (
