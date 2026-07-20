@@ -7,7 +7,7 @@ import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { useRoleGuard } from '@/hooks/use-role-guard';
 import { fetchTripGpsDistances } from '@/lib/gps-data';
 import { fetchFuelEvents, fetchTripFuelUsage, loadSyncedObdSnapshot, type FuelEvent, type ObdSnapshot, type TripFuelUsage } from '@/lib/obd-data';
-import { deleteTripsByIds, fetchTripsReadOnly, fetchVehiclesReadOnly, type TripSummary, type VehicleSummary } from '@/lib/readonly-data';
+import { deleteTripsByIds, fetchTripsReadOnly, fetchVehiclesReadOnly, type TripDateRange, type TripSummary, type VehicleSummary } from '@/lib/readonly-data';
 
 function formatTripTime(value: string | null) {
   if (!value) return '-';
@@ -66,6 +66,22 @@ function currentMonthRange() {
   };
 }
 
+function monthRangeFor(year: number, month: number): TripDateRange {
+  return {
+    from: new Date(year, month, 1).toISOString(),
+    to: new Date(year, month + 1, 1).toISOString(),
+  };
+}
+
+function monthLabel(year: number, month: number) {
+  const now = new Date();
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+  const isLastMonth = year === (month === 0 ? now.getFullYear() - 1 : now.getFullYear()) && month === (now.getMonth() === 0 ? 11 : now.getMonth() - 1);
+  if (isCurrentMonth) return '이번달';
+  if (isLastMonth) return '지난달';
+  return `${year}.${month + 1}`;
+}
+
 function fuelEventText(events: FuelEvent[], vehicleId: string | null) {
   if (!vehicleId) return '';
   return events
@@ -114,12 +130,20 @@ export default function RecordsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [filterYear, setFilterYear] = useState(() => new Date().getFullYear());
+  const [filterMonth, setFilterMonth] = useState(() => new Date().getMonth());
+  const [showAllMonths, setShowAllMonths] = useState(false);
 
-  const loadData = useCallback(async () => {
+  const activeDateRange = useMemo<TripDateRange | undefined>(
+    () => (showAllMonths ? undefined : monthRangeFor(filterYear, filterMonth)),
+    [filterYear, filterMonth, showAllMonths]
+  );
+
+  const loadData = useCallback(async (dateRange?: TripDateRange) => {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const [nextTrips, nextVehicles] = await Promise.all([fetchTripsReadOnly(100), fetchVehiclesReadOnly(200)]);
+      const [nextTrips, nextVehicles] = await Promise.all([fetchTripsReadOnly(200, dateRange), fetchVehiclesReadOnly(200)]);
       const vehicleIds = nextVehicles.map((vehicle) => vehicle.id);
       const [obd, nextGpsDistances, nextTripFuelUsage] = await Promise.all([
         loadSyncedObdSnapshot(vehicleIds),
@@ -142,20 +166,42 @@ export default function RecordsScreen() {
   }, []);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    void loadData(activeDateRange);
+  }, [loadData, activeDateRange]);
 
   useFocusEffect(
     useCallback(() => {
-      void loadData();
+      void loadData(activeDateRange);
+    // activeDateRange는 useFocusEffect에 의존하지 않음 — 포커스 시 현재 필터로 새로고침
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loadData])
   );
+
+  function shiftMonth(delta: number) {
+    setShowAllMonths(false);
+    setFilterMonth((m) => {
+      const next = m + delta;
+      if (next < 0) { setFilterYear((y) => y - 1); return 11; }
+      if (next > 11) { setFilterYear((y) => y + 1); return 0; }
+      return next;
+    });
+  }
 
   const filtered = useMemo(
     () => (selectedVehicleId ? trips.filter((trip) => trip.vehicleId === selectedVehicleId) : trips),
     [selectedVehicleId, trips]
   );
   const completedCount = useMemo(() => filtered.filter((trip) => trip.status === 'completed').length, [filtered]);
+  const totalOdometerKm = useMemo(
+    () => filtered.reduce((sum, trip) => {
+      const km = trip.dailyKm ?? (
+        trip.startOdometer !== null && trip.endOdometer !== null && trip.endOdometer >= trip.startOdometer
+          ? trip.endOdometer - trip.startOdometer : 0
+      );
+      return sum + Math.max(0, km ?? 0);
+    }, 0),
+    [filtered]
+  );
 
   function parseDateStart(value: string) {
     const date = new Date(`${value.trim()}T00:00:00`);
@@ -278,11 +324,36 @@ export default function RecordsScreen() {
   return (
     <RebuildScreen
       title="기록"
-      metrics={[{ label: '완료', value: `${completedCount}건` }]}
+      metrics={[
+        { label: '완료', value: `${completedCount}건` },
+        { label: '계기판 합계', value: `${Math.round(totalOdometerKm).toLocaleString('ko-KR')}km` },
+      ]}
       bottomSpace="tab">
-      <Pressable style={styles.refreshBtn} onPress={() => void loadData()} disabled={isLoading}>
-        <Text style={styles.refreshBtnText}>{isLoading ? '불러오는 중' : '새로고침'}</Text>
-      </Pressable>
+
+      {/* 월 필터 */}
+      <View style={styles.monthFilterRow}>
+        <Pressable style={styles.monthArrow} onPress={() => shiftMonth(-1)}>
+          <Text style={styles.monthArrowText}>◀</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.monthChip, !showAllMonths && styles.monthChipActive]}
+          onPress={() => setShowAllMonths(false)}>
+          <Text style={[styles.monthChipText, !showAllMonths && styles.monthChipTextActive]}>
+            {monthLabel(filterYear, filterMonth)}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[styles.monthChip, showAllMonths && styles.monthChipActive]}
+          onPress={() => setShowAllMonths(true)}>
+          <Text style={[styles.monthChipText, showAllMonths && styles.monthChipTextActive]}>전체</Text>
+        </Pressable>
+        <Pressable style={styles.monthArrow} onPress={() => shiftMonth(1)}>
+          <Text style={styles.monthArrowText}>▶</Text>
+        </Pressable>
+        <Pressable style={styles.refreshBtn} onPress={() => void loadData(activeDateRange)} disabled={isLoading}>
+          <Text style={styles.refreshBtnText}>{isLoading ? '…' : '↻'}</Text>
+        </Pressable>
+      </View>
 
       <Pressable style={styles.exportBtn} onPress={() => setExportModalVisible(true)}>
         <Text style={styles.exportBtnText}>월장비운행증 엑셀 내보내기</Text>
@@ -384,18 +455,43 @@ export default function RecordsScreen() {
 }
 
 const styles = StyleSheet.create({
-  refreshBtn: {
-    alignSelf: 'flex-end',
-    minHeight: 36,
-    borderRadius: 12,
-    backgroundColor: '#EAF2FF',
+  monthFilterRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
+    gap: 6,
     marginTop: 4,
     marginBottom: 10,
   },
-  refreshBtnText: { color: '#2563EB', fontSize: 13, fontWeight: '700' },
+  monthArrow: {
+    width: 32,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#EAF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthArrowText: { color: '#2563EB', fontSize: 14, fontWeight: '700' },
+  monthChip: {
+    flex: 1,
+    minHeight: 36,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  monthChipActive: { backgroundColor: '#2563EB' },
+  monthChipText: { color: '#475569', fontSize: 13, fontWeight: '600' },
+  monthChipTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  refreshBtn: {
+    minHeight: 36,
+    width: 36,
+    borderRadius: 10,
+    backgroundColor: '#EAF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  refreshBtnText: { color: '#2563EB', fontSize: 16, fontWeight: '700' },
   exportBtn: {
     minHeight: 48,
     borderRadius: 14,

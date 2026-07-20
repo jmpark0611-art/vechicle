@@ -264,26 +264,26 @@ export async function deleteVehicleAndTrips(vehicleId: string): Promise<void> {
   }
 }
 
-async function fetchTripsWithSelect(limit: number, activeOnly: boolean, includeExtended: boolean) {
+export type TripDateRange = { from: string; to: string };
+
+async function fetchTripsWithSelect(limit: number, activeOnly: boolean, includeExtended: boolean, dateRange?: TripDateRange) {
   const unitCode = await getStoredUnitCode();
   let query = supabase.from('trips').select(tripSelect(includeExtended));
   if (unitCode) query = query.or(`unit_code.eq.${unitCode},unit_code.is.null`);
-  if (activeOnly) {
-    query = query.eq('status', 'in_progress');
-  }
+  if (activeOnly) query = query.eq('status', 'in_progress');
+  if (dateRange) query = query.gte('start_time', dateRange.from).lte('start_time', dateRange.to);
   return withRequestTimeout(query.order('start_time', { ascending: false }).limit(limit), activeOnly ? '진행 중 운행' : '운행 기록');
 }
 
-async function fetchLegacyTripsWithSelect(limit: number, activeOnly: boolean, includeExtended: boolean) {
+async function fetchLegacyTripsWithSelect(limit: number, activeOnly: boolean, includeExtended: boolean, dateRange?: TripDateRange) {
   let query = supabase.from('trips').select(legacyTripSelect(includeExtended));
-  if (activeOnly) {
-    query = query.eq('status', 'in_progress');
-  }
+  if (activeOnly) query = query.eq('status', 'in_progress');
+  if (dateRange) query = query.gte('start_time', dateRange.from).lte('start_time', dateRange.to);
   return withRequestTimeout(query.order('start_time', { ascending: false }).limit(limit), activeOnly ? '진행 중 운행' : '운행 기록');
 }
 
-async function fetchTripRows(limit: number, activeOnly: boolean): Promise<TripRow[]> {
-  const extended = await fetchTripsWithSelect(limit, activeOnly, true);
+async function fetchTripRows(limit: number, activeOnly: boolean, dateRange?: TripDateRange): Promise<TripRow[]> {
+  const extended = await fetchTripsWithSelect(limit, activeOnly, true, dateRange);
   if (!extended.error) {
     return (extended.data ?? []) as unknown as TripRow[];
   }
@@ -292,7 +292,7 @@ async function fetchTripRows(limit: number, activeOnly: boolean): Promise<TripRo
     throw new Error(extended.error.message);
   }
 
-  const legacyExtended = await fetchLegacyTripsWithSelect(limit, activeOnly, true);
+  const legacyExtended = await fetchLegacyTripsWithSelect(limit, activeOnly, true, dateRange);
   if (!legacyExtended.error) {
     return (legacyExtended.data ?? []) as unknown as TripRow[];
   }
@@ -300,7 +300,7 @@ async function fetchTripRows(limit: number, activeOnly: boolean): Promise<TripRo
     throw new Error(legacyExtended.error.message);
   }
 
-  const basic = await fetchLegacyTripsWithSelect(limit, activeOnly, false);
+  const basic = await fetchLegacyTripsWithSelect(limit, activeOnly, false, dateRange);
   if (basic.error) {
     throw new Error(basic.error.message);
   }
@@ -308,8 +308,8 @@ async function fetchTripRows(limit: number, activeOnly: boolean): Promise<TripRo
   return (basic.data ?? []) as unknown as TripRow[];
 }
 
-export async function fetchTripsReadOnly(limit = 20): Promise<TripSummary[]> {
-  const [vehicles, trips] = await Promise.all([fetchVehiclesReadOnly(200), fetchTripRows(limit, false)]);
+export async function fetchTripsReadOnly(limit = 20, dateRange?: TripDateRange): Promise<TripSummary[]> {
+  const [vehicles, trips] = await Promise.all([fetchVehiclesReadOnly(200), fetchTripRows(limit, false, dateRange)]);
   const vehicleById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle.vehicleNumber]));
   return trips.map((trip) => mapTrip(trip, vehicleById));
 }

@@ -1,5 +1,15 @@
 # 변경 이력
 
+## 2026-07-19 monthly filter for records tab
+
+- 기록탭 상단에 월 필터 바 추가: ◀ 이전달 | 현재월 | 전체 | 다음달 ▶.
+- 기본값은 이번달 — 화면 진입 시 이번달 운행만 조회.
+- Supabase 쿼리에 `gte/lte start_time` 범위 필터를 전달해 불필요한 데이터 전송 없음.
+- `lib/readonly-data.ts`: `fetchTripsReadOnly(limit, dateRange?)`, 내부 쿼리 함수에 `TripDateRange` 파라미터 추가.
+- 기록탭 metrics에 계기판 합계 km 추가 (현재 필터·차량 기준).
+- 새로고침 버튼은 현재 선택 월 범위를 유지하며 재조회.
+- `npm run verify` 통과, Android export 통과.
+
 ## 2026-07-19 purpose chips and recent destinations
 
 - 운행탭 운행 목적 필드 아래에 군 공통 목적 칩 10개 추가: 부대업무·물자수송·교육훈련·출장·정비수리·환자후송·식량수령·피복수령·지휘관수송·행정지원.
