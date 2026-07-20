@@ -1,5 +1,14 @@
 # 변경 이력
 
+## 2026-07-19 purpose chips and recent destinations
+
+- 운행탭 운행 목적 필드 아래에 군 공통 목적 칩 10개 추가: 부대업무·물자수송·교육훈련·출장·정비수리·환자후송·식량수령·피복수령·지휘관수송·행정지원.
+- 칩 탭 → 목적 필드 자동 입력. 이미 선택된 칩 재탭 → 지움. 자유 입력도 그대로 유지.
+- 목적지 필드 아래에 최근 사용한 목적지 칩 최대 6개 표시 (중복 제거, 최신순).
+- 운행 시작 성공 시 목적지를 `recent_end_places_v1` AsyncStorage 키에 저장.
+- `lib/last-trip-input.ts`에 `loadRecentEndPlaces()` / `saveRecentEndPlace()` 추가.
+- `npm run verify` 통과, Android export 통과.
+
 ## 2026-07-19 rank picker for driver form
 
 - 운행탭 인원 카드의 계급 입력이 자유 텍스트에서 계급 피커 모달로 변경.

@@ -42,7 +42,7 @@ import {
   type ObdBleDevice,
   type ObdLiveData,
 } from '@/lib/obd-ble';
-import { loadLastTripInput, saveLastTripInput } from '@/lib/last-trip-input';
+import { loadLastTripInput, loadRecentEndPlaces, saveLastTripInput, saveRecentEndPlace } from '@/lib/last-trip-input';
 import {
   cancelManualTrip,
   completeManualTrip,
@@ -56,6 +56,8 @@ import {
 } from '@/lib/readonly-data';
 
 const DRIVER_SPEED_CHECK_MS = 3_000;
+
+const PURPOSE_CHIPS = ['부대업무', '물자수송', '교육훈련', '출장', '정비수리', '환자후송', '식량수령', '피복수령', '지휘관수송', '행정지원'];
 
 const RANK_GROUPS: { label: string; ranks: string[] }[] = [
   { label: '병사', ranks: ['이병', '일병', '상병', '병장'] },
@@ -158,6 +160,7 @@ export default function TripScreen() {
   const [savedBleDeviceId, setSavedBleDeviceId] = useState<string | null>(null);
   const [savedBleDeviceName, setSavedBleDeviceName] = useState<string | null>(null);
   const [rankPickerTarget, setRankPickerTarget] = useState<'operator' | 'user' | null>(null);
+  const [recentEndPlaces, setRecentEndPlaces] = useState<string[]>([]);
 
   const activeTripsRef = useRef<TripSummary[]>([]);
   const obdLiveRef = useRef<ObdLiveData | null>(null);
@@ -513,14 +516,16 @@ export default function TripScreen() {
 
   useEffect(() => {
     void (async () => {
-      const saved = await loadLastTripInput();
-      if (!saved) return;
-      setOperatorRank((prev) => (prev ? prev : saved.operatorRank));
-      setOperatorName((prev) => (prev ? prev : saved.operatorName));
-      setUserRank((prev) => (prev ? prev : saved.userRank));
-      setUserName((prev) => (prev ? prev : saved.userName));
-      setSameUser((prev) => (prev ? prev : saved.sameUser));
-      setStartPlace((prev) => (prev && prev !== '본부대' ? prev : saved.startPlace || '본부대'));
+      const [saved, places] = await Promise.all([loadLastTripInput(), loadRecentEndPlaces()]);
+      if (saved) {
+        setOperatorRank((prev) => (prev ? prev : saved.operatorRank));
+        setOperatorName((prev) => (prev ? prev : saved.operatorName));
+        setUserRank((prev) => (prev ? prev : saved.userRank));
+        setUserName((prev) => (prev ? prev : saved.userName));
+        setSameUser((prev) => (prev ? prev : saved.sameUser));
+        setStartPlace((prev) => (prev && prev !== '본부대' ? prev : saved.startPlace || '본부대'));
+      }
+      setRecentEndPlaces(places);
     })();
   }, []);
 
@@ -663,6 +668,7 @@ export default function TripScreen() {
       setActiveTrips([trip]);
       tripStartFuelRef.current[trip.id] = typeof obdLiveData?.fuelPercent === 'number' ? obdLiveData.fuelPercent : null;
       void saveLastTripInput({ operatorRank, operatorName, userRank, userName, sameUser, startPlace });
+      void saveRecentEndPlace(endPlace).then(() => loadRecentEndPlaces().then(setRecentEndPlaces));
       setLastCompletion(null);
       setObdInterruption(null);
       void clearTripObdInterruption();
@@ -1092,10 +1098,32 @@ export default function TripScreen() {
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>운행 정보</Text>
           <TextInput style={styles.input} value={purpose} onChangeText={setPurpose} placeholder="운행 목적" placeholderTextColor="#94A3B8" />
-          <View style={styles.twoCol}>
+          <View style={styles.chipRow}>
+            {PURPOSE_CHIPS.map((chip) => (
+              <Pressable
+                key={chip}
+                style={[styles.quickChip, purpose === chip && styles.quickChipSelected]}
+                onPress={() => setPurpose((prev) => (prev === chip ? '' : chip))}>
+                <Text style={[styles.quickChipText, purpose === chip && styles.quickChipTextSelected]}>{chip}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={[styles.twoCol, { marginTop: 8 }]}>
             <TextInput style={styles.halfInput} value={startPlace} onChangeText={setStartPlace} placeholder="출발지" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.halfInput} value={endPlace} onChangeText={setEndPlace} placeholder="목적지" placeholderTextColor="#94A3B8" />
           </View>
+          {recentEndPlaces.length > 0 ? (
+            <View style={styles.chipRow}>
+              {recentEndPlaces.map((place) => (
+                <Pressable
+                  key={place}
+                  style={[styles.quickChip, endPlace === place && styles.quickChipSelected]}
+                  onPress={() => setEndPlace((prev) => (prev === place ? '' : place))}>
+                  <Text style={[styles.quickChipText, endPlace === place && styles.quickChipTextSelected]}>{place}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
           <TextInput
             style={styles.input}
             value={startOdometer}
@@ -1416,6 +1444,18 @@ const styles = StyleSheet.create({
   longTripBannerBody: { color: '#7F1D1D', fontSize: 13, fontWeight: '400', lineHeight: 18 },
   longTripBannerTitleWarn: { color: '#92400E', fontSize: 14, fontWeight: '700', marginBottom: 4 },
   longTripBannerBodyWarn: { color: '#78350F', fontSize: 13, fontWeight: '400', lineHeight: 18 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  quickChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#DCEAF8',
+    backgroundColor: '#F8FAFC',
+  },
+  quickChipSelected: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+  quickChipText: { color: '#475569', fontSize: 12, fontWeight: '500' },
+  quickChipTextSelected: { color: '#FFFFFF', fontWeight: '700' },
   rankPickerBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   rankPickerText: { color: '#0F172A', fontSize: 14, fontWeight: '500' },
   rankPickerPlaceholder: { color: '#94A3B8', fontSize: 14, fontWeight: '400' },
