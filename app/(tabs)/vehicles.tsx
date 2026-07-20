@@ -8,7 +8,6 @@ import { clearStoredRole } from '@/lib/role';
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { useRoleGuard } from '@/hooks/use-role-guard';
-import { showLiveEcuAlertPopup } from '@/lib/fleet-alerts';
 import {
   getVehicleMaintenanceState,
   loadSyncedMaintenanceSnapshot,
@@ -191,10 +190,6 @@ export default function VehiclesScreen() {
         if (!vehicleId) return;
 
         try {
-          const vehicle = vehiclesRef.current.find((item) => item.id === vehicleId);
-          if (vehicle) {
-            void showLiveEcuAlertPopup(vehicle, data);
-          }
           const reading = liveToReading(vehicleId, data);
           setObdSnapshot((current) => ({ ...current, [vehicleId]: reading }));
           const now = Date.now();
@@ -370,6 +365,16 @@ export default function VehiclesScreen() {
   return (
     <RebuildScreen title="진단" bottomSpace="compact">
       <View style={styles.topActionRow}>
+        <Pressable
+          style={styles.changeRoleBtn}
+          onPress={() => {
+            Alert.alert('역할 변경', '현재 역할을 해제하고 선택 화면으로 이동합니다.', [
+              { text: '취소', style: 'cancel' },
+              { text: '변경', onPress: async () => { await clearStoredRole(); router.replace('/role-select'); } },
+            ]);
+          }}>
+          <Text style={styles.changeRoleBtnText}>역할 변경</Text>
+        </Pressable>
         <Pressable style={styles.registerOpenBtn} onPress={() => setIsRegisterOpen(true)}>
           <Text style={styles.registerOpenText}>차량 등록</Text>
         </Pressable>
@@ -446,27 +451,17 @@ export default function VehiclesScreen() {
         </View>
       </Modal>
 
-      <SectionCard title="설정">
-        <Pressable
-          style={styles.changeRoleBtn}
-          onPress={() => {
-            Alert.alert('역할 변경', '현재 역할을 해제하고 선택 화면으로 이동합니다.', [
-              { text: '취소', style: 'cancel' },
-              { text: '변경', onPress: async () => { await clearStoredRole(); router.replace('/role-select'); } },
-            ]);
-          }}>
-          <Text style={styles.changeRoleBtnText}>역할 변경</Text>
-        </Pressable>
-      </SectionCard>
     </RebuildScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  changeRoleBtn: { minHeight: 42, borderRadius: 10, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
-  changeRoleBtnText: { color: '#475569', fontSize: 14, fontWeight: '800' },
+  changeRoleBtn: { paddingVertical: 6, paddingHorizontal: 2 },
+  changeRoleBtnText: { color: '#64748B', fontSize: 13, fontWeight: '700' },
   topActionRow: {
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: -48,
     marginBottom: 12,
     paddingRight: 2,
