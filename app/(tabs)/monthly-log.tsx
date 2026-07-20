@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard } from '@/components/rebuild-screen';
@@ -109,6 +109,10 @@ export default function MonthlyLogScreen() {
       void loadData();
     }, [loadData])
   );
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const totalKm = useMemo(() => {
     return trips.reduce((sum, t) => {

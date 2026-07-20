@@ -522,7 +522,7 @@ export default function TripScreen() {
         setOperatorName((prev) => (prev ? prev : saved.operatorName));
         setUserRank((prev) => (prev ? prev : saved.userRank));
         setUserName((prev) => (prev ? prev : saved.userName));
-        setSameUser((prev) => (prev ? prev : saved.sameUser));
+        setSameUser(saved.sameUser ?? false);
         setStartPlace((prev) => (prev && prev !== '본부대' ? prev : saved.startPlace || '본부대'));
       }
       setRecentEndPlaces(places);
