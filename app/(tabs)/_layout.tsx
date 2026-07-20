@@ -29,7 +29,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      initialRouteName={isAdmin ? 'monthly-log' : isCommander ? 'monthly-log' : 'index'}
+      initialRouteName={isAdmin ? 'vehicles' : isCommander ? 'vehicles' : 'index'}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: ACTIVE,
