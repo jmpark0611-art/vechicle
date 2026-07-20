@@ -83,7 +83,7 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="check"
-        options={{ title: '점검', tabBarIcon: ({ color }) => <TabGlyph label="✓" color={color} />, href: (isCommander || isAdmin) ? undefined : null }}
+        options={{ href: null }}
       />
     </Tabs>
   );

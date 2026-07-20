@@ -1,6 +1,9 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+
+import { clearStoredRole } from '@/lib/role';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
@@ -442,11 +445,26 @@ export default function VehiclesScreen() {
           </View>
         </View>
       </Modal>
+
+      <SectionCard title="설정">
+        <Pressable
+          style={styles.changeRoleBtn}
+          onPress={() => {
+            Alert.alert('역할 변경', '현재 역할을 해제하고 선택 화면으로 이동합니다.', [
+              { text: '취소', style: 'cancel' },
+              { text: '변경', onPress: async () => { await clearStoredRole(); router.replace('/role-select'); } },
+            ]);
+          }}>
+          <Text style={styles.changeRoleBtnText}>역할 변경</Text>
+        </Pressable>
+      </SectionCard>
     </RebuildScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  changeRoleBtn: { minHeight: 42, borderRadius: 10, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  changeRoleBtnText: { color: '#475569', fontSize: 14, fontWeight: '800' },
   topActionRow: {
     alignItems: 'flex-end',
     marginTop: -48,
