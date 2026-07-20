@@ -144,7 +144,7 @@ function getAlertPopupLine(item: MaintenanceAlert | EcuAlert) {
 }
 
 export default function AlertsScreen() {
-  useRoleGuard(['commander']);
+  useRoleGuard(['commander', 'admin']);
 
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [activeTrips, setActiveTrips] = useState<TripSummary[]>([]);

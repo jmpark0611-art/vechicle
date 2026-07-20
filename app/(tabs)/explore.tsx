@@ -111,7 +111,7 @@ function groupTripsByDay(trips: TripSummary[]) {
 }
 
 export default function RecordsScreen() {
-  useRoleGuard(['commander']);
+  useRoleGuard(['commander', 'admin']);
 
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
@@ -172,9 +172,7 @@ export default function RecordsScreen() {
   useFocusEffect(
     useCallback(() => {
       void loadData(activeDateRange);
-    // activeDateRange는 useFocusEffect에 의존하지 않음 — 포커스 시 현재 필터로 새로고침
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [loadData])
+    }, [loadData, activeDateRange])
   );
 
   function shiftMonth(delta: number) {

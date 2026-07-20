@@ -63,27 +63,27 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="explore"
-        options={{ title: '기록', tabBarIcon: ({ color }) => <TabGlyph label="☰" color={color} />, href: isCommander ? undefined : null }}
+        options={{ title: '기록', tabBarIcon: ({ color }) => <TabGlyph label="☰" color={color} />, href: (isCommander || isAdmin) ? undefined : null }}
       />
       <Tabs.Screen
         name="vehicles"
-        options={{ title: '진단', tabBarIcon: ({ color }) => <TabGlyph label="▣" color={color} />, href: isCommander ? undefined : null }}
+        options={{ title: '진단', tabBarIcon: ({ color }) => <TabGlyph label="▣" color={color} />, href: (isCommander || isAdmin) ? undefined : null }}
       />
       <Tabs.Screen
         name="alerts"
-        options={{ title: '정비', tabBarIcon: ({ color }) => <TabGlyph label="!" color={color} />, href: isCommander ? undefined : null }}
+        options={{ title: '정비', tabBarIcon: ({ color }) => <TabGlyph label="!" color={color} />, href: (isCommander || isAdmin) ? undefined : null }}
       />
       <Tabs.Screen
         name="map"
-        options={{ href: null }}
+        options={{ title: '속도', tabBarIcon: ({ color }) => <TabGlyph label="⊙" color={color} />, href: (isCommander || isAdmin) ? undefined : null }}
       />
       <Tabs.Screen
         name="monthly-log"
-        options={{ title: '운행증', tabBarIcon: ({ color }) => <TabGlyph label="≡" color={color} />, href: isCommander ? undefined : null }}
+        options={{ title: '운행증', tabBarIcon: ({ color }) => <TabGlyph label="≡" color={color} />, href: (isCommander || isAdmin) ? undefined : null }}
       />
       <Tabs.Screen
         name="check"
-        options={{ title: '점검', tabBarIcon: ({ color }) => <TabGlyph label="✓" color={color} />, href: isCommander ? undefined : null }}
+        options={{ title: '점검', tabBarIcon: ({ color }) => <TabGlyph label="✓" color={color} />, href: (isCommander || isAdmin) ? undefined : null }}
       />
     </Tabs>
   );

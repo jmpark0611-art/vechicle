@@ -144,7 +144,7 @@ async function checkTripsExtendedColumns(): Promise<TableCheck> {
   if (!result.error) {
     return { label: 'trips 확장 컬럼', table: 'trips_columns', status: 'ok', value: '적용됨' };
   }
-  const isColMissing = result.error.code === 'PGRST204' || /column|does not exist/i.test(result.error.message);
+  const isColMissing = result.error.code === '42703' || result.error.code === 'PGRST204' || /column|does not exist/i.test(result.error.message);
   return {
     label: 'trips 확장 컬럼',
     table: 'trips_columns',
@@ -161,7 +161,7 @@ function statusText(status: TableCheck['status'], table?: string) {
 }
 
 export default function CheckScreen() {
-  useRoleGuard(['commander']);
+  useRoleGuard(['commander', 'admin']);
 
   const sdkVersion = Constants.expoConfig?.sdkVersion ?? '54';
   const [result, setResult] = useState<DiagnosticResult | null>(null);

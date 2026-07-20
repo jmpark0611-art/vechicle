@@ -96,7 +96,7 @@ function liveToReading(vehicleId: string, data: ObdLiveData): ObdReading {
 }
 
 export default function VehiclesScreen() {
-  useRoleGuard(['commander']);
+  useRoleGuard(['commander', 'admin']);
 
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);

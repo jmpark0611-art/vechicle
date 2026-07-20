@@ -28,7 +28,7 @@ function fmtTime(iso: string | null) {
 }
 
 function fmtKm(trip: TripSummary) {
-  if (trip.dailyKm != null) return `${trip.dailyKm}km`;
+  if (trip.dailyKm != null) return `${Math.round(trip.dailyKm)}km`;
   if (trip.startOdometer != null && trip.endOdometer != null) return `${Math.round(trip.endOdometer - trip.startOdometer)}km`;
   return '-';
 }
@@ -99,8 +99,12 @@ export default function MonthlyLogScreen() {
   useFocusEffect(
     useCallback(() => {
       void (async () => {
-        const vs = await fetchVehiclesReadOnly(50);
-        setVehicles(vs);
+        try {
+          const vs = await fetchVehiclesReadOnly(50);
+          setVehicles(vs);
+        } catch {
+          // vehicles list unavailable; dropdown stays empty
+        }
       })();
       void loadData();
     }, [loadData])
@@ -198,7 +202,7 @@ export default function MonthlyLogScreen() {
               ))}
               {/* Total row */}
               <View style={styles.totalRow}>
-                <Text style={[styles.totalCell, { width: COL.date + COL.time + COL.time + COL.place + COL.purpose + COL.place + COL.person + COL.person + 56 }]}>
+                <Text style={[styles.totalCell, { width: COL.date + COL.time + COL.time + COL.place + COL.purpose + COL.place + COL.person + COL.person + 70 }]}>
                   합계 {trips.length}건
                 </Text>
                 <Text style={[styles.totalCell, { width: COL.km }]}>
