@@ -355,7 +355,15 @@ export default function RecordsScreen() {
         </Pressable>
       </View>
 
-      <Pressable style={styles.exportBtn} onPress={() => setExportModalVisible(true)}>
+      <Pressable style={styles.exportBtn} onPress={() => {
+        if (!showAllMonths) {
+          const from = new Date(filterYear, filterMonth, 1);
+          const to = new Date(filterYear, filterMonth + 1, 0);
+          setExportFrom(`${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, '0')}-01`);
+          setExportTo(`${to.getFullYear()}-${String(to.getMonth() + 1).padStart(2, '0')}-${String(to.getDate()).padStart(2, '0')}`);
+        }
+        setExportModalVisible(true);
+      }}>
         <Text style={styles.exportBtnText}>월장비운행증 엑셀 내보내기</Text>
       </Pressable>
 

@@ -1011,7 +1011,19 @@ export default function TripScreen() {
         </View>
 
         <View style={styles.formCard}>
-          <Text style={styles.formTitle}>인원</Text>
+          <View style={styles.compactHeader}>
+            <Text style={styles.formTitle}>인원</Text>
+            <Pressable
+              onPress={() => {
+                setOperatorRank('');
+                setOperatorName('');
+                setUserRank('');
+                setUserName('');
+                setSameUser(false);
+              }}>
+              <Text style={styles.resetBtnText}>초기화</Text>
+            </Pressable>
+          </View>
           <View style={styles.twoCol}>
             <Pressable style={[styles.halfInput, styles.rankPickerBtn]} onPress={() => setRankPickerTarget('operator')}>
               <Text style={operatorRank ? styles.rankPickerText : styles.rankPickerPlaceholder}>
@@ -1444,6 +1456,7 @@ const styles = StyleSheet.create({
   longTripBannerBody: { color: '#7F1D1D', fontSize: 13, fontWeight: '400', lineHeight: 18 },
   longTripBannerTitleWarn: { color: '#92400E', fontSize: 14, fontWeight: '700', marginBottom: 4 },
   longTripBannerBodyWarn: { color: '#78350F', fontSize: 13, fontWeight: '400', lineHeight: 18 },
+  resetBtnText: { color: '#94A3B8', fontSize: 12, fontWeight: '600' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
   quickChip: {
     paddingHorizontal: 10,
