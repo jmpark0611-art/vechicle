@@ -82,6 +82,26 @@ create policy "allow all" on public.speed_zones
 alter table public.obd_logs enable row level security;
 create policy "allow all" on public.obd_logs
   for all using (true) with check (true);`,
+
+  units: `create table public.units (
+  code text primary key,
+  name text not null,
+  commander_pin text
+);
+alter table public.units enable row level security;
+create policy "allow all" on public.units
+  for all using (true) with check (true);`,
+
+  trips_columns: `alter table public.trips
+  add column if not exists purpose text,
+  add column if not exists operator_name text,
+  add column if not exists operator_rank text,
+  add column if not exists user_name text,
+  add column if not exists user_rank text,
+  add column if not exists daily_km numeric,
+  add column if not exists start_odometer numeric,
+  add column if not exists end_odometer numeric,
+  add column if not exists unit_code text;`,
 };
 
 async function withRequestTimeout<T>(promise: PromiseLike<T>, label: string): Promise<T> {
@@ -113,10 +133,30 @@ async function countTable(label: string, table: string): Promise<TableCheck> {
   return { label, table, status: count > 0 ? 'ok' : 'empty', value: `${count.toLocaleString('ko-KR')}건` };
 }
 
-function statusText(status: TableCheck['status']) {
+async function checkTripsExtendedColumns(): Promise<TableCheck> {
+  const result = await withRequestTimeout(
+    supabase
+      .from('trips')
+      .select('purpose, operator_name, operator_rank, user_name, user_rank, daily_km, start_odometer, end_odometer')
+      .limit(1),
+    'trips 확장 컬럼 확인'
+  );
+  if (!result.error) {
+    return { label: 'trips 확장 컬럼', table: 'trips_columns', status: 'ok', value: '적용됨' };
+  }
+  const isColMissing = result.error.code === 'PGRST204' || /column|does not exist/i.test(result.error.message);
+  return {
+    label: 'trips 확장 컬럼',
+    table: 'trips_columns',
+    status: isColMissing ? 'missing' : 'error',
+    value: isColMissing ? '미적용 (ALTER 필요)' : result.error.message,
+  };
+}
+
+function statusText(status: TableCheck['status'], table?: string) {
   if (status === 'ok') return '정상';
   if (status === 'empty') return '비어 있음';
-  if (status === 'missing') return '테이블 없음';
+  if (status === 'missing') return table === 'trips_columns' ? '미적용' : '테이블 없음';
   return '오류';
 }
 
@@ -150,18 +190,20 @@ export default function CheckScreen() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const [vehicles, trips, gpsPoints, maintenanceRecords, speedZones, obdLogs] = await Promise.all([
+      const [vehicles, trips, tripsColumns, gpsPoints, maintenanceRecords, speedZones, obdLogs, units] = await Promise.all([
         fetchVehiclesReadOnly(5),
         fetchTripsReadOnly(5),
+        checkTripsExtendedColumns(),
         countTable('GPS 위치', 'gps_points'),
         countTable('정비 기록', 'maintenance_records'),
         countTable('속도구역', 'speed_zones'),
         countTable('OBD 기록', 'obd_logs'),
+        countTable('부대', 'units'),
       ]);
       setResult({
         vehicles: vehicles.length,
         trips: trips.length,
-        tableChecks: [gpsPoints, maintenanceRecords, speedZones, obdLogs],
+        tableChecks: [tripsColumns, gpsPoints, maintenanceRecords, speedZones, obdLogs, units],
       });
     } catch (error) {
       setResult(null);
@@ -219,7 +261,7 @@ export default function CheckScreen() {
         <SectionCard title="기능 테이블">
           {result?.tableChecks.map((item) => (
             <View key={item.table}>
-              <StatusLine label={item.label} value={`${statusText(item.status)} · ${item.value}`} />
+              <StatusLine label={item.label} value={`${statusText(item.status, item.table)} · ${item.value}`} />
               {item.status === 'missing' && TABLE_SQL[item.table] ? (
                 <View style={styles.sqlCard}>
                   <Text style={styles.sqlHint}>Supabase Dashboard → SQL Editor에서 실행하세요</Text>
