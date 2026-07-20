@@ -5,14 +5,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleMap } from '@/components/vehicle-map';
 import { useRoleGuard } from '@/hooks/use-role-guard';
-import { createSpeedZone, fetchLocationSnapshot, type LocationSnapshot, type ZonePoint } from '@/lib/location-data';
+import { createSpeedZone, deleteSpeedZone, fetchLocationSnapshot, type LocationSnapshot, type ZonePoint } from '@/lib/location-data';
 import { generateVehicleMapHtml } from '@/lib/map-html';
 import { overspeedWarningKey, showOverspeedWarning } from '@/lib/overspeed-warning';
 
 const SPEED_REFRESH_MS = 10_000;
 
 export default function MapScreen() {
-  useRoleGuard(['admin']);
+  useRoleGuard(['commander', 'admin']);
 
   const insets = useSafeAreaInsets();
   const [snapshot, setSnapshot] = useState<LocationSnapshot>({ positions: [], zones: [], alerts: [], message: '대기' });
@@ -92,6 +92,24 @@ export default function MapScreen() {
     setMapDraftRevision((current) => current + 1);
   }
 
+  async function handleDeleteZone(id: string, name: string) {
+    Alert.alert('구역 삭제', `"${name}" 구역을 삭제하시겠습니까?`, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          const result = await deleteSpeedZone(id);
+          if (result.ok) {
+            await loadLocation();
+          } else {
+            Alert.alert('삭제 실패', result.message);
+          }
+        },
+      },
+    ]);
+  }
+
   async function handleCreateZone() {
     const speedLimitKmh = Number(zoneLimit.trim());
 
@@ -143,23 +161,30 @@ export default function MapScreen() {
         <>
           <VehicleMap html={previewMapHtml} style={styles.map} />
 
-          <SectionCard title="속도구역 등록" body="구역명과 제한속도를 입력한 뒤 큰 지도에서 경계점을 찍으세요.">
+          <SectionCard title="속도구역 등록">
+            <Text style={styles.formGuide}>구역명과 제한속도를 먼저 입력하고 → <Text style={styles.formGuideAccent}>구역 설정</Text>에서 지도 경계점을 찍으세요</Text>
             <View style={styles.zoneInputRow}>
-              <TextInput
-                style={[styles.input, styles.zoneNameInput]}
-                value={zoneName}
-                onChangeText={setZoneName}
-                placeholder="구역명"
-                placeholderTextColor="#94A3B8"
-              />
-              <TextInput
-                style={[styles.input, styles.zoneLimitInput]}
-                value={zoneLimit}
-                onChangeText={setZoneLimit}
-                placeholder="km/h"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-              />
+              <View style={styles.inputWrap}>
+                <Text style={styles.inputLabel}>구역명</Text>
+                <TextInput
+                  style={styles.input}
+                  value={zoneName}
+                  onChangeText={setZoneName}
+                  placeholder="예) 정문 앞 도로"
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
+              <View style={styles.inputWrapSmall}>
+                <Text style={styles.inputLabel}>제한속도</Text>
+                <TextInput
+                  style={styles.input}
+                  value={zoneLimit}
+                  onChangeText={setZoneLimit}
+                  placeholder="km/h"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="number-pad"
+                />
+              </View>
             </View>
             <View style={styles.draftToolbar}>
               <Text style={styles.draftCount}>꼭짓점 {polygonPoints.length}개</Text>
@@ -172,19 +197,25 @@ export default function MapScreen() {
             </Pressable>
           </SectionCard>
 
-          <SectionCard title="제한속도 구역">
+          <SectionCard title={`제한속도 구역 (${snapshot.zones.length}개)`}>
             {snapshot.zones.length === 0 ? (
               <StatusLine label="상태" value="등록 구역 없음" />
             ) : (
-              snapshot.zones.slice(0, 2).map((zone) => (
+              snapshot.zones.map((zone) => (
                 <View key={zone.id} style={styles.listItem}>
-                  <Text style={styles.listTitle}>{zone.name}</Text>
-                  <StatusLine label="방식" value={zone.zoneKind === 'polygon' ? `면적 ${zone.polygonPoints.length}점` : '기존 원형'} />
-                  <StatusLine label="제한속도" value={`${Math.round(zone.speedLimitKmh)}km/h`} />
+                  <View style={styles.listHeader}>
+                    <Text style={styles.listTitle}>{zone.name}</Text>
+                    <Pressable style={styles.deleteBtn} onPress={() => void handleDeleteZone(zone.id, zone.name)}>
+                      <Text style={styles.deleteBtnText}>삭제</Text>
+                    </Pressable>
+                  </View>
+                  <View style={styles.listMeta}>
+                    <Text style={styles.listMetaText}>{zone.zoneKind === 'polygon' ? `면적 ${zone.polygonPoints.length}점` : '원형'}</Text>
+                    <Text style={styles.listSpeed}>{Math.round(zone.speedLimitKmh)} km/h</Text>
+                  </View>
                 </View>
               ))
             )}
-            {snapshot.zones.length > 2 ? <Text style={styles.moreText}>외 {snapshot.zones.length - 2}개 구역 저장됨</Text> : null}
           </SectionCard>
 
           <Modal visible={isPickerOpen} animationType="slide" onRequestClose={() => setIsPickerOpen(false)}>
@@ -219,20 +250,23 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
   map: { height: 196, borderRadius: 14, marginBottom: 10 },
-  zoneInputRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  formGuide: { fontSize: 13, color: '#475569', fontWeight: '600', marginBottom: 10, lineHeight: 20 },
+  formGuideAccent: { color: '#2563EB', fontWeight: '800' },
+  zoneInputRow: { flexDirection: 'row', gap: 10 },
+  inputWrap: { flex: 1.6 },
+  inputWrapSmall: { flex: 1 },
+  inputLabel: { fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 5 },
   input: {
-    minHeight: 44,
+    minHeight: 46,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#DCEAF8',
     backgroundColor: '#F8FAFC',
     color: '#0F172A',
     fontSize: 15,
     fontWeight: '800',
     paddingHorizontal: 14,
   },
-  zoneNameInput: { flex: 1.5 },
-  zoneLimitInput: { flex: 0.8 },
   draftToolbar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 9 },
   draftCount: { flex: 1, color: '#0F172A', fontSize: 14, fontWeight: '900' },
   smallButton: {
@@ -254,9 +288,19 @@ const styles = StyleSheet.create({
     marginTop: 9,
   },
   mapPickBtnText: { color: '#2563EB', fontSize: 14, fontWeight: '900' },
-  listItem: { borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 9, marginTop: 9 },
-  listTitle: { color: '#0F172A', fontSize: 15, fontWeight: '900' },
-  moreText: { color: '#64748B', fontSize: 12, fontWeight: '800', marginTop: 8 },
+  listItem: { borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 10, marginTop: 10 },
+  listHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  listTitle: { color: '#0F172A', fontSize: 15, fontWeight: '900', flex: 1, marginRight: 8 },
+  deleteBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: '#FEE2E2',
+  },
+  deleteBtnText: { color: '#DC2626', fontSize: 12, fontWeight: '800' },
+  listMeta: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  listMetaText: { color: '#64748B', fontSize: 13, fontWeight: '600' },
+  listSpeed: { color: '#2563EB', fontSize: 13, fontWeight: '800' },
   modalRoot: { flex: 1, backgroundColor: '#F8FAFC' },
   modalHeader: {
     minHeight: 86,

@@ -383,3 +383,13 @@ export async function createSpeedZone(input: CreateSpeedZoneInput): Promise<{ ok
 
   return { ok: false, message: result.error.message };
 }
+
+export async function deleteSpeedZone(id: string): Promise<{ ok: boolean; message: string }> {
+  const result = await withRequestTimeout(
+    supabase.from('speed_zones').delete().eq('id', id),
+    '제한속도 구역 삭제'
+  );
+  if (!result.error) return { ok: true, message: '구역을 삭제했습니다.' };
+  if (isMissingTable(result.error)) return { ok: false, message: 'speed_zones 테이블이 아직 DB에 적용되지 않았습니다.' };
+  return { ok: false, message: result.error.message };
+}

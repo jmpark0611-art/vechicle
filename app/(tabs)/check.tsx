@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { useRoleGuard } from '@/hooks/use-role-guard';
@@ -206,6 +206,11 @@ export default function CheckScreen() {
         {currentRole === 'admin' ? <Text style={styles.pinHint}>관리자 PIN은 임시로 1862입니다.</Text> : null}
       </SectionCard>
 
+      <TouchableOpacity style={styles.speedZoneBtn} onPress={() => router.push('/(tabs)/map')}>
+        <Text style={styles.speedZoneBtnText}>⚡ 속도구역 관리</Text>
+        <Text style={styles.speedZoneBtnArrow}>›</Text>
+      </TouchableOpacity>
+
       {isLoading ? (
         <LoadingCard label="점검 중" />
       ) : errorMessage ? (
@@ -242,6 +247,19 @@ const styles = StyleSheet.create({
   },
   changeRoleBtnText: { color: '#64748B', fontSize: 14, fontWeight: '600' },
   pinHint: { color: '#94A3B8', fontSize: 12, fontWeight: '500', marginTop: 10 },
+  speedZoneBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 50,
+    borderRadius: 14,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#DCEAF8',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  speedZoneBtnText: { flex: 1, color: '#1D4ED8', fontSize: 15, fontWeight: '800' },
+  speedZoneBtnArrow: { color: '#2563EB', fontSize: 22, fontWeight: '400' },
   sqlCard: {
     backgroundColor: '#F8FAFC',
     borderRadius: 10,

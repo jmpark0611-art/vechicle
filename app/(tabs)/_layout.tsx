@@ -75,7 +75,7 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="map"
-        options={{ title: '속도', tabBarIcon: ({ color }) => <TabGlyph label="⚡" color={color} />, href: isAdmin ? undefined : null }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="check"
