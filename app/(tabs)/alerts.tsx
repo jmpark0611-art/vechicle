@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
@@ -155,6 +155,8 @@ export default function AlertsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [completionModal, setCompletionModal] = useState<{ vehicle: VehicleSummary; item: MaintenanceItem } | null>(null);
+  const [completionKmText, setCompletionKmText] = useState('');
   const refreshInFlightRef = useRef(false);
   const announcedAlertKeysRef = useRef<Set<string>>(new Set());
   const hasLoadedAnnouncementsRef = useRef(false);
@@ -249,10 +251,12 @@ export default function AlertsScreen() {
   const maintenanceCards = selectedVehicle && selectedState
     ? MAINTENANCE_ITEMS.map((item) => {
         const remainingKm = getRemainingKm(selectedState, item);
+        const lastReplacedKm = selectedState.completedKm[item.key];
         return {
           item,
           title: maintenanceLabel(item),
-          value: remainingKm === null ? '현재 km 필요' : remainingLabel(remainingKm),
+          remainingValue: remainingKm === null ? '현재 km 필요' : remainingLabel(remainingKm),
+          lastReplacedKm,
           detail: `${item.intervalKm.toLocaleString('ko-KR')}km 주기`,
           tone: remainingKm !== null && remainingKm <= 0 ? 'bad' : remainingKm !== null && remainingKm <= 1000 ? 'warn' : 'ok',
         };
@@ -276,19 +280,27 @@ export default function AlertsScreen() {
     Alert.alert(title, `${body}${suffix}`);
   }, [alerts, errorMessage, isLoading]);
 
-  async function handleCompleteMaintenance(alertItem: MaintenanceAlert) {
-    const state = getVehicleMaintenanceState(maintenanceSnapshot, alertItem.vehicle.id);
-    if (state.currentKm === null) {
-      Alert.alert('현재 km 필요', '진단 탭에서 차량의 현재 계기판 기준을 먼저 저장해 주세요.');
+  function openCompletionModal(vehicle: VehicleSummary, item: MaintenanceItem) {
+    const state = getVehicleMaintenanceState(maintenanceSnapshot, vehicle.id);
+    const defaultKm = state.currentKm ?? state.completedKm[item.key] ?? null;
+    setCompletionModal({ vehicle, item });
+    setCompletionKmText(defaultKm !== null ? String(defaultKm) : '');
+  }
+
+  async function handleConfirmCompletion() {
+    if (!completionModal) return;
+    const km = parseInt(completionKmText.replace(/[^0-9]/g, ''), 10);
+    if (!Number.isFinite(km) || km <= 0) {
+      Alert.alert('입력 오류', '교체 당시 계기판 km을 입력해 주세요.');
       return;
     }
-
+    setCompletionModal(null);
     setIsSaving(true);
     try {
-      const nextSnapshot = await completeMaintenanceItem(alertItem.vehicle.id, alertItem.item.key, state.currentKm);
+      const nextSnapshot = await completeMaintenanceItem(completionModal.vehicle.id, completionModal.item.key, km);
       setMaintenanceSnapshot(nextSnapshot);
-      await syncMaintenanceCompletion(alertItem.vehicle.id, alertItem.item.key, state.currentKm);
-      Alert.alert('교체 완료', `${alertItem.vehicle.vehicleNumber} · ${maintenanceLabel(alertItem.item)}\n기준 ${formatKm(state.currentKm)}`);
+      await syncMaintenanceCompletion(completionModal.vehicle.id, completionModal.item.key, km);
+      Alert.alert('교체 완료', `${completionModal.vehicle.vehicleNumber} · ${maintenanceLabel(completionModal.item)}\n교체 km ${formatKm(km)}`);
     } catch (error) {
       Alert.alert('교체 기록 실패', error instanceof Error ? error.message : '교체 기록을 저장하지 못했습니다.');
     } finally {
@@ -393,7 +405,7 @@ export default function AlertsScreen() {
                     </Text>
                     <Pressable
                       style={styles.completeButton}
-                      onPress={() => item.kind === 'maintenance' ? void handleCompleteMaintenance(item) : void handleAcknowledgeEcu(item)}
+                      onPress={() => item.kind === 'maintenance' ? openCompletionModal(item.vehicle, item.item) : void handleAcknowledgeEcu(item)}
                       disabled={isSaving}>
                       <Text style={styles.completeButtonText}>{item.kind === 'maintenance' ? '교체완료' : '점검완료'}</Text>
                     </Pressable>
@@ -404,6 +416,37 @@ export default function AlertsScreen() {
           ) : null}
         </>
       )}
+
+      <Modal visible={completionModal !== null} transparent animationType="fade" onRequestClose={() => setCompletionModal(null)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setCompletionModal(null)} />
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>교체 완료 기록</Text>
+            {completionModal ? (
+              <Text style={styles.modalSub}>{completionModal.vehicle.vehicleNumber} · {completionModal.item.label}</Text>
+            ) : null}
+            <Text style={styles.modalInputLabel}>교체 당시 계기판 (km)</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={completionKmText}
+              onChangeText={setCompletionKmText}
+              keyboardType="numeric"
+              placeholder="예: 45000"
+              placeholderTextColor="#94A3B8"
+              returnKeyType="done"
+              onSubmitEditing={() => void handleConfirmCompletion()}
+            />
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalCancelBtn} onPress={() => setCompletionModal(null)}>
+                <Text style={styles.modalCancelText}>취소</Text>
+              </Pressable>
+              <Pressable style={styles.modalConfirmBtn} onPress={() => void handleConfirmCompletion()} disabled={isSaving}>
+                <Text style={styles.modalConfirmText}>확인</Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {!isLoading && !errorMessage && vehicles.length > 0 ? (
         <SectionCard title="차량 설정" body="차량을 선택하면 현재 기준거리와 주기성 교환품목을 확인할 수 있습니다.">
@@ -419,18 +462,20 @@ export default function AlertsScreen() {
                 {maintenanceCards.map((card, index) => (
                   <View key={card.item.key} style={[styles.maintenanceCard, { backgroundColor: PART_COLORS[index % PART_COLORS.length] }, card.tone === 'bad' && styles.badCard, card.tone === 'warn' && styles.warnCard]}>
                     <Text style={styles.cardTitle} numberOfLines={1}>{card.title}</Text>
-                    <Text style={styles.cardValue} numberOfLines={2} adjustsFontSizeToFit>{card.value}</Text>
+                    <View style={styles.trackBlock}>
+                      <Text style={styles.trackLabel}>잔여</Text>
+                      <Text style={styles.cardValue} numberOfLines={1} adjustsFontSizeToFit>{card.remainingValue}</Text>
+                    </View>
+                    <View style={styles.trackBlock}>
+                      <Text style={styles.trackLabel}>교체</Text>
+                      <Text style={styles.cardReplace} numberOfLines={1}>
+                        {card.lastReplacedKm !== undefined ? formatKm(card.lastReplacedKm) : '이력 없음'}
+                      </Text>
+                    </View>
                     <Text style={styles.cardDetail} numberOfLines={1}>{card.detail}</Text>
                     <Pressable
                       style={styles.cardAction}
-                      onPress={() => void handleCompleteMaintenance({
-                        kind: 'maintenance',
-                        id: `${selectedVehicle.id}:${card.item.key}`,
-                        severity: card.tone === 'bad' ? 'bad' : 'warn',
-                        vehicle: selectedVehicle,
-                        item: card.item,
-                        remainingKm: getRemainingKm(selectedState, card.item) ?? 0,
-                      })}
+                      onPress={() => openCompletionModal(selectedVehicle, card.item)}
                       disabled={isSaving}>
                       <Text style={styles.cardActionText}>교체완료</Text>
                     </Pressable>
@@ -485,7 +530,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   maintenanceCard: {
     width: '48%',
-    minHeight: 116,
+    minHeight: 140,
     borderRadius: 15,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.72)',
@@ -503,4 +548,55 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardActionText: { color: '#5B7CFA', fontSize: 12, fontWeight: '900' },
+  trackBlock: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  trackLabel: { fontSize: 9, fontWeight: '900', color: '#7180A3', width: 22, textAlign: 'right' },
+  cardReplace: { fontSize: 11, fontWeight: '800', color: '#52607D', flexShrink: 1 },
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  modalCard: {
+    width: '82%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#2563EB',
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '900', color: '#0F172A', marginBottom: 4 },
+  modalSub: { fontSize: 13, fontWeight: '700', color: '#52607D', marginBottom: 18 },
+  modalInputLabel: { fontSize: 12, fontWeight: '800', color: '#64748B', marginBottom: 6 },
+  modalInput: {
+    borderWidth: 1.5,
+    borderColor: '#BFDBFE',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    backgroundColor: '#F0F7FF',
+    marginBottom: 20,
+  },
+  modalButtons: { flexDirection: 'row', gap: 10 },
+  modalCancelBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelText: { color: '#64748B', fontSize: 15, fontWeight: '800' },
+  modalConfirmBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalConfirmText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
 });

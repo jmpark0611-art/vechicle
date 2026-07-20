@@ -252,14 +252,13 @@ export async function mergeVehicleCurrentKm(
 export async function completeMaintenanceItem(
   vehicleId: string,
   itemKey: MaintenanceKey,
-  currentKm: number
+  replacedAtKm: number
 ): Promise<MaintenanceSnapshot> {
   const snapshot = await loadMaintenanceSnapshot();
   const previous = snapshot[vehicleId] ?? emptyState();
-  const nextKm = Math.max(0, Math.round(currentKm));
+  const nextKm = Math.max(0, Math.round(replacedAtKm));
   snapshot[vehicleId] = {
     ...previous,
-    currentKm: nextKm,
     completedKm: {
       ...previous.completedKm,
       [itemKey]: nextKm,
