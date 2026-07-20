@@ -29,7 +29,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      initialRouteName={isAdmin ? 'map' : isCommander ? 'explore' : 'index'}
+      initialRouteName={isAdmin ? 'monthly-log' : isCommander ? 'monthly-log' : 'index'}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: ACTIVE,
@@ -63,7 +63,7 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="explore"
-        options={{ title: '기록', tabBarIcon: ({ color }) => <TabGlyph label="☰" color={color} />, href: (isCommander || isAdmin) ? undefined : null }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="vehicles"

@@ -1,11 +1,13 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
-import { LoadingCard, RebuildScreen, SectionCard } from '@/components/rebuild-screen';
+import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { useRoleGuard } from '@/hooks/use-role-guard';
-import { fetchTripsReadOnly, fetchVehiclesReadOnly, type TripSummary, type VehicleSummary } from '@/lib/readonly-data';
+import { fetchTripGpsDistances } from '@/lib/gps-data';
+import { fetchTripFuelUsage, type TripFuelUsage } from '@/lib/obd-data';
+import { deleteTripsByIds, fetchTripsReadOnly, fetchVehiclesReadOnly, type TripSummary, type VehicleSummary } from '@/lib/readonly-data';
 
 function monthStart(year: number, month: number) {
   return new Date(year, month, 1).toISOString();
@@ -21,10 +23,22 @@ function fmtDate(iso: string | null) {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
+function fmtDateFull(iso: string | null) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+}
+
 function fmtTime(iso: string | null) {
   if (!iso) return '-';
   const d = new Date(iso);
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+}
+
+function fmtDateTime(iso: string | null) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 }
 
 function fmtKm(trip: TripSummary) {
@@ -33,9 +47,29 @@ function fmtKm(trip: TripSummary) {
   return '-';
 }
 
+function tripKmNum(trip: TripSummary): number {
+  if (trip.dailyKm != null) return trip.dailyKm;
+  if (trip.startOdometer != null && trip.endOdometer != null) return Math.max(0, trip.endOdometer - trip.startOdometer);
+  return 0;
+}
+
 function fmtPerson(rank: string | null, name: string | null) {
   if (!rank && !name) return '-';
   return [rank, name].filter(Boolean).join(' ');
+}
+
+function fmtGps(gpsDistances: Record<string, number>, tripId: string) {
+  const v = gpsDistances[tripId];
+  return typeof v === 'number' && v > 0 ? `${v.toLocaleString('ko-KR')}km` : '-';
+}
+
+function fmtFuel(tripFuelUsage: TripFuelUsage, tripId: string) {
+  const v = tripFuelUsage[tripId];
+  return typeof v === 'number' && v > 0 ? `${Math.round(v * 10) / 10}%` : '-';
+}
+
+function csvCell(value: unknown) {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`;
 }
 
 const COL = {
@@ -70,7 +104,11 @@ export default function MonthlyLogScreen() {
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [trips, setTrips] = useState<TripSummary[]>([]);
+  const [gpsDistances, setGpsDistances] = useState<Record<string, number>>({});
+  const [tripFuelUsage, setTripFuelUsage] = useState<TripFuelUsage>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState<TripSummary | null>(null);
 
   const monthLabel = useMemo(() => `${year}년 ${month + 1}월`, [year, month]);
 
@@ -87,8 +125,16 @@ export default function MonthlyLogScreen() {
     if (!selectedVehicleId) return;
     setIsLoading(true);
     try {
-      const data = await fetchTripsReadOnly(200, { from: monthStart(year, month), to: monthEnd(year, month) });
-      setTrips(data.filter((t) => t.vehicleId === selectedVehicleId));
+      const allTrips = await fetchTripsReadOnly(200, { from: monthStart(year, month), to: monthEnd(year, month) });
+      const filtered = allTrips.filter((t) => t.vehicleId === selectedVehicleId);
+      const tripIds = filtered.map((t) => t.id);
+      const [gps, fuel] = await Promise.all([
+        fetchTripGpsDistances(tripIds),
+        fetchTripFuelUsage(tripIds),
+      ]);
+      setTrips(filtered);
+      setGpsDistances(gps);
+      setTripFuelUsage(fuel);
     } catch {
       setTrips([]);
     } finally {
@@ -114,18 +160,12 @@ export default function MonthlyLogScreen() {
     void loadData();
   }, [loadData]);
 
-  const totalKm = useMemo(() => {
-    return trips.reduce((sum, t) => {
-      if (t.dailyKm != null) return sum + t.dailyKm;
-      if (t.startOdometer != null && t.endOdometer != null) return sum + (t.endOdometer - t.startOdometer);
-      return sum;
-    }, 0);
-  }, [trips]);
+  const totalKm = useMemo(() => trips.reduce((sum, t) => sum + tripKmNum(t), 0), [trips]);
 
   async function handleExport() {
     if (trips.length === 0) { Alert.alert('내보내기', '기록이 없습니다.'); return; }
     const vehicleNum = vehicles.find((v) => v.id === selectedVehicleId)?.vehicleNumber ?? '';
-    const header = '일자,출발,도착,출발지,목적지,목적,운용자,사용자,거리';
+    const header = '일자,출발,도착,출발지,목적지,목적,운용자,사용자,거리,GPS거리,유류소모';
     const rows = trips.map((t) =>
       [
         fmtDate(t.startTime),
@@ -137,8 +177,10 @@ export default function MonthlyLogScreen() {
         fmtPerson(t.operatorRank, t.operatorName),
         fmtPerson(t.userRank, t.userName),
         fmtKm(t),
+        fmtGps(gpsDistances, t.id),
+        fmtFuel(tripFuelUsage, t.id),
       ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .map(csvCell)
         .join(',')
     );
     await Share.share({
@@ -147,9 +189,35 @@ export default function MonthlyLogScreen() {
     });
   }
 
+  function confirmDelete() {
+    if (trips.length === 0 || isDeleting) return;
+    const vehicleNum = vehicles.find((v) => v.id === selectedVehicleId)?.vehicleNumber ?? '';
+    Alert.alert(
+      '운행 기록 삭제',
+      `${monthLabel} ${vehicleNum} 운행 기록 ${trips.length}건을 삭제합니다. 복구할 수 없습니다.`,
+      [
+        { text: '취소', style: 'cancel' },
+        { text: '삭제', style: 'destructive', onPress: () => { void handleDelete(); } },
+      ]
+    );
+  }
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    try {
+      await deleteTripsByIds(trips.map((t) => t.id));
+      setTrips([]);
+      Alert.alert('삭제 완료', '운행 기록을 삭제했습니다.');
+    } catch (error) {
+      Alert.alert('삭제 실패', error instanceof Error ? error.message : '삭제하지 못했습니다.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <RebuildScreen
-      title="월장비운행증"
+      title="운행증"
       metrics={[
         { label: monthLabel, value: `${trips.length}건` },
         { label: '합계거리', value: totalKm > 0 ? `${Math.round(totalKm)}km` : '-' },
@@ -184,15 +252,16 @@ export default function MonthlyLogScreen() {
         <SectionCard title={`운행 기록 (${trips.length}건)`}>
           <ScrollView horizontal showsHorizontalScrollIndicator style={styles.tableScroll}>
             <View style={{ minWidth: TOTAL_WIDTH }}>
-              {/* Header row */}
               <View style={styles.headerRow}>
                 {HEADERS.map((h) => (
                   <Text key={h.key} style={[styles.headerCell, { width: h.w }]}>{h.label}</Text>
                 ))}
               </View>
-              {/* Data rows */}
               {trips.map((t, idx) => (
-                <View key={t.id} style={[styles.dataRow, idx % 2 === 1 && styles.dataRowAlt]}>
+                <Pressable
+                  key={t.id}
+                  style={({ pressed }) => [styles.dataRow, idx % 2 === 1 && styles.dataRowAlt, pressed && styles.dataRowPressed]}
+                  onPress={() => setSelectedTrip(t)}>
                   <Text style={[styles.cell, { width: COL.date }]}>{fmtDate(t.startTime)}</Text>
                   <Text style={[styles.cell, { width: COL.time }]}>{fmtTime(t.startTime)}</Text>
                   <Text style={[styles.cell, { width: COL.time }]}>{fmtTime(t.endTime)}</Text>
@@ -202,9 +271,8 @@ export default function MonthlyLogScreen() {
                   <Text style={[styles.cell, { width: COL.person }]} numberOfLines={1}>{fmtPerson(t.operatorRank, t.operatorName)}</Text>
                   <Text style={[styles.cell, { width: COL.person }]} numberOfLines={1}>{fmtPerson(t.userRank, t.userName)}</Text>
                   <Text style={[styles.cell, { width: COL.km }]}>{fmtKm(t)}</Text>
-                </View>
+                </Pressable>
               ))}
-              {/* Total row */}
               <View style={styles.totalRow}>
                 <Text style={[styles.totalCell, { width: COL.date + COL.time + COL.time + COL.place + COL.purpose + COL.place + COL.person + COL.person + 70 }]}>
                   합계 {trips.length}건
@@ -215,11 +283,42 @@ export default function MonthlyLogScreen() {
               </View>
             </View>
           </ScrollView>
-          <Pressable style={styles.exportBtn} onPress={() => void handleExport()}>
-            <Text style={styles.exportBtnText}>CSV 내보내기</Text>
-          </Pressable>
+
+          <View style={styles.actionRow}>
+            <Pressable style={styles.exportBtn} onPress={() => void handleExport()}>
+              <Text style={styles.exportBtnText}>CSV 내보내기</Text>
+            </Pressable>
+            <Pressable style={[styles.deleteBtn, isDeleting && styles.disabledBtn]} onPress={confirmDelete} disabled={isDeleting}>
+              <Text style={styles.deleteBtnText}>{isDeleting ? '삭제 중' : '삭제'}</Text>
+            </Pressable>
+          </View>
         </SectionCard>
       )}
+
+      <Modal visible={selectedTrip !== null} transparent animationType="fade" onRequestClose={() => setSelectedTrip(null)}>
+        <View style={styles.modalDim}>
+          <View style={styles.detailModal}>
+            {selectedTrip ? (
+              <>
+                <Text style={styles.modalTitle}>{selectedTrip.vehicleNumber}</Text>
+                <Text style={styles.modalSub}>{fmtDateFull(selectedTrip.startTime)}</Text>
+                <StatusLine label="경로" value={`${selectedTrip.startPlace ?? '-'} → ${selectedTrip.endPlace ?? '-'}`} />
+                <StatusLine label="출발" value={fmtDateTime(selectedTrip.startTime)} />
+                <StatusLine label="도착" value={fmtDateTime(selectedTrip.endTime)} />
+                <StatusLine label="계기판 거리" value={fmtKm(selectedTrip)} />
+                <StatusLine label="GPS 참고거리" value={fmtGps(gpsDistances, selectedTrip.id)} />
+                <StatusLine label="유류 소모" value={fmtFuel(tripFuelUsage, selectedTrip.id)} />
+                <StatusLine label="목적" value={selectedTrip.purpose ?? '-'} />
+                <StatusLine label="운용자" value={fmtPerson(selectedTrip.operatorRank, selectedTrip.operatorName)} />
+                <StatusLine label="사용자" value={fmtPerson(selectedTrip.userRank, selectedTrip.userName)} />
+                <Pressable style={styles.modalClose} onPress={() => setSelectedTrip(null)}>
+                  <Text style={styles.modalCloseText}>닫기</Text>
+                </Pressable>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </RebuildScreen>
   );
 }
@@ -267,6 +366,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
   },
   dataRowAlt: { backgroundColor: '#F8FAFC' },
+  dataRowPressed: { backgroundColor: '#EFF6FF' },
   cell: {
     fontSize: 11,
     color: '#1E293B',
@@ -288,13 +388,43 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
   exportBtn: {
+    flex: 1,
     minHeight: 42,
     borderRadius: 12,
     backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
   },
   exportBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  deleteBtn: {
+    minHeight: 42,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    backgroundColor: '#FFF1F2',
+    borderWidth: 1,
+    borderColor: '#FFE4E6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtnText: { color: '#E11D48', fontSize: 14, fontWeight: '800' },
+  disabledBtn: { opacity: 0.5 },
+  modalDim: { flex: 1, backgroundColor: 'rgba(15,23,42,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  detailModal: { width: '100%', borderRadius: 18, backgroundColor: '#FFFFFF', padding: 20 },
+  modalTitle: { color: '#0F172A', fontSize: 20, fontWeight: '900' },
+  modalSub: { color: '#64748B', fontSize: 13, fontWeight: '600', marginTop: 2, marginBottom: 10 },
+  modalClose: {
+    minHeight: 46,
+    borderRadius: 12,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  modalCloseText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
 });
