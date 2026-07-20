@@ -57,7 +57,6 @@ import {
 
 const DRIVER_SPEED_CHECK_MS = 3_000;
 
-const PURPOSE_CHIPS = ['부대업무', '물자수송', '교육훈련', '출장', '정비수리', '환자후송', '식량수령', '피복수령', '지휘관수송', '행정지원'];
 
 const RANK_GROUPS: { label: string; ranks: string[] }[] = [
   { label: '병사', ranks: ['이병', '일병', '상병', '병장'] },
@@ -141,7 +140,7 @@ export default function TripScreen() {
   const [userRank, setUserRank] = useState('');
   const [sameUser, setSameUser] = useState(false);
   const [purpose, setPurpose] = useState('');
-  const [startPlace, setStartPlace] = useState('본부대');
+  const [startPlace, setStartPlace] = useState('');
   const [endPlace, setEndPlace] = useState('');
   const [startOdometer, setStartOdometer] = useState('');
   const [endOdometer, setEndOdometer] = useState('');
@@ -523,7 +522,7 @@ export default function TripScreen() {
         setUserRank((prev) => (prev ? prev : saved.userRank));
         setUserName((prev) => (prev ? prev : saved.userName));
         setSameUser(saved.sameUser ?? false);
-        setStartPlace((prev) => (prev && prev !== '본부대' ? prev : saved.startPlace || '본부대'));
+        setStartPlace((prev) => (prev ? prev : saved.startPlace ?? ''));
       }
       setRecentEndPlaces(places);
     })();
@@ -1110,16 +1109,6 @@ export default function TripScreen() {
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>운행 정보</Text>
           <TextInput style={styles.input} value={purpose} onChangeText={setPurpose} placeholder="운행 목적" placeholderTextColor="#94A3B8" />
-          <View style={styles.chipRow}>
-            {PURPOSE_CHIPS.map((chip) => (
-              <Pressable
-                key={chip}
-                style={[styles.quickChip, purpose === chip && styles.quickChipSelected]}
-                onPress={() => setPurpose((prev) => (prev === chip ? '' : chip))}>
-                <Text style={[styles.quickChipText, purpose === chip && styles.quickChipTextSelected]}>{chip}</Text>
-              </Pressable>
-            ))}
-          </View>
           <View style={[styles.twoCol, { marginTop: 8 }]}>
             <TextInput style={styles.halfInput} value={startPlace} onChangeText={setStartPlace} placeholder="출발지" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.halfInput} value={endPlace} onChangeText={setEndPlace} placeholder="목적지" placeholderTextColor="#94A3B8" />
