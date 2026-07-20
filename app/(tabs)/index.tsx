@@ -1119,12 +1119,26 @@ export default function TripScreen() {
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>운행 정보</Text>
           <TextInput style={styles.input} value={purpose} onChangeText={setPurpose} placeholder="운행 목적" placeholderTextColor="#94A3B8" />
+          {recentEndPlaces.length > 0 ? (
+            <View style={[styles.chipRow, { marginTop: 8, marginBottom: 0 }]}>
+              <Text style={styles.chipRowLabel}>출발지</Text>
+              {recentEndPlaces.slice(0, 4).map((place) => (
+                <Pressable
+                  key={`start-${place}`}
+                  style={[styles.quickChip, startPlace === place && styles.quickChipSelected]}
+                  onPress={() => setStartPlace((prev) => (prev === place ? '' : place))}>
+                  <Text style={[styles.quickChipText, startPlace === place && styles.quickChipTextSelected]}>{place}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
           <View style={[styles.twoCol, { marginTop: 8 }]}>
             <TextInput style={styles.halfInput} value={startPlace} onChangeText={setStartPlace} placeholder="출발지" placeholderTextColor="#94A3B8" />
             <TextInput style={styles.halfInput} value={endPlace} onChangeText={setEndPlace} placeholder="목적지" placeholderTextColor="#94A3B8" />
           </View>
           {recentEndPlaces.length > 0 ? (
-            <View style={styles.chipRow}>
+            <View style={[styles.chipRow, { marginTop: 4 }]}>
+              <Text style={styles.chipRowLabel}>목적지</Text>
               {recentEndPlaces.map((place) => (
                 <Pressable
                   key={place}
@@ -1456,7 +1470,8 @@ const styles = StyleSheet.create({
   longTripBannerTitleWarn: { color: '#92400E', fontSize: 14, fontWeight: '700', marginBottom: 4 },
   longTripBannerBodyWarn: { color: '#78350F', fontSize: 13, fontWeight: '400', lineHeight: 18 },
   resetBtnText: { color: '#94A3B8', fontSize: 12, fontWeight: '600' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8, alignItems: 'center' },
+  chipRowLabel: { fontSize: 10, color: '#94A3B8', marginRight: 2 },
   quickChip: {
     paddingHorizontal: 10,
     paddingVertical: 5,
