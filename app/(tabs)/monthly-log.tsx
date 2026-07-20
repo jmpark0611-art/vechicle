@@ -109,8 +109,9 @@ export default function MonthlyLogScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<TripSummary | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
-  const monthLabel = useMemo(() => `${year}년 ${month + 1}월`, [year, month]);
+  const monthLabel = useMemo(() => showAll ? '전체 기간' : `${year}년 ${month + 1}월`, [year, month, showAll]);
 
   function shiftMonth(delta: number) {
     setMonth((m) => {
@@ -125,7 +126,8 @@ export default function MonthlyLogScreen() {
     if (!selectedVehicleId) return;
     setIsLoading(true);
     try {
-      const allTrips = await fetchTripsReadOnly(200, { from: monthStart(year, month), to: monthEnd(year, month) });
+      const dateFilter = showAll ? undefined : { from: monthStart(year, month), to: monthEnd(year, month) };
+      const allTrips = await fetchTripsReadOnly(500, dateFilter);
       const filtered = allTrips.filter((t) => t.vehicleId === selectedVehicleId);
       const tripIds = filtered.map((t) => t.id);
       const [gps, fuel] = await Promise.all([
@@ -140,7 +142,7 @@ export default function MonthlyLogScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedVehicleId, year, month]);
+  }, [selectedVehicleId, year, month, showAll]);
 
   useFocusEffect(
     useCallback(() => {
@@ -232,14 +234,17 @@ export default function MonthlyLogScreen() {
           onSelect={(id) => { setSelectedVehicleId(id); }}
         />
         <View style={styles.monthRow}>
-          <Pressable style={styles.monthArrow} onPress={() => shiftMonth(-1)}>
+          <Pressable style={[styles.monthArrow, showAll && { opacity: 0.3 }]} onPress={() => { setShowAll(false); shiftMonth(-1); }} disabled={showAll}>
             <Text style={styles.monthArrowText}>◀</Text>
           </Pressable>
           <Text style={styles.monthLabel}>{monthLabel}</Text>
-          <Pressable style={styles.monthArrow} onPress={() => shiftMonth(1)}>
+          <Pressable style={[styles.monthArrow, showAll && { opacity: 0.3 }]} onPress={() => { setShowAll(false); shiftMonth(1); }} disabled={showAll}>
             <Text style={styles.monthArrowText}>▶</Text>
           </Pressable>
         </View>
+        <Pressable style={[styles.showAllBtn, showAll && styles.showAllBtnActive]} onPress={() => setShowAll((v) => !v)}>
+          <Text style={[styles.showAllBtnText, showAll && styles.showAllBtnTextActive]}>전체 기간</Text>
+        </Pressable>
       </SectionCard>
 
       {!selectedVehicleId ? (
@@ -296,7 +301,8 @@ export default function MonthlyLogScreen() {
       )}
 
       <Modal visible={selectedTrip !== null} transparent animationType="fade" onRequestClose={() => setSelectedTrip(null)}>
-        <View style={styles.modalDim}>
+        <Pressable style={styles.modalDim} onPress={() => setSelectedTrip(null)}>
+          <Pressable onPress={() => { /* stop propagation */ }}>
           <View style={styles.detailModal}>
             {selectedTrip ? (
               <>
@@ -317,7 +323,8 @@ export default function MonthlyLogScreen() {
               </>
             ) : null}
           </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </RebuildScreen>
   );
@@ -414,6 +421,10 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: { color: '#E11D48', fontSize: 14, fontWeight: '800' },
   disabledBtn: { opacity: 0.5 },
+  showAllBtn: { alignSelf: 'center', marginTop: 8, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
+  showAllBtnActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+  showAllBtnText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+  showAllBtnTextActive: { color: '#FFFFFF' },
   modalDim: { flex: 1, backgroundColor: 'rgba(15,23,42,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   detailModal: { width: '100%', borderRadius: 18, backgroundColor: '#FFFFFF', padding: 20 },
   modalTitle: { color: '#0F172A', fontSize: 20, fontWeight: '900' },

@@ -924,6 +924,13 @@ export default function TripScreen() {
           ) : null}
           <View style={styles.autoOdoBox}>
             <Text style={styles.autoOdoLabel}>도착 계기판 km</Text>
+            {(activeTrip.startOdometer !== null || startOdometer.trim()) ? (
+              <Text style={styles.autoOdoRef}>
+                출발 계기판: {activeTrip.startOdometer !== null
+                  ? `${Math.round(activeTrip.startOdometer).toLocaleString('ko-KR')} km`
+                  : `${startOdometer.trim()} km`}
+              </Text>
+            ) : null}
             <TextInput
               style={styles.endOdoInput}
               value={endOdometer}
@@ -935,11 +942,11 @@ export default function TripScreen() {
             <Text style={styles.autoOdoHint}>GPS 이동거리는 참고값으로만 저장됩니다.</Text>
           </View>
           <View style={styles.actionRow}>
-            <Pressable style={styles.cancelBtnWide} onPress={() => void handleCancelTrip(activeTrip)} disabled={isSaving}>
+            <Pressable style={[styles.cancelBtnWide, isSaving && { opacity: 0.5 }]} onPress={() => void handleCancelTrip(activeTrip)} disabled={isSaving}>
               <Text style={styles.cancelBtnText}>취소</Text>
             </Pressable>
-            <Pressable style={styles.endBtn} onPress={handlePrimaryAction} disabled={isSaving}>
-              <Text style={styles.endBtnText}>{isSaving ? '저장 중' : '운행 종료'}</Text>
+            <Pressable style={[styles.endBtn, isSaving && { opacity: 0.65 }]} onPress={handlePrimaryAction} disabled={isSaving}>
+              <Text style={styles.endBtnText}>{isSaving ? '저장 중…' : '운행 종료'}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -1275,7 +1282,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     justifyContent: 'center',
   },
-  autoOdoLabel: { color: '#64748B', fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  autoOdoLabel: { color: '#64748B', fontSize: 14, fontWeight: '600', marginBottom: 4 },
+  autoOdoRef: { color: '#2563EB', fontSize: 12, fontWeight: '700', marginBottom: 8 },
   endOdoInput: {
     minHeight: 44,
     borderRadius: 12,

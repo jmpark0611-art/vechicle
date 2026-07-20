@@ -155,7 +155,7 @@ export default function AlertsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [completionModal, setCompletionModal] = useState<{ vehicle: VehicleSummary; item: MaintenanceItem } | null>(null);
+  const [completionModal, setCompletionModal] = useState<{ vehicle: VehicleSummary; item: MaintenanceItem; currentKm: number | null; remainingKm: number | null } | null>(null);
   const [completionKmText, setCompletionKmText] = useState('');
   const refreshInFlightRef = useRef(false);
   const announcedAlertKeysRef = useRef<Set<string>>(new Set());
@@ -283,7 +283,8 @@ export default function AlertsScreen() {
   function openCompletionModal(vehicle: VehicleSummary, item: MaintenanceItem) {
     const state = getVehicleMaintenanceState(maintenanceSnapshot, vehicle.id);
     const defaultKm = state.currentKm ?? state.completedKm[item.key] ?? null;
-    setCompletionModal({ vehicle, item });
+    const remainingKm = getRemainingKm(state, item);
+    setCompletionModal({ vehicle, item, currentKm: state.currentKm, remainingKm });
     setCompletionKmText(defaultKm !== null ? String(defaultKm) : '');
   }
 
@@ -423,7 +424,17 @@ export default function AlertsScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>교체 완료 기록</Text>
             {completionModal ? (
-              <Text style={styles.modalSub}>{completionModal.vehicle.vehicleNumber} · {completionModal.item.label}</Text>
+              <>
+                <Text style={styles.modalSub}>{completionModal.vehicle.vehicleNumber} · {completionModal.item.label}</Text>
+                <View style={styles.modalRefRow}>
+                  <Text style={styles.modalRefText}>현재 기준: {completionModal.currentKm !== null ? formatKm(completionModal.currentKm) : '미설정'}</Text>
+                  {completionModal.remainingKm !== null ? (
+                    <Text style={[styles.modalRefText, completionModal.remainingKm <= 0 && { color: '#E11D48' }]}>
+                      잔여: {remainingLabel(completionModal.remainingKm)}
+                    </Text>
+                  ) : null}
+                </View>
+              </>
             ) : null}
             <Text style={styles.modalInputLabel}>교체 당시 계기판 (km)</Text>
             <TextInput
@@ -465,6 +476,9 @@ export default function AlertsScreen() {
                     <View style={styles.trackBlock}>
                       <Text style={styles.trackLabel}>잔여</Text>
                       <Text style={styles.cardValue} numberOfLines={1} adjustsFontSizeToFit>{card.remainingValue}</Text>
+                      {card.remainingValue === '현재 km 필요' ? (
+                        <Text style={styles.cardHint}>운행탭에서 출발 계기판 입력 시 자동 설정</Text>
+                      ) : null}
                     </View>
                     <View style={styles.trackBlock}>
                       <Text style={styles.trackLabel}>교체</Text>
@@ -548,9 +562,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardActionText: { color: '#5B7CFA', fontSize: 12, fontWeight: '900' },
-  trackBlock: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  trackLabel: { fontSize: 9, fontWeight: '900', color: '#7180A3', width: 22, textAlign: 'right' },
+  trackBlock: { flexDirection: 'column', gap: 1, marginTop: 2 },
+  trackLabel: { fontSize: 9, fontWeight: '900', color: '#7180A3' },
   cardReplace: { fontSize: 11, fontWeight: '800', color: '#52607D', flexShrink: 1 },
+  cardHint: { fontSize: 9, color: '#94A3B8', fontWeight: '600', marginTop: 1 },
+  modalRefRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
+  modalRefText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+  modalSub: { fontSize: 13, fontWeight: '700', color: '#52607D', marginBottom: 6 },
   modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
   modalCard: {
@@ -565,7 +583,6 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   modalTitle: { fontSize: 18, fontWeight: '900', color: '#0F172A', marginBottom: 4 },
-  modalSub: { fontSize: 13, fontWeight: '700', color: '#52607D', marginBottom: 18 },
   modalInputLabel: { fontSize: 12, fontWeight: '800', color: '#64748B', marginBottom: 6 },
   modalInput: {
     borderWidth: 1.5,
