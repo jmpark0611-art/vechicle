@@ -11,6 +11,7 @@ export type LastTripInput = {
   userName: string;
   sameUser: boolean;
   startPlace: string;
+  lastEndOdometer?: number;
 };
 
 export async function loadLastTripInput(): Promise<LastTripInput | null> {

@@ -173,6 +173,7 @@ export default function TripScreen() {
   const obdSnapshotSaveAtRef = useRef<Record<string, number>>({});
   const overspeedWarningStateRef = useRef<OverspeedWarningState | null>(null);
   const staleInterruptionPromptKeyRef = useRef<string | null>(null);
+  const lastEndOdometerRef = useRef<number | null>(null);
 
   activeTripsRef.current = activeTrips;
   obdLiveRef.current = obdLiveData;
@@ -523,6 +524,10 @@ export default function TripScreen() {
         setUserName((prev) => (prev ? prev : saved.userName));
         setSameUser(saved.sameUser ?? false);
         setStartPlace((prev) => (prev ? prev : saved.startPlace ?? ''));
+        if (saved.lastEndOdometer) {
+          lastEndOdometerRef.current = saved.lastEndOdometer;
+          setStartOdometer((prev) => (prev ? prev : String(saved.lastEndOdometer)));
+        }
       }
       setRecentEndPlaces(places);
     })();
@@ -666,7 +671,7 @@ export default function TripScreen() {
       setStartOdometer(String(Math.round(startOdo)));
       setActiveTrips([trip]);
       tripStartFuelRef.current[trip.id] = typeof obdLiveData?.fuelPercent === 'number' ? obdLiveData.fuelPercent : null;
-      void saveLastTripInput({ operatorRank, operatorName, userRank, userName, sameUser, startPlace });
+      void saveLastTripInput({ operatorRank, operatorName, userRank, userName, sameUser, startPlace, lastEndOdometer: undefined });
       void saveRecentEndPlace(endPlace).then(() => loadRecentEndPlaces().then(setRecentEndPlaces));
       setLastCompletion(null);
       setObdInterruption(null);
@@ -757,6 +762,8 @@ export default function TripScreen() {
         operator: [trip.operatorRank, trip.operatorName].filter(Boolean).join(' ') || [operatorRank, operatorName].filter(Boolean).join(' ') || '-',
         user: [trip.userRank, trip.userName].filter(Boolean).join(' ') || [sameUser ? operatorRank : userRank, sameUser ? operatorName : userName].filter(Boolean).join(' ') || '-',
       });
+      lastEndOdometerRef.current = confirmedEndOdo;
+      void saveLastTripInput({ operatorRank, operatorName, userRank, userName, sameUser, startPlace, lastEndOdometer: confirmedEndOdo });
       setActiveTrips([]);
       setObdInterruption(null);
       setPurpose('');
@@ -968,7 +975,10 @@ export default function TripScreen() {
           <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행목적</Text><Text style={styles.summaryVal}>{lastCompletion.purpose}</Text></View>
           <View style={styles.summaryLine}><Text style={styles.summaryKey}>운행자</Text><Text style={styles.summaryVal}>{lastCompletion.operator}</Text></View>
           <View style={styles.summaryLine}><Text style={styles.summaryKey}>사용자</Text><Text style={styles.summaryVal}>{lastCompletion.user}</Text></View>
-          <Pressable style={[styles.startBtn, { marginTop: 20 }]} onPress={() => setLastCompletion(null)}>
+          <Pressable style={[styles.startBtn, { marginTop: 20 }]} onPress={() => {
+            if (lastEndOdometerRef.current !== null) setStartOdometer(String(lastEndOdometerRef.current));
+            setLastCompletion(null);
+          }}>
             <Text style={styles.startBtnText}>새 운행 입력</Text>
           </Pressable>
         </ScrollView>
