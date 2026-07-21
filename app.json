@@ -3,6 +3,15 @@
     "name": "차량운행시스템",
     "slug": "vehicle-operation-system",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/EXPO_PROJECT_ID",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 3000
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "vehicleops",
@@ -37,6 +46,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-updates",
       [
         "expo-splash-screen",
         {

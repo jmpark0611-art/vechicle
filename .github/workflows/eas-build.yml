@@ -104,3 +104,13 @@ jobs:
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish OTA update (preview channel)
+        if: env.EXPO_TOKEN != ''
+        run: |
+          npx eas-cli update \
+            --branch preview \
+            --message "APK 빌드 동반 OTA | ${{ github.sha }}" \
+            --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

@@ -1,0 +1,41 @@
+name: OTA 자동 업데이트
+
+on:
+  push:
+    branches:
+      - claude/env-permissions-session-restart-154onb
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ota-update-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    name: EAS OTA 업데이트 배포
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish OTA update (preview channel)
+        run: |
+          npx eas-cli update \
+            --branch preview \
+            --message "자동 업데이트 | ${{ github.ref_name }} | ${{ github.sha }}" \
+            --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
