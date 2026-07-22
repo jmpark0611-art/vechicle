@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "차량운행시스템",
-    "slug": "vehicle-operation-system",
+    "slug": "vechicle-operation-system",
+    "owner": "ssrizo",
     "version": "1.0.0",
     "runtimeVersion": {
       "policy": "sdkVersion"
