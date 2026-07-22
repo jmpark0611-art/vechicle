@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "차량운행시스템",
-    "slug": "vechicle-operation-system",
+    "slug": "vechicle",
     "owner": "ssrizo",
     "version": "1.0.0",
     "runtimeVersion": {
