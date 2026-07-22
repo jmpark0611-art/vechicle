@@ -16,6 +16,8 @@ jobs:
     name: EAS OTA 업데이트 배포
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # EXPO_TOKEN 시크릿이 없으면 스킵 (미설정 시 빈 문자열)
+    if: ${{ secrets.EXPO_TOKEN != '' }}
     env:
       EXPO_NO_TELEMETRY: '1'
     steps:
