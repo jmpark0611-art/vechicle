@@ -31,6 +31,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Link EAS project
+        run: npx eas-cli init --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
       - name: Publish OTA update (preview channel)
         run: |
           npx eas-cli update \
