@@ -32,7 +32,7 @@ jobs:
         run: npm ci
 
       - name: Link EAS project
-        run: npx eas-cli init --non-interactive
+        run: npx eas-cli init --non-interactive --force
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
