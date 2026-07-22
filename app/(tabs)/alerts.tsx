@@ -14,12 +14,13 @@ import {
   loadSyncedMaintenanceSnapshot,
   MAINTENANCE_ITEMS,
   mergeVehicleCurrentKm,
+  setVehicleCurrentKm,
   syncMaintenanceCompletion,
   type MaintenanceItem,
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
 import { loadSyncedObdSnapshot, type ObdReading, type ObdSnapshot } from '@/lib/obd-data';
-import { fetchActiveTrips, fetchLatestVehicleOdometers, fetchVehiclesReadOnly, type TripSummary, type VehicleSummary } from '@/lib/readonly-data';
+import { fetchLatestVehicleOdometers, fetchVehiclesReadOnly, type VehicleSummary } from '@/lib/readonly-data';
 
 type Severity = 'bad' | 'warn';
 
@@ -43,46 +44,17 @@ type EcuAlert = {
   detail: string;
 };
 
+type OverviewTone = 'bad' | 'warn' | 'no-data' | 'ok';
+
 const ACK_STORAGE_KEY = 'vehicle-ecu-alert-acks-v1';
-const ANNOUNCED_ALERT_STORAGE_KEY = 'vehicle-maintenance-alert-announced-v1';
-const ENABLE_MAINTENANCE_ALERT_POPUPS = false;
 const PART_COLORS = ['#EAFBF4', '#FFF4DE', '#EAF7FA'];
 const FOCUSED_REFRESH_MS = 5_000;
-const LONG_ACTIVE_TRIP_HOURS = 24;
-const CRITICAL_ACTIVE_TRIP_HOURS = 48;
+
+const OVERVIEW_ICON: Record<OverviewTone, string> = { bad: '🔴', warn: '🟡', 'no-data': '⚫', ok: '🟢' };
+const OVERVIEW_COLOR: Record<OverviewTone, string> = { bad: '#E11D48', warn: '#D97706', 'no-data': '#94A3B8', ok: '#15803D' };
 
 function formatKm(value: number) {
   return `${Math.round(value).toLocaleString('ko-KR')}km`;
-}
-
-function getElapsedHours(startTime: string | null) {
-  if (!startTime) return 0;
-  const startedAt = new Date(startTime).getTime();
-  if (!Number.isFinite(startedAt)) return 0;
-  return Math.max(0, (Date.now() - startedAt) / 3_600_000);
-}
-
-function elapsedLabel(startTime: string | null) {
-  const hours = getElapsedHours(startTime);
-  if (hours < 1) return '1시간 미만';
-  const rounded = Math.floor(hours);
-  const days = Math.floor(rounded / 24);
-  const restHours = rounded % 24;
-  return days > 0 ? `${days}일 ${restHours}시간` : `${rounded}시간`;
-}
-
-function isCriticalLongTrip(trip: TripSummary) {
-  return getElapsedHours(trip.startTime) >= CRITICAL_ACTIVE_TRIP_HOURS;
-}
-
-function formatTripTime(value: string | null) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value.slice(0, 16);
-  return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date
-    .getMinutes()
-    .toString()
-    .padStart(2, '0')}`;
 }
 
 function remainingLabel(value: number) {
@@ -90,25 +62,11 @@ function remainingLabel(value: number) {
   return `${value.toLocaleString('ko-KR')}km 남음`;
 }
 
-function maintenanceLabel(item: MaintenanceItem) {
-  return item.label;
-}
-
 function buildEcuAlerts(vehicle: VehicleSummary, reading: ObdReading | undefined): EcuAlert[] {
   if (!reading) return [];
-
   return buildEcuAlertRules(reading).map((alert) => {
     const fingerprint = `${vehicle.id}:${alert.key}:${alert.value}`;
-    return {
-      kind: 'ecu',
-      id: fingerprint,
-      fingerprint,
-      severity: alert.severity,
-      vehicle,
-      title: alert.title,
-      value: alert.value,
-      detail: alert.detail,
-    };
+    return { kind: 'ecu' as const, id: fingerprint, fingerprint, severity: alert.severity as Severity, vehicle, title: alert.title, value: alert.value, detail: alert.detail };
   });
 }
 
@@ -127,27 +85,10 @@ async function saveAcknowledgedFingerprints(items: Set<string>) {
   await AsyncStorage.setItem(ACK_STORAGE_KEY, JSON.stringify([...items]));
 }
 
-async function saveAnnouncedAlertKeys(items: Set<string>) {
-  await AsyncStorage.setItem(ANNOUNCED_ALERT_STORAGE_KEY, JSON.stringify([...items]));
-}
-
-function getAlertAnnouncementKey(item: MaintenanceAlert | EcuAlert) {
-  if (item.kind === 'maintenance') return `${item.id}:${item.severity}`;
-  return item.fingerprint;
-}
-
-function getAlertPopupLine(item: MaintenanceAlert | EcuAlert) {
-  if (item.kind === 'maintenance') {
-    return `${item.vehicle.vehicleNumber} · ${maintenanceLabel(item.item)}: ${remainingLabel(item.remainingKm)}`;
-  }
-  return `${item.vehicle.vehicleNumber} · ${item.title}: ${item.value} (${item.detail})`;
-}
-
 export default function AlertsScreen() {
   useRoleGuard(['commander', 'admin']);
 
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
-  const [activeTrips, setActiveTrips] = useState<TripSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [maintenanceSnapshot, setMaintenanceSnapshot] = useState<MaintenanceSnapshot>({});
   const [obdSnapshot, setObdSnapshot] = useState<ObdSnapshot>({});
@@ -155,11 +96,15 @@ export default function AlertsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [completionModal, setCompletionModal] = useState<{ vehicle: VehicleSummary; item: MaintenanceItem; currentKm: number | null; remainingKm: number | null } | null>(null);
+  const [completionModal, setCompletionModal] = useState<{
+    vehicle: VehicleSummary;
+    item: MaintenanceItem;
+    currentKm: number | null;
+    remainingKm: number | null;
+  } | null>(null);
   const [completionKmText, setCompletionKmText] = useState('');
+  const [kmInputText, setKmInputText] = useState('');
   const refreshInFlightRef = useRef(false);
-  const announcedAlertKeysRef = useRef<Set<string>>(new Set());
-  const hasLoadedAnnouncementsRef = useRef(false);
 
   const loadData = useCallback(async (showLoading = true) => {
     if (refreshInFlightRef.current) return;
@@ -168,17 +113,15 @@ export default function AlertsScreen() {
     setErrorMessage(null);
     try {
       const nextVehicles = await fetchVehiclesReadOnly(200);
-      const vehicleIds = nextVehicles.map((vehicle) => vehicle.id);
-      const [maintenanceResult, obdResult, odometers, ackSet, nextActiveTrips] = await Promise.all([
+      const vehicleIds = nextVehicles.map((v) => v.id);
+      const [maintenanceResult, obdResult, odometers, ackSet] = await Promise.all([
         loadSyncedMaintenanceSnapshot(vehicleIds),
         loadSyncedObdSnapshot(vehicleIds),
         fetchLatestVehicleOdometers(vehicleIds),
         loadAcknowledgedFingerprints(),
-        fetchActiveTrips(100),
       ]);
       const mergedMaintenance = await mergeVehicleCurrentKm(maintenanceResult.snapshot, odometers);
       setVehicles(nextVehicles);
-      setActiveTrips(nextActiveTrips);
       setSelectedVehicleId((current) => current ?? nextVehicles[0]?.id ?? null);
       setMaintenanceSnapshot(mergedMaintenance);
       setObdSnapshot(obdResult.snapshot);
@@ -191,16 +134,12 @@ export default function AlertsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
+  useEffect(() => { void loadData(); }, [loadData]);
 
   useFocusEffect(
     useCallback(() => {
       void loadData(false);
-      const refreshId = setInterval(() => {
-        void loadData(false);
-      }, FOCUSED_REFRESH_MS);
+      const refreshId = setInterval(() => { void loadData(false); }, FOCUSED_REFRESH_MS);
       return () => clearInterval(refreshId);
     }, [loadData])
   );
@@ -221,40 +160,58 @@ export default function AlertsScreen() {
         }];
       });
     });
-
     const ecuAlerts = vehicles
       .flatMap((vehicle) => buildEcuAlerts(vehicle, obdSnapshot[vehicle.id]))
       .filter((item) => !acknowledged.has(item.fingerprint));
-
     return [...maintenanceAlerts, ...ecuAlerts].sort((a, b) => {
       if (a.severity !== b.severity) return a.severity === 'bad' ? -1 : 1;
       return a.vehicle.vehicleNumber.localeCompare(b.vehicle.vehicleNumber, 'ko-KR');
     });
   }, [acknowledged, maintenanceSnapshot, obdSnapshot, vehicles]);
 
+  // 개선 A: 전체 차량 교환주기 현황 (urgency 순 정렬)
+  const vehicleOverview = useMemo(() =>
+    vehicles.map((vehicle) => {
+      const state = getVehicleMaintenanceState(maintenanceSnapshot, vehicle.id);
+      const hasData = state.currentKm !== null;
+      const worstItem = MAINTENANCE_ITEMS.reduce<{ item: MaintenanceItem; remaining: number } | null>((acc, item) => {
+        const remaining = getRemainingKm(state, item);
+        if (remaining === null) return acc;
+        if (acc === null || remaining < acc.remaining) return { item, remaining };
+        return acc;
+      }, null);
+      const tone: OverviewTone = !hasData ? 'no-data'
+        : worstItem === null ? 'ok'
+        : worstItem.remaining <= 0 ? 'bad'
+        : worstItem.remaining <= 1000 ? 'warn'
+        : 'ok';
+      return { vehicle, worstItem, tone };
+    }).sort((a, b) => {
+      const order: Record<OverviewTone, number> = { bad: 0, warn: 1, 'no-data': 2, ok: 3 };
+      return order[a.tone] - order[b.tone];
+    }),
+    [vehicles, maintenanceSnapshot]
+  );
+
   const selectedVehicle = useMemo(
-    () => vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? vehicles[0] ?? null,
+    () => vehicles.find((v) => v.id === selectedVehicleId) ?? vehicles[0] ?? null,
     [selectedVehicleId, vehicles]
   );
   const selectedState = selectedVehicle ? getVehicleMaintenanceState(maintenanceSnapshot, selectedVehicle.id) : null;
   const selectedObd = selectedVehicle ? obdSnapshot[selectedVehicle.id] : null;
-  const longActiveTrips = useMemo(
-    () => activeTrips
-      .filter((trip) => getElapsedHours(trip.startTime) >= LONG_ACTIVE_TRIP_HOURS)
-      .sort((a, b) => getElapsedHours(b.startTime) - getElapsedHours(a.startTime)),
-    [activeTrips]
-  );
-  const criticalLongActiveTrips = useMemo(
-    () => longActiveTrips.filter(isCriticalLongTrip),
-    [longActiveTrips]
-  );
+
+  // 개선 B: 차량 전환 시 현재 km 자동 채우기
+  useEffect(() => {
+    setKmInputText(selectedState?.currentKm != null ? String(selectedState.currentKm) : '');
+  }, [selectedVehicleId, selectedState?.currentKm]);
+
   const maintenanceCards = selectedVehicle && selectedState
     ? MAINTENANCE_ITEMS.map((item) => {
         const remainingKm = getRemainingKm(selectedState, item);
         const lastReplacedKm = selectedState.completedKm[item.key];
         return {
           item,
-          title: maintenanceLabel(item),
+          title: item.label,
           remainingValue: remainingKm === null ? '현재 km 필요' : remainingLabel(remainingKm),
           lastReplacedKm,
           detail: `${item.intervalKm.toLocaleString('ko-KR')}km 주기`,
@@ -263,28 +220,10 @@ export default function AlertsScreen() {
       })
     : [];
 
-  useEffect(() => {
-    if (!ENABLE_MAINTENANCE_ALERT_POPUPS || isLoading || errorMessage || !hasLoadedAnnouncementsRef.current || alerts.length === 0) return;
-
-    const pending = alerts.filter((item) => !announcedAlertKeysRef.current.has(getAlertAnnouncementKey(item)));
-    if (pending.length === 0) return;
-
-    for (const item of pending) {
-      announcedAlertKeysRef.current.add(getAlertAnnouncementKey(item));
-    }
-    void saveAnnouncedAlertKeys(announcedAlertKeysRef.current);
-
-    const title = pending.some((item) => item.severity === 'bad') ? '정비 필요 알림' : '점검 필요 알림';
-    const body = pending.slice(0, 4).map(getAlertPopupLine).join('\n');
-    const suffix = pending.length > 4 ? `\n외 ${pending.length - 4}건` : '';
-    Alert.alert(title, `${body}${suffix}`);
-  }, [alerts, errorMessage, isLoading]);
-
   function openCompletionModal(vehicle: VehicleSummary, item: MaintenanceItem) {
     const state = getVehicleMaintenanceState(maintenanceSnapshot, vehicle.id);
     const defaultKm = state.currentKm ?? state.completedKm[item.key] ?? null;
-    const remainingKm = getRemainingKm(state, item);
-    setCompletionModal({ vehicle, item, currentKm: state.currentKm, remainingKm });
+    setCompletionModal({ vehicle, item, currentKm: state.currentKm, remainingKm: getRemainingKm(state, item) });
     setCompletionKmText(defaultKm !== null ? String(defaultKm) : '');
   }
 
@@ -301,7 +240,7 @@ export default function AlertsScreen() {
       const nextSnapshot = await completeMaintenanceItem(completionModal.vehicle.id, completionModal.item.key, km);
       setMaintenanceSnapshot(nextSnapshot);
       await syncMaintenanceCompletion(completionModal.vehicle.id, completionModal.item.key, km);
-      Alert.alert('교체 완료', `${completionModal.vehicle.vehicleNumber} · ${maintenanceLabel(completionModal.item)}\n교체 km ${formatKm(km)}`);
+      Alert.alert('교체 완료', `${completionModal.vehicle.vehicleNumber} · ${completionModal.item.label}\n교체 km ${formatKm(km)}`);
     } catch (error) {
       Alert.alert('교체 기록 실패', error instanceof Error ? error.message : '교체 기록을 저장하지 못했습니다.');
     } finally {
@@ -317,23 +256,23 @@ export default function AlertsScreen() {
     Alert.alert('점검 완료', `${alertItem.vehicle.vehicleNumber} · ${alertItem.title}\n값이 바뀌면 다시 알림에 표시됩니다.`);
   }
 
-  function handleShowLongTripDetail(trip: TripSummary) {
-    Alert.alert(
-      '미종료 운행 상세',
-      [
-        `차량: ${trip.vehicleNumber}`,
-        `구분: ${isCriticalLongTrip(trip) ? '장기 미종료' : '미종료 확인'}`,
-        `상태: ${trip.status}`,
-        `경과: ${elapsedLabel(trip.startTime)}`,
-        `시작: ${formatTripTime(trip.startTime)}`,
-        `경로: ${trip.startPlace ?? '-'} → ${trip.endPlace ?? '-'}`,
-        `운행자: ${[trip.operatorRank, trip.operatorName].filter(Boolean).join(' ') || '-'}`,
-        `사용자: ${[trip.userRank, trip.userName].filter(Boolean).join(' ') || '-'}`,
-        `목적: ${trip.purpose || '-'}`,
-        `출발 계기판: ${trip.startOdometer === null ? '-' : formatKm(trip.startOdometer)}`,
-      ].join('\n'),
-      [{ text: '확인' }]
-    );
+  // 개선 B: 정비탭에서 km 직접 설정
+  async function handleSaveCurrentKm() {
+    const km = parseInt(kmInputText.replace(/[^0-9]/g, ''), 10);
+    if (!Number.isFinite(km) || km <= 0) {
+      Alert.alert('입력 오류', '현재 계기판 km를 입력해 주세요.');
+      return;
+    }
+    if (!selectedVehicle) return;
+    setIsSaving(true);
+    try {
+      const nextSnapshot = await setVehicleCurrentKm(selectedVehicle.id, km);
+      setMaintenanceSnapshot(nextSnapshot);
+    } catch (error) {
+      Alert.alert('저장 실패', error instanceof Error ? error.message : '저장하지 못했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -342,49 +281,45 @@ export default function AlertsScreen() {
       subtitle="교환 알림과 차량별 정비 설정"
       bottomSpace="compact"
       metrics={[
-        { label: '전체 알림', value: `${alerts.length + longActiveTrips.length}건` },
-        { label: '정비 필요', value: `${alerts.filter((item) => item.severity === 'bad').length}건` },
-        { label: '미종료 확인', value: `${longActiveTrips.length - criticalLongActiveTrips.length}건` },
-        { label: '장기 미종료', value: `${criticalLongActiveTrips.length}건` },
+        { label: '교환 필요', value: `${alerts.filter((a) => a.kind === 'maintenance' && a.severity === 'bad').length}건` },
+        { label: '점검 알림', value: `${alerts.filter((a) => a.kind === 'ecu').length}건` },
+        { label: '전체 알림', value: `${alerts.length}건` },
+        { label: '등록 차량', value: `${vehicles.length}대` },
       ]}>
+
       {isLoading ? (
         <LoadingCard label="알림 데이터를 불러오는 중" />
       ) : errorMessage ? (
         <SectionCard title="오류" body={errorMessage} />
-      ) : alerts.length === 0 && longActiveTrips.length === 0 ? (
-        <SectionCard title="현재 알림 없음" body="교체주기가 임박했거나 ECU 기준치를 벗어난 차량이 없습니다." />
       ) : (
         <>
-          {longActiveTrips.length > 0 ? (
-            <SectionCard title={`미종료 운행 확인 ${longActiveTrips.length}건`} body="운행 시작 후 24시간 이상 종료되지 않은 운행입니다. 자동 종료하지 않고 운행자 확인 대상으로만 표시합니다.">
-              <View style={styles.list}>
-                {longActiveTrips.map((trip) => (
+          {/* 개선 A: 전체 차량 현황 한눈에 */}
+          {vehicleOverview.length > 0 ? (
+            <SectionCard title="전체 차량 현황">
+              <View style={styles.overviewList}>
+                {vehicleOverview.map(({ vehicle, worstItem, tone }) => (
                   <Pressable
-                    key={trip.id}
-                    style={({ pressed }) => [
-                      styles.alertCard,
-                      isCriticalLongTrip(trip) ? styles.criticalLongTripCard : styles.longTripCard,
-                      pressed && styles.pressedCard,
-                    ]}
-                    onPress={() => handleShowLongTripDetail(trip)}>
-                    <View style={styles.alertTop}>
-                      <View style={isCriticalLongTrip(trip) ? styles.criticalLongTripBadge : styles.longTripBadge}>
-                        <Text style={isCriticalLongTrip(trip) ? styles.criticalLongTripBadgeText : styles.longTripBadgeText}>
-                          {isCriticalLongTrip(trip) ? '장기 미종료' : '미종료'}
-                        </Text>
-                      </View>
-                      <Text style={styles.vehicleText}>{trip.vehicleNumber}</Text>
-                    </View>
-                    <Text style={styles.alertTitle}>{trip.startPlace ?? '-'} → {trip.endPlace ?? '-'}</Text>
-                    <Text style={styles.alertDetail}>
-                      경과 {elapsedLabel(trip.startTime)} · 운행자 {[trip.operatorRank, trip.operatorName].filter(Boolean).join(' ') || '-'}
+                    key={vehicle.id}
+                    style={[styles.overviewRow, selectedVehicleId === vehicle.id && styles.overviewRowSelected]}
+                    onPress={() => setSelectedVehicleId(vehicle.id)}>
+                    <Text style={styles.overviewIcon}>{OVERVIEW_ICON[tone]}</Text>
+                    <Text style={styles.overviewVehicle}>{vehicle.vehicleNumber}</Text>
+                    <Text style={[styles.overviewStatus, { color: OVERVIEW_COLOR[tone] }]}>
+                      {tone === 'no-data'
+                        ? 'km 미설정'
+                        : worstItem === null
+                        ? '정상'
+                        : `${worstItem.item.label} ${remainingLabel(worstItem.remaining)}`}
                     </Text>
                   </Pressable>
                 ))}
               </View>
             </SectionCard>
-          ) : null}
+          ) : (
+            <SectionCard title="차량 없음" body="등록된 차량이 없습니다." />
+          )}
 
+          {/* 알림 목록 */}
           {alerts.length > 0 ? (
             <SectionCard title={`알림 ${alerts.length}건`}>
               <View style={styles.list}>
@@ -397,7 +332,7 @@ export default function AlertsScreen() {
                       <Text style={styles.vehicleText}>{item.vehicle.vehicleNumber}</Text>
                     </View>
                     <Text style={styles.alertTitle}>
-                      {item.kind === 'maintenance' ? maintenanceLabel(item.item) : item.title}
+                      {item.kind === 'maintenance' ? item.item.label : item.title}
                     </Text>
                     <Text style={styles.alertDetail}>
                       {item.kind === 'maintenance'
@@ -414,10 +349,88 @@ export default function AlertsScreen() {
                 ))}
               </View>
             </SectionCard>
+          ) : (
+            <SectionCard title="현재 알림 없음" body="교체주기가 임박했거나 ECU 기준치를 벗어난 차량이 없습니다." />
+          )}
+
+          {/* 차량 정비 설정 — 개선 B: km 직접 입력 포함 */}
+          {vehicles.length > 0 ? (
+            <SectionCard title="차량 정비 설정">
+              <VehicleDropdown
+                vehicles={vehicles}
+                selectedVehicleId={selectedVehicle?.id ?? null}
+                onSelect={setSelectedVehicleId}
+              />
+              {selectedVehicle && selectedState ? (
+                <>
+                  <StatusLine label="차량번호" value={selectedVehicle.vehicleNumber} />
+                  <StatusLine
+                    label="현재 기준"
+                    value={selectedState.currentKm === null ? '미설정' : formatKm(selectedState.currentKm)}
+                  />
+                  <StatusLine
+                    label="ECU 상태"
+                    value={selectedObd ? `최근 수신 · ${selectedObd.recordedAt.slice(5, 16).replace('T', ' ')}` : '미수신'}
+                  />
+
+                  {/* 개선 B: 계기판 km 직접 입력 */}
+                  <View style={styles.kmRow}>
+                    <TextInput
+                      style={styles.kmInput}
+                      value={kmInputText}
+                      onChangeText={setKmInputText}
+                      keyboardType="numeric"
+                      placeholder="계기판 km 직접 입력"
+                      placeholderTextColor="#94A3B8"
+                      returnKeyType="done"
+                      onSubmitEditing={() => void handleSaveCurrentKm()}
+                    />
+                    <Pressable style={styles.kmSaveBtn} onPress={() => void handleSaveCurrentKm()} disabled={isSaving}>
+                      <Text style={styles.kmSaveBtnText}>{isSaving ? '저장 중' : '기준 설정'}</Text>
+                    </Pressable>
+                  </View>
+                  <Text style={styles.kmHint}>운행탭 출발 계기판 입력 시 자동 반영 · 여기서 직접 입력도 가능</Text>
+
+                  <Text style={styles.settingsTitle}>주기성 교환품목</Text>
+                  <View style={styles.grid}>
+                    {maintenanceCards.map((card, index) => (
+                      <View
+                        key={card.item.key}
+                        style={[
+                          styles.maintenanceCard,
+                          { backgroundColor: PART_COLORS[index % PART_COLORS.length] },
+                          card.tone === 'bad' && styles.badCard,
+                          card.tone === 'warn' && styles.warnCard,
+                        ]}>
+                        <Text style={styles.cardTitle} numberOfLines={1}>{card.title}</Text>
+                        <View style={styles.trackBlock}>
+                          <Text style={styles.trackLabel}>잔여</Text>
+                          <Text style={styles.cardValue} numberOfLines={1} adjustsFontSizeToFit>{card.remainingValue}</Text>
+                        </View>
+                        <View style={styles.trackBlock}>
+                          <Text style={styles.trackLabel}>교체</Text>
+                          <Text style={styles.cardReplace} numberOfLines={1}>
+                            {card.lastReplacedKm !== undefined ? formatKm(card.lastReplacedKm) : '이력 없음'}
+                          </Text>
+                        </View>
+                        <Text style={styles.cardDetail} numberOfLines={1}>{card.detail}</Text>
+                        <Pressable
+                          style={styles.cardAction}
+                          onPress={() => openCompletionModal(selectedVehicle, card.item)}
+                          disabled={isSaving}>
+                          <Text style={styles.cardActionText}>교체완료</Text>
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              ) : null}
+            </SectionCard>
           ) : null}
         </>
       )}
 
+      {/* 개선 C: 교체완료 시 계기판 km 입력 모달 */}
       <Modal visible={completionModal !== null} transparent animationType="fade" onRequestClose={() => setCompletionModal(null)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={() => setCompletionModal(null)} />
@@ -427,7 +440,9 @@ export default function AlertsScreen() {
               <>
                 <Text style={styles.modalSub}>{completionModal.vehicle.vehicleNumber} · {completionModal.item.label}</Text>
                 <View style={styles.modalRefRow}>
-                  <Text style={styles.modalRefText}>현재 기준: {completionModal.currentKm !== null ? formatKm(completionModal.currentKm) : '미설정'}</Text>
+                  <Text style={styles.modalRefText}>
+                    현재 기준: {completionModal.currentKm !== null ? formatKm(completionModal.currentKm) : '미설정'}
+                  </Text>
                   {completionModal.remainingKm !== null ? (
                     <Text style={[styles.modalRefText, completionModal.remainingKm <= 0 && { color: '#E11D48' }]}>
                       잔여: {remainingLabel(completionModal.remainingKm)}
@@ -436,7 +451,7 @@ export default function AlertsScreen() {
                 </View>
               </>
             ) : null}
-            <Text style={styles.modalInputLabel}>교체 당시 계기판 (km)</Text>
+            <Text style={styles.modalInputLabel}>교체 당시 계기판 km</Text>
             <TextInput
               style={styles.modalInput}
               value={completionKmText}
@@ -458,53 +473,45 @@ export default function AlertsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-
-      {!isLoading && !errorMessage && vehicles.length > 0 ? (
-        <SectionCard title="차량 설정" body="차량을 선택하면 현재 기준거리와 주기성 교환품목을 확인할 수 있습니다.">
-          <VehicleDropdown vehicles={vehicles} selectedVehicleId={selectedVehicle?.id ?? null} onSelect={setSelectedVehicleId} />
-          {selectedVehicle && selectedState ? (
-            <>
-              <StatusLine label="차량번호" value={selectedVehicle.vehicleNumber} />
-              <StatusLine label="현재 기준" value={selectedState.currentKm === null ? '-' : formatKm(selectedState.currentKm)} />
-              <StatusLine label="ECU 상태" value={selectedObd ? `최근 수신 · ${selectedObd.recordedAt.slice(5, 16).replace('T', ' ')}` : '미수신'} />
-
-              <Text style={styles.settingsTitle}>주기성 교환품목</Text>
-              <View style={styles.grid}>
-                {maintenanceCards.map((card, index) => (
-                  <View key={card.item.key} style={[styles.maintenanceCard, { backgroundColor: PART_COLORS[index % PART_COLORS.length] }, card.tone === 'bad' && styles.badCard, card.tone === 'warn' && styles.warnCard]}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{card.title}</Text>
-                    <View style={styles.trackBlock}>
-                      <Text style={styles.trackLabel}>잔여</Text>
-                      <Text style={styles.cardValue} numberOfLines={1} adjustsFontSizeToFit>{card.remainingValue}</Text>
-                      {card.remainingValue === '현재 km 필요' ? (
-                        <Text style={styles.cardHint}>운행탭에서 출발 계기판 입력 시 자동 설정</Text>
-                      ) : null}
-                    </View>
-                    <View style={styles.trackBlock}>
-                      <Text style={styles.trackLabel}>교체</Text>
-                      <Text style={styles.cardReplace} numberOfLines={1}>
-                        {card.lastReplacedKm !== undefined ? formatKm(card.lastReplacedKm) : '이력 없음'}
-                      </Text>
-                    </View>
-                    <Text style={styles.cardDetail} numberOfLines={1}>{card.detail}</Text>
-                    <Pressable
-                      style={styles.cardAction}
-                      onPress={() => openCompletionModal(selectedVehicle, card.item)}
-                      disabled={isSaving}>
-                      <Text style={styles.cardActionText}>교체완료</Text>
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
-            </>
-          ) : null}
-        </SectionCard>
-      ) : null}
     </RebuildScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  // 전체 차량 현황 (개선 A)
+  overviewList: { gap: 2, marginTop: 8 },
+  overviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 6, borderRadius: 10, gap: 10 },
+  overviewRowSelected: { backgroundColor: '#EFF6FF' },
+  overviewIcon: { fontSize: 14 },
+  overviewVehicle: { color: '#0F172A', fontSize: 14, fontWeight: '800', minWidth: 90 },
+  overviewStatus: { flex: 1, fontSize: 13, fontWeight: '700', textAlign: 'right' },
+
+  // km 직접 입력 (개선 B)
+  kmRow: { flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' },
+  kmInput: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#F0F7FF',
+    paddingHorizontal: 12,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  kmSaveBtn: {
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  kmSaveBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  kmHint: { color: '#94A3B8', fontSize: 10, fontWeight: '600', marginTop: 4, marginBottom: 2 },
+
+  // 알림 목록
   list: { gap: 10, marginTop: 10 },
   alertCard: {
     borderRadius: 20,
@@ -518,16 +525,9 @@ const styles = StyleSheet.create({
   },
   badCard: { backgroundColor: '#FFF1F2', borderColor: '#FFD0D6' },
   warnCard: { backgroundColor: '#FFF8E7', borderColor: '#FFE7AC' },
-  longTripCard: { backgroundColor: '#EEF6FF', borderColor: '#BFD7FF' },
-  criticalLongTripCard: { backgroundColor: '#FFF1F2', borderColor: '#FDA4AF' },
-  pressedCard: { opacity: 0.82, transform: [{ scale: 0.99 }] },
   alertTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   badge: { borderRadius: 999, backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 5 },
   badgeText: { color: '#4F6AE6', fontSize: 11, fontWeight: '900' },
-  longTripBadge: { borderRadius: 999, backgroundColor: '#DBEAFE', paddingHorizontal: 10, paddingVertical: 5 },
-  longTripBadgeText: { color: '#2563EB', fontSize: 11, fontWeight: '900' },
-  criticalLongTripBadge: { borderRadius: 999, backgroundColor: '#FFE4E6', paddingHorizontal: 10, paddingVertical: 5 },
-  criticalLongTripBadgeText: { color: '#E11D48', fontSize: 11, fontWeight: '900' },
   vehicleText: { color: '#1E2946', fontSize: 14, fontWeight: '900' },
   alertTitle: { color: '#111827', fontSize: 20, fontWeight: '900', marginTop: 12 },
   alertDetail: { color: '#52607D', fontSize: 13, fontWeight: '800', lineHeight: 18, marginTop: 6 },
@@ -540,6 +540,8 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   completeButtonText: { color: '#4F6AE6', fontSize: 14, fontWeight: '900' },
+
+  // 교환품목 카드
   settingsTitle: { color: '#13866F', fontSize: 18, fontWeight: '900', marginTop: 18, marginBottom: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   maintenanceCard: {
@@ -565,7 +567,8 @@ const styles = StyleSheet.create({
   trackBlock: { flexDirection: 'column', gap: 1, marginTop: 2 },
   trackLabel: { fontSize: 9, fontWeight: '900', color: '#7180A3' },
   cardReplace: { fontSize: 11, fontWeight: '800', color: '#52607D', flexShrink: 1 },
-  cardHint: { fontSize: 9, color: '#94A3B8', fontWeight: '600', marginTop: 1 },
+
+  // 교체완료 모달 (개선 C)
   modalRefRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
   modalRefText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
   modalSub: { fontSize: 13, fontWeight: '700', color: '#52607D', marginBottom: 6 },

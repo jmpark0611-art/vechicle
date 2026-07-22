@@ -1164,6 +1164,7 @@ export default function TripScreen() {
             placeholderTextColor="#94A3B8"
             keyboardType="number-pad"
           />
+          <Text style={styles.odoHint}>입력한 계기판 km는 정비탭 교환주기 기준으로 자동 반영됩니다</Text>
         </View>
 
         <Pressable style={styles.startBtn} onPress={handlePrimaryAction} disabled={isSaving}>
@@ -1325,6 +1326,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginTop: 6,
   },
+  odoHint: { color: '#94A3B8', fontSize: 10, fontWeight: '600', marginTop: 4, marginLeft: 2 },
   twoCol: { flexDirection: 'row', gap: 8, marginTop: 6 },
   halfInput: {
     flex: 1,
