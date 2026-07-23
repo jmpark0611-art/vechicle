@@ -59,9 +59,9 @@ jobs:
         run: |
           PLUGIN_DIR="node_modules/expo-updates/expo-updates-gradle-plugin"
           if [ -f "$PLUGIN_DIR/build.gradle.kts" ]; then
-            sed -i 's/kotlin("jvm") version "[^"]*"/kotlin("jvm") version "2.1.0"/g' "$PLUGIN_DIR/build.gradle.kts"
-            echo "Patched expo-updates-gradle-plugin Kotlin version to 2.1.0"
-            grep 'kotlin("jvm")' "$PLUGIN_DIR/build.gradle.kts" || true
+            sed -i 's/version("1\.[0-9]*\.[0-9]*")/version("2.1.0")/g' "$PLUGIN_DIR/build.gradle.kts"
+            echo "Patched expo-updates-gradle-plugin Kotlin version:"
+            grep 'kotlin("jvm")' "$PLUGIN_DIR/build.gradle.kts"
           else
             echo "Plugin build file not found, skipping patch"
           fi
