@@ -386,7 +386,7 @@ export default function VehiclesScreen() {
       ]
     : [];
   return (
-    <View style={[styles.screenContainer, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 54 }]}>
+    <View style={[styles.screenContainer, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 86 }]}>
       <View style={styles.screenHeader}>
         <Text style={styles.screenTitle}>진단</Text>
       </View>
@@ -446,10 +446,10 @@ export default function VehiclesScreen() {
                   if (!valid) setTankCapacityInput('');
                 }}
                 keyboardType="numeric"
-                placeholder="미설정"
-                placeholderTextColor="#94A3B8"
+                placeholder="0"
+                placeholderTextColor="#CBD5E1"
               />
-              <Text style={styles.tankUnit}>L{tankCapacitySaved > 0 ? ' ✓' : ''}</Text>
+              <Text style={styles.tankUnit}>L</Text>
             </View>
             <View style={styles.deleteRow}>
               <Pressable style={styles.deleteBtn} onPress={confirmDeleteSelectedVehicle} disabled={isSaving}>
