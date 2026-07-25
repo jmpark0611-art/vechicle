@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F8',
     paddingHorizontal: 18,
-    paddingVertical: 22,
+    paddingVertical: 16,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
