@@ -155,10 +155,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0F4FB',
     paddingHorizontal: 22,
-    justifyContent: 'center',
   },
   hero: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 14,
   },
   logo: {
