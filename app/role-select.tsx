@@ -155,12 +155,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0F4FB',
     paddingHorizontal: 22,
+    justifyContent: 'space-between',
   },
   hero: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
+    paddingVertical: 8,
   },
   logo: {
     width: 52,

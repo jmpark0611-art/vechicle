@@ -446,7 +446,7 @@ export default function VehiclesScreen() {
                   if (!valid) setTankCapacityInput('');
                 }}
                 keyboardType="numeric"
-                placeholder="0"
+                placeholder=""
                 placeholderTextColor="#CBD5E1"
               />
               <Text style={styles.tankUnit}>L</Text>
