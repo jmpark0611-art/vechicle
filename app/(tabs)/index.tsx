@@ -43,7 +43,7 @@ import {
   type ObdLiveData,
 } from '@/lib/obd-ble';
 import { loadLastTripInput, loadRecentEndPlaces, saveLastTripInput, saveRecentEndPlace } from '@/lib/last-trip-input';
-import { formatFuel, formatFuelUsed, getTankCapacity, setTankCapacity } from '@/lib/tank-capacity';
+import { formatFuel, formatFuelUsed, getTankCapacity } from '@/lib/tank-capacity';
 import {
   cancelManualTrip,
   completeManualTrip,
@@ -162,7 +162,6 @@ export default function TripScreen() {
   const [rankPickerTarget, setRankPickerTarget] = useState<'operator' | 'user' | null>(null);
   const [recentEndPlaces, setRecentEndPlaces] = useState<string[]>([]);
   const [tankCapacityL, setTankCapacityL] = useState(0);
-  const [tankCapacityInput, setTankCapacityInput] = useState('');
 
   const activeTripsRef = useRef<TripSummary[]>([]);
   const obdLiveRef = useRef<ObdLiveData | null>(null);
@@ -538,10 +537,7 @@ export default function TripScreen() {
 
   useEffect(() => {
     if (!selectedVehicleId) return;
-    void getTankCapacity(selectedVehicleId).then((l) => {
-      setTankCapacityL(l);
-      setTankCapacityInput(l > 0 ? String(l) : '');
-    });
+    void getTankCapacity(selectedVehicleId).then(setTankCapacityL);
   }, [selectedVehicleId]);
 
   useFocusEffect(
@@ -919,28 +915,6 @@ export default function TripScreen() {
               <Text style={styles.statValue}>{activeFuelUsed}</Text>
             </View>
           </View>
-          {isObdConnected && selectedVehicleId ? (
-            <View style={styles.tankRow}>
-              <Text style={styles.tankLabel}>탱크 용량</Text>
-              <TextInput
-                style={styles.tankInput}
-                value={tankCapacityInput}
-                onChangeText={setTankCapacityInput}
-                onEndEditing={() => {
-                  const l = Number(tankCapacityInput.trim());
-                  const valid = Number.isFinite(l) && l > 0;
-                  const next = valid ? l : 0;
-                  setTankCapacityL(next);
-                  if (selectedVehicleId) void setTankCapacity(selectedVehicleId, next);
-                  if (!valid) setTankCapacityInput('');
-                }}
-                keyboardType="numeric"
-                placeholder="용량 입력"
-                placeholderTextColor="#94A3B8"
-              />
-              <Text style={styles.tankUnit}>L</Text>
-            </View>
-          ) : null}
           <View style={styles.obdStrip}>
             <Text style={styles.obdStripLabel}>OBD</Text>
             <Text style={styles.obdStripValue}>{obdLabel}</Text>
@@ -1283,34 +1257,6 @@ const styles = StyleSheet.create({
   statCard: { flex: 1, minHeight: 116, borderRadius: 14, backgroundColor: '#F5F8FF', padding: 16, justifyContent: 'center' },
   statLabel: { color: '#64748B', fontSize: 13, fontWeight: '600', marginBottom: 10 },
   statValue: { color: '#0F172A', fontSize: 18, fontWeight: '700' },
-  tankRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#DCEAF8',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginTop: 4,
-    gap: 8,
-  },
-  tankLabel: { color: '#64748B', fontSize: 12, fontWeight: '500', flex: 1 },
-  tankInput: {
-    flex: 0,
-    width: 80,
-    height: 34,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 10,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
-    textAlign: 'right',
-  },
-  tankUnit: { color: '#2563EB', fontSize: 14, fontWeight: '700', width: 16 },
   obdStrip: {
     minHeight: 78,
     borderRadius: 20,

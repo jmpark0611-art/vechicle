@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { clearStoredRole } from '@/lib/role';
+import { getTankCapacity, setTankCapacity } from '@/lib/tank-capacity';
 
 import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
@@ -113,6 +114,8 @@ export default function VehiclesScreen() {
   const [newVehicleNumber, setNewVehicleNumber] = useState('');
   const [newVehicleType, setNewVehicleType] = useState('');
   const [newVehicleKm, setNewVehicleKm] = useState('');
+  const [tankCapacityInput, setTankCapacityInput] = useState('');
+  const [tankCapacitySaved, setTankCapacitySaved] = useState(0);
   const lastSaveAtRef = useRef(0);
   const selectedVehicleIdRef = useRef<string | null>(null);
   const vehiclesRef = useRef<VehicleSummary[]>([]);
@@ -124,6 +127,15 @@ export default function VehiclesScreen() {
     () => vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? vehicles[0] ?? null,
     [selectedVehicleId, vehicles]
   );
+
+  useEffect(() => {
+    const id = selectedVehicle?.id;
+    if (!id) { setTankCapacityInput(''); setTankCapacitySaved(0); return; }
+    void getTankCapacity(id).then((l) => {
+      setTankCapacitySaved(l);
+      setTankCapacityInput(l > 0 ? String(l) : '');
+    });
+  }, [selectedVehicle?.id]);
 
   const selectVehicleForObdDevice = useCallback(async (device: ObdBleDevice, sourceVehicles = vehicles) => {
     const vehicleNumber = getVehicleNumberForObdDevice(device);
@@ -342,7 +354,16 @@ export default function VehiclesScreen() {
         { title: 'OBD 속도', value: selectedObd?.speedKmh == null ? '-' : `${selectedObd.speedKmh}km/h`, detail: '최근 수신값', tone: 'ok' },
         { title: '냉각수', value: selectedObd?.coolantTempC == null ? '-' : `${selectedObd.coolantTempC}°C`, detail: 'ECU 센서', tone: selectedObd?.coolantTempC != null && selectedObd.coolantTempC >= 105 ? 'bad' : 'ok' },
         { title: '배터리', value: selectedObd?.batteryVoltage == null ? '-' : `${selectedObd.batteryVoltage}V`, detail: '전압 상태', tone: selectedObd?.batteryVoltage != null && selectedObd.batteryVoltage < 12 ? 'bad' : 'ok' },
-        { title: '연료 잔량', value: selectedObd?.fuelPercent == null ? '-' : `${selectedObd.fuelPercent}%`, detail: '증가 시 주유 추정', tone: selectedObd?.fuelPercent != null && selectedObd.fuelPercent < 20 ? 'warn' : 'ok' },
+        {
+          title: '연료 잔량',
+          value: selectedObd?.fuelPercent == null
+            ? '-'
+            : tankCapacitySaved > 0
+              ? `${Math.round(((selectedObd.fuelPercent / 100) * tankCapacitySaved) * 10) / 10} L`
+              : `${selectedObd.fuelPercent}%`,
+          detail: tankCapacitySaved > 0 ? `탱크 ${tankCapacitySaved}L 기준` : '탱크 용량 미설정',
+          tone: selectedObd?.fuelPercent != null && selectedObd.fuelPercent < 20 ? 'warn' : 'ok',
+        },
         { title: '고장 코드', value: selectedObd?.dtcCount == null ? '-' : `${selectedObd.dtcCount}건`, detail: 'DTC 감지', tone: selectedObd?.dtcCount ? 'bad' : 'ok' },
         { title: '흡기 온도', value: selectedObd?.intakeTempC == null ? '미수신' : `${selectedObd.intakeTempC}°C`, detail: 'PID 010F', tone: 'ok' },
         { title: '스로틀', value: selectedObd?.throttlePercent == null ? '미수신' : `${selectedObd.throttlePercent}%`, detail: '액셀 개폐율', tone: 'ok' },
@@ -404,6 +425,26 @@ export default function VehiclesScreen() {
               </Pressable>
             </View>
             <StatusLine label="상태" value={obdStatus} />
+            <View style={styles.tankRow}>
+              <Text style={styles.tankLabel}>탱크 용량</Text>
+              <TextInput
+                style={styles.tankInput}
+                value={tankCapacityInput}
+                onChangeText={setTankCapacityInput}
+                onEndEditing={() => {
+                  const l = Number(tankCapacityInput.trim());
+                  const valid = Number.isFinite(l) && l > 0;
+                  const next = valid ? l : 0;
+                  setTankCapacitySaved(next);
+                  if (selectedVehicle) void setTankCapacity(selectedVehicle.id, next);
+                  if (!valid) setTankCapacityInput('');
+                }}
+                keyboardType="numeric"
+                placeholder="미설정"
+                placeholderTextColor="#94A3B8"
+              />
+              <Text style={styles.tankUnit}>L{tankCapacitySaved > 0 ? ' ✓' : ''}</Text>
+            </View>
             <View style={styles.deleteRow}>
               <Pressable style={styles.deleteBtn} onPress={confirmDeleteSelectedVehicle} disabled={isSaving}>
                 <Text style={styles.deleteBtnText}>차량 삭제</Text>
@@ -456,6 +497,30 @@ export default function VehiclesScreen() {
 }
 
 const styles = StyleSheet.create({
+  tankRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 10,
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5FB',
+    gap: 8,
+  },
+  tankLabel: { color: '#64748B', fontSize: 12, fontWeight: '500', flex: 1 },
+  tankInput: {
+    width: 80,
+    height: 34,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    textAlign: 'right',
+  },
+  tankUnit: { color: '#2563EB', fontSize: 13, fontWeight: '700', minWidth: 28 },
   changeRoleBtn: { paddingVertical: 6, paddingHorizontal: 2 },
   changeRoleBtnText: { color: '#64748B', fontSize: 13, fontWeight: '700' },
   topActionRow: {
