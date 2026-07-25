@@ -20,6 +20,7 @@ import {
   type MaintenanceSnapshot,
 } from '@/lib/maintenance-data';
 import { loadSyncedObdSnapshot, type ObdReading, type ObdSnapshot } from '@/lib/obd-data';
+import { loadSelectedObdBleDevice, obdBle, saveSelectedObdBleDevice, scanForObdBleDevices } from '@/lib/obd-ble';
 import { fetchLatestVehicleOdometers, fetchVehiclesReadOnly, type VehicleSummary } from '@/lib/readonly-data';
 
 type Severity = 'bad' | 'warn';
@@ -104,7 +105,9 @@ export default function AlertsScreen() {
   } | null>(null);
   const [completionKmText, setCompletionKmText] = useState('');
   const [kmInputText, setKmInputText] = useState('');
+  const [obdConnectStatus, setObdConnectStatus] = useState<string | null>(null);
   const refreshInFlightRef = useRef(false);
+  const obdConnectInFlightRef = useRef(false);
 
   const loadData = useCallback(async (showLoading = true) => {
     if (refreshInFlightRef.current) return;
@@ -122,7 +125,7 @@ export default function AlertsScreen() {
       ]);
       const mergedMaintenance = await mergeVehicleCurrentKm(maintenanceResult.snapshot, odometers);
       setVehicles(nextVehicles);
-      setSelectedVehicleId((current) => current ?? nextVehicles[0]?.id ?? null);
+      setSelectedVehicleId((current) => current);
       setMaintenanceSnapshot(mergedMaintenance);
       setObdSnapshot(obdResult.snapshot);
       setAcknowledged(ackSet);
@@ -194,15 +197,55 @@ export default function AlertsScreen() {
   );
 
   const selectedVehicle = useMemo(
-    () => vehicles.find((v) => v.id === selectedVehicleId) ?? vehicles[0] ?? null,
+    () => vehicles.find((v) => v.id === selectedVehicleId) ?? null,
     [selectedVehicleId, vehicles]
   );
   const selectedState = selectedVehicle ? getVehicleMaintenanceState(maintenanceSnapshot, selectedVehicle.id) : null;
 
-  // 개선 B: 차량 전환 시 현재 km 자동 채우기
+  // 차량 전환 시 현재 km 자동 채우기
   useEffect(() => {
     setKmInputText(selectedState?.currentKm != null ? String(selectedState.currentKm) : '');
   }, [selectedVehicleId, selectedState?.currentKm]);
+
+  // 차량 선택 시 OBD 단말기 자동 검색 및 연결
+  useEffect(() => {
+    if (!selectedVehicleId) {
+      setObdConnectStatus(null);
+      return;
+    }
+    if (obdConnectInFlightRef.current) return;
+    obdConnectInFlightRef.current = true;
+    setObdConnectStatus('단말기 검색 중');
+
+    (async () => {
+      try {
+        let device = await loadSelectedObdBleDevice();
+        if (!device) {
+          const scan = await scanForObdBleDevices();
+          if (scan.ok && scan.devices.length > 0) {
+            device = scan.devices.find((d) => /vlink|obd|elm/i.test(d.name)) ?? scan.devices[0];
+            await saveSelectedObdBleDevice(device);
+          }
+        }
+        if (!device) {
+          setObdConnectStatus('단말기 미검색');
+          return;
+        }
+        setObdConnectStatus(`${device.name} 연결 중`);
+        const result = await obdBle.connect(device.id);
+        if (result.ok) {
+          obdBle.startPolling(2000);
+          setObdConnectStatus('연결완료');
+        } else {
+          setObdConnectStatus('연결 실패');
+        }
+      } catch {
+        setObdConnectStatus('연결 실패');
+      } finally {
+        obdConnectInFlightRef.current = false;
+      }
+    })();
+  }, [selectedVehicleId]);
 
   const maintenanceCards = selectedVehicle && selectedState
     ? MAINTENANCE_ITEMS.map((item) => {
@@ -359,14 +402,18 @@ export default function AlertsScreen() {
             <SectionCard title="현재 알림 없음" body="교체주기가 임박했거나 ECU 기준치를 벗어난 차량이 없습니다." />
           )}
 
-          {/* 차량 정비 설정 — 개선 B: km 직접 입력 포함 */}
+          {/* 차량 정비 설정 */}
           {vehicles.length > 0 ? (
             <SectionCard title="차량 정비 설정">
               <VehicleDropdown
                 vehicles={vehicles}
-                selectedVehicleId={selectedVehicle?.id ?? null}
+                selectedVehicleId={selectedVehicleId}
                 onSelect={setSelectedVehicleId}
+                placeholder="차량 선택"
               />
+              {obdConnectStatus ? (
+                <StatusLine label="단말기" value={obdConnectStatus} />
+              ) : null}
               {selectedVehicle && selectedState ? (
                 <>
                   <StatusLine

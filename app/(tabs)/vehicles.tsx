@@ -2,11 +2,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { clearStoredRole } from '@/lib/role';
 import { getTankCapacity, setTankCapacity } from '@/lib/tank-capacity';
 
-import { LoadingCard, RebuildScreen, SectionCard, StatusLine } from '@/components/rebuild-screen';
+import { LoadingCard, SectionCard, StatusLine } from '@/components/rebuild-screen';
 import { VehicleDropdown } from '@/components/vehicle-dropdown';
 import { useRoleGuard } from '@/hooks/use-role-guard';
 import {
@@ -100,6 +101,7 @@ function liveToReading(vehicleId: string, data: ObdLiveData): ObdReading {
 
 export default function VehiclesScreen() {
   useRoleGuard(['commander', 'admin']);
+  const insets = useSafeAreaInsets();
 
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
@@ -384,7 +386,11 @@ export default function VehiclesScreen() {
       ]
     : [];
   return (
-    <RebuildScreen title="진단" bottomSpace="compact">
+    <View style={[styles.screenContainer, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 54 }]}>
+      <View style={styles.screenHeader}>
+        <Text style={styles.screenTitle}>진단</Text>
+      </View>
+
       <View style={styles.topActionRow}>
         <Pressable
           style={styles.changeRoleBtn}
@@ -408,7 +414,7 @@ export default function VehiclesScreen() {
       ) : vehicles.length === 0 ? (
         <SectionCard title="차량 없음" body="등록된 차량이 없습니다." />
       ) : (
-        <>
+        <View style={{ flex: 1 }}>
           <SectionCard title="차량 선택">
             <View style={styles.vehicleRow}>
               <View style={styles.dropdownWrap}>
@@ -458,19 +464,22 @@ export default function VehiclesScreen() {
                 <Text style={[styles.groupTitle, styles.ecuGroupTitle]}>ECU 감지 정보</Text>
                 <Text style={[styles.detectText, selectedObd && styles.detectTextOn]}>{selectedObd ? 'ECU 감지' : '연결 전'}</Text>
               </View>
-              <View style={styles.grid}>
-                {ecuCards.slice(0, 8).map((card, index) => (
-                  <View key={card.title} style={[styles.ecuCard, card.tone === 'bad' && styles.squareCardBad, card.tone === 'warn' && styles.squareCardWarn]}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{card.title}</Text>
-                    <Text style={styles.cardValue} numberOfLines={2} adjustsFontSizeToFit>{card.value}</Text>
-                    <Text style={styles.cardDetail} numberOfLines={1}>{card.detail}</Text>
+              <View style={styles.ecuGrid}>
+                {[0, 1, 2, 3].map((row) => (
+                  <View key={row} style={styles.ecuRow}>
+                    {ecuCards.slice(row * 2, row * 2 + 2).map((card) => (
+                      <View key={card.title} style={[styles.ecuCard, card.tone === 'bad' && styles.squareCardBad, card.tone === 'warn' && styles.squareCardWarn]}>
+                        <Text style={styles.cardTitle} numberOfLines={1}>{card.title}</Text>
+                        <Text style={styles.cardValue} numberOfLines={2} adjustsFontSizeToFit>{card.value}</Text>
+                        <Text style={styles.cardDetail} numberOfLines={1}>{card.detail}</Text>
+                      </View>
+                    ))}
                   </View>
                 ))}
               </View>
-
             </View>
           ) : null}
-        </>
+        </View>
       )}
 
       <Modal visible={isRegisterOpen} transparent animationType="fade" onRequestClose={() => setIsRegisterOpen(false)}>
@@ -492,11 +501,25 @@ export default function VehiclesScreen() {
         </View>
       </Modal>
 
-    </RebuildScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenContainer: {
+    flex: 1,
+    backgroundColor: '#F0F4FB',
+    paddingHorizontal: 18,
+  },
+  screenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 36,
+    paddingHorizontal: 2,
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
+  screenTitle: { color: '#0F172A', fontSize: 24, fontWeight: '700', letterSpacing: -0.3 },
   tankRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -565,6 +588,7 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: { color: '#E11D48', fontSize: 12, fontWeight: '600' },
   diagnosisPanel: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
@@ -577,16 +601,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
-  groupTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  groupTitle: { fontSize: 18, fontWeight: '700', marginTop: 0, marginBottom: 2, letterSpacing: -0.2 },
+  groupTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  groupTitle: { fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
   ecuGroupTitle: { color: '#2563EB' },
-  partsGroupTitle: { color: '#15803D' },
   detectText: { color: '#94A3B8', fontSize: 13, fontWeight: '600' },
   detectTextOn: { color: '#15803D' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  ecuGrid: { flex: 1, gap: 6, marginTop: 6 },
+  ecuRow: { flex: 1, flexDirection: 'row', gap: 6 },
   ecuCard: {
-    width: '48%',
-    minHeight: 72,
+    flex: 1,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F8',
