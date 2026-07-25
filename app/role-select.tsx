@@ -78,7 +78,6 @@ export default function RoleSelectScreen() {
         <Text style={styles.subtitle}>사용할 모드를 선택하세요</Text>
       </View>
 
-      <View style={styles.cards}>
       <View style={styles.unitCard}>
         <View style={styles.unitHeader}>
           <View>
@@ -147,7 +146,6 @@ export default function RoleSelectScreen() {
         </View>
         <Text style={styles.cardChevron}>›</Text>
       </Pressable>
-      </View>
     </View>
   );
 }
@@ -157,14 +155,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0F4FB',
     paddingHorizontal: 22,
-  },
-  hero: {
-    flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
   },
-  cards: {
-    gap: 10,
+  hero: {
+    alignItems: 'center',
+    marginBottom: 14,
   },
   logo: {
     width: 52,
@@ -192,6 +187,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F8',
     padding: 12,
+    marginBottom: 10,
     shadowColor: '#0F172A',
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -231,6 +227,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F8',
     paddingHorizontal: 18,
     paddingVertical: 22,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#0F172A',
