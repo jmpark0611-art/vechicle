@@ -198,7 +198,6 @@ export default function AlertsScreen() {
     [selectedVehicleId, vehicles]
   );
   const selectedState = selectedVehicle ? getVehicleMaintenanceState(maintenanceSnapshot, selectedVehicle.id) : null;
-  const selectedObd = selectedVehicle ? obdSnapshot[selectedVehicle.id] : null;
 
   // 개선 B: 차량 전환 시 현재 km 자동 채우기
   useEffect(() => {
@@ -297,22 +296,29 @@ export default function AlertsScreen() {
           {vehicleOverview.length > 0 ? (
             <SectionCard title="전체 차량 현황">
               <View style={styles.overviewList}>
-                {vehicleOverview.map(({ vehicle, worstItem, tone }) => (
-                  <Pressable
-                    key={vehicle.id}
-                    style={[styles.overviewRow, selectedVehicleId === vehicle.id && styles.overviewRowSelected]}
-                    onPress={() => setSelectedVehicleId(vehicle.id)}>
-                    <Text style={styles.overviewIcon}>{OVERVIEW_ICON[tone]}</Text>
-                    <Text style={styles.overviewVehicle}>{vehicle.vehicleNumber}</Text>
-                    <Text style={[styles.overviewStatus, { color: OVERVIEW_COLOR[tone] }]}>
-                      {tone === 'no-data'
-                        ? 'km 미설정'
-                        : worstItem === null
-                        ? '정상'
-                        : `${worstItem.item.label} ${remainingLabel(worstItem.remaining)}`}
-                    </Text>
-                  </Pressable>
-                ))}
+                {vehicleOverview.map(({ vehicle, worstItem, tone }) => {
+                  const obd = obdSnapshot[vehicle.id];
+                  const ecuTime = obd ? obd.recordedAt.slice(5, 16).replace('T', ' ') : null;
+                  return (
+                    <Pressable
+                      key={vehicle.id}
+                      style={[styles.overviewRow, selectedVehicleId === vehicle.id && styles.overviewRowSelected]}
+                      onPress={() => setSelectedVehicleId(vehicle.id)}>
+                      <Text style={styles.overviewIcon}>{OVERVIEW_ICON[tone]}</Text>
+                      <Text style={styles.overviewVehicle}>{vehicle.vehicleNumber}</Text>
+                      <View style={styles.overviewRight}>
+                        <Text style={[styles.overviewStatus, { color: OVERVIEW_COLOR[tone] }]}>
+                          {tone === 'no-data'
+                            ? 'km 미설정'
+                            : worstItem === null
+                            ? '정상'
+                            : `${worstItem.item.label} ${remainingLabel(worstItem.remaining)}`}
+                        </Text>
+                        {ecuTime ? <Text style={styles.overviewEcu}>ECU {ecuTime}</Text> : null}
+                      </View>
+                    </Pressable>
+                  );
+                })}
               </View>
             </SectionCard>
           ) : (
@@ -363,14 +369,9 @@ export default function AlertsScreen() {
               />
               {selectedVehicle && selectedState ? (
                 <>
-                  <StatusLine label="차량번호" value={selectedVehicle.vehicleNumber} />
                   <StatusLine
                     label="현재 기준"
                     value={selectedState.currentKm === null ? '미설정' : formatKm(selectedState.currentKm)}
-                  />
-                  <StatusLine
-                    label="ECU 상태"
-                    value={selectedObd ? `최근 수신 · ${selectedObd.recordedAt.slice(5, 16).replace('T', ' ')}` : '미수신'}
                   />
 
                   {/* 개선 B: 계기판 km 직접 입력 */}
@@ -480,11 +481,13 @@ export default function AlertsScreen() {
 const styles = StyleSheet.create({
   // 전체 차량 현황 (개선 A)
   overviewList: { gap: 2, marginTop: 8 },
-  overviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 6, borderRadius: 10, gap: 10 },
+  overviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 6, borderRadius: 10, gap: 10 },
   overviewRowSelected: { backgroundColor: '#EFF6FF' },
   overviewIcon: { fontSize: 14 },
   overviewVehicle: { color: '#0F172A', fontSize: 14, fontWeight: '800', minWidth: 90 },
-  overviewStatus: { flex: 1, fontSize: 13, fontWeight: '700', textAlign: 'right' },
+  overviewRight: { flex: 1, alignItems: 'flex-end', gap: 2 },
+  overviewStatus: { fontSize: 13, fontWeight: '700', textAlign: 'right' },
+  overviewEcu: { color: '#94A3B8', fontSize: 10, fontWeight: '500', textAlign: 'right' },
 
   // km 직접 입력 (개선 B)
   kmRow: { flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' },
