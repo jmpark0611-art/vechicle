@@ -175,6 +175,7 @@ export default function TripScreen() {
   const obdSnapshotSaveAtRef = useRef<Record<string, number>>({});
   const overspeedWarningStateRef = useRef<OverspeedWarningState | null>(null);
   const staleInterruptionPromptKeyRef = useRef<string | null>(null);
+  const isObdConnectingRef = useRef(false);
   const lastEndOdometerRef = useRef<number | null>(null);
 
   activeTripsRef.current = activeTrips;
@@ -294,12 +295,15 @@ export default function TripScreen() {
   }, []);
 
   const ensureObdConnected = useCallback(async () => {
-    if (isObdConnected || isObdConnecting) return;
+    // Use ref for guard — React state updates are async and would allow concurrent calls
+    if (isObdConnectingRef.current || obdBle.isConnected) return;
 
+    isObdConnectingRef.current = true;
     setIsObdConnecting(true);
     try {
-      let deviceId = savedBleDeviceId;
-      let deviceName = displayObdDeviceName(savedBleDeviceName, currentVehicleNumber);
+      // Use refs so stale closure values don't cause misses after state updates
+      let deviceId = savedBleDeviceIdRef.current;
+      let deviceName = displayObdDeviceName(savedBleDeviceNameRef.current, currentVehicleNumber);
       const usedSavedDevice = Boolean(deviceId);
 
       if (!deviceId) {
@@ -326,7 +330,8 @@ export default function TripScreen() {
           await obdBle.disconnect();
           setObdStatus(`${deviceName ?? 'OBD'} 재검색 중`);
           const scan = await scanForObdBleDevices(6_000);
-          const retryDevice = scan.devices.find((device) => device.id === savedBleDeviceId) ?? scan.devices[0] ?? null;
+          // Use ref for current device ID in case it updated during async scan
+          const retryDevice = scan.devices.find((device) => device.id === savedBleDeviceIdRef.current) ?? scan.devices[0] ?? null;
           if (retryDevice) {
             const namedDevice = { ...retryDevice, name: displayObdDeviceName(retryDevice.name, currentVehicleNumber) };
             await saveSelectedObdBleDevice(namedDevice);
@@ -348,7 +353,8 @@ export default function TripScreen() {
           }
         }
         setIsObdConnected(false);
-        setObdStatus(`${deviceName ?? 'OBD'} 연결 실패 · 자동 재시도 중`);
+        // Hint about common cause: adapter already connected to another device
+        setObdStatus(`${deviceName ?? 'OBD'} 연결 실패 · 어댑터 전원 재시작 후 재시도`);
         return;
       }
 
@@ -361,9 +367,10 @@ export default function TripScreen() {
       setIsObdConnected(false);
       setObdStatus(error instanceof Error ? `자동연결 오류 · ${error.message}` : '자동연결 오류 · 자동 재시도 중');
     } finally {
+      isObdConnectingRef.current = false;
       setIsObdConnecting(false);
     }
-  }, [currentVehicleNumber, isObdConnected, isObdConnecting, savedBleDeviceId, savedBleDeviceName, selectVehicleForObdDevice, startObdSaveTimer, stopObdRetryTimer]);
+  }, [currentVehicleNumber, selectVehicleForObdDevice, startObdSaveTimer, stopObdRetryTimer]);
 
   useEffect(() => {
     obdBle.setCallbacks({
@@ -486,8 +493,8 @@ export default function TripScreen() {
     return () => clearInterval(timerId);
   }, [activeTrip]);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
+  const loadData = useCallback(async (showSpinner = true) => {
+    if (showSpinner) setIsLoading(true);
     setErrorMessage(null);
     try {
       const [nextVehicles, nextActiveTrips] = await Promise.all([fetchVehiclesReadOnly(200), fetchActiveTrips(20)]);
@@ -508,7 +515,7 @@ export default function TripScreen() {
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '운행 데이터를 불러오지 못했습니다.');
     } finally {
-      setIsLoading(false);
+      if (showSpinner) setIsLoading(false);
     }
   }, [startGpsTimer]);
 
@@ -542,7 +549,8 @@ export default function TripScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void loadData();
+      // Silent refresh on tab focus — don't show spinner so screen doesn't flicker
+      void loadData(false);
     }, [loadData])
   );
 
